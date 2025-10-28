@@ -1,0 +1,5 @@
+{
+  "name": "Hitung PPh Karyawan 2025",
+  "description": "A web application to calculate Indonesian employee income tax (PPh 21) according to the latest 2025 regulations, featuring employee management, reporting, and tax rule references.",
+  "requestFramePermissions": []
+}
