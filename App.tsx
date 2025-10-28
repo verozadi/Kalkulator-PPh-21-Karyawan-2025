@@ -11,6 +11,7 @@ import Sidebar from './components/Sidebar';
 import ProfileModal from './components/ProfileModal';
 import Overtime from './components/Overtime';
 import EmployeeMasterList from './components/EmployeeMasterList';
+import Settings from './components/Settings'; // Import Settings component
 
 import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord } from './types';
 import { calculatePPh21 } from './services/taxCalculator';
@@ -119,6 +120,8 @@ const App: React.FC = () => {
         return <Reports employees={employees} masterEmployees={masterEmployees} profile={profile!} />;
       case 'overtime':
         return <Overtime masterEmployees={masterEmployees} existingRecords={overtimeRecords} onSave={handleSaveOvertime} />;
+      case 'settings':
+        return <Settings />;
       default:
         return <Dashboard summaryData={summaryData} recentEmployees={recentEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee}/>;
     }

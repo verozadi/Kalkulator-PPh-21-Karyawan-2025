@@ -1,4 +1,4 @@
-export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList';
+export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings';
 
 export enum MaritalStatus {
   TK0 = 'TK/0',
