@@ -2,33 +2,41 @@ import { MasterEmployee } from '../types';
 import { initialMasterEmployees } from './mockData';
 import { v4 as uuidv4 } from 'uuid';
 
-const STORAGE_KEY = 'pph21_master_employees';
+const getStorageKey = (userId: string) => `pph21_master_employees_${userId}`;
 
-const getStoredMasterEmployees = (): MasterEmployee[] => {
+export const initializeMasterEmployeesForUser = (userId: string): void => {
+    const storageKey = getStorageKey(userId);
+    if (!localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, JSON.stringify(initialMasterEmployees));
+    }
+};
+
+const getStoredMasterEmployees = (userId: string): MasterEmployee[] => {
+    const storageKey = getStorageKey(userId);
     try {
-        const storedData = localStorage.getItem(STORAGE_KEY);
+        const storedData = localStorage.getItem(storageKey);
         if (storedData) {
             return JSON.parse(storedData);
         }
     } catch (error) {
         console.error("Failed to parse master employees from localStorage", error);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMasterEmployees));
+    localStorage.setItem(storageKey, JSON.stringify(initialMasterEmployees));
     return initialMasterEmployees;
 };
 
-let masterEmployees: MasterEmployee[] = getStoredMasterEmployees();
-
-export const getMasterEmployees = (): MasterEmployee[] => {
-    masterEmployees = getStoredMasterEmployees();
+export const getMasterEmployees = (userId: string): MasterEmployee[] => {
+    const masterEmployees = getStoredMasterEmployees(userId);
     return [...masterEmployees].sort((a, b) => a.fullName.localeCompare(b.fullName));
 };
 
-export const getMasterEmployeeById = (id: string): MasterEmployee | undefined => {
+export const getMasterEmployeeById = (userId: string, id: string): MasterEmployee | undefined => {
+    const masterEmployees = getStoredMasterEmployees(userId);
     return masterEmployees.find(e => e.id === id);
 };
 
-export const saveMasterEmployee = (employee: MasterEmployee): void => {
+export const saveMasterEmployee = (userId: string, employee: MasterEmployee): void => {
+    let masterEmployees = getStoredMasterEmployees(userId);
     if (!employee.id) {
         employee.id = uuidv4();
     }
@@ -38,10 +46,11 @@ export const saveMasterEmployee = (employee: MasterEmployee): void => {
     } else {
         masterEmployees.push(employee);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(masterEmployees));
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(masterEmployees));
 };
 
-export const deleteMasterEmployee = (id: string): void => {
+export const deleteMasterEmployee = (userId: string, id: string): void => {
+    let masterEmployees = getStoredMasterEmployees(userId);
     masterEmployees = masterEmployees.filter(e => e.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(masterEmployees));
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(masterEmployees));
 };

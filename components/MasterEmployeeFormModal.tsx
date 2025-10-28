@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MasterEmployee, MaritalStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -125,7 +126,7 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
                 <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
                     <div className="p-6 border-b border-gray-700">

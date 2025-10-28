@@ -1,4 +1,11 @@
-export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings';
+export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings' | 'login' | 'register' | 'forgotPassword';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+}
 
 export enum MaritalStatus {
   TK0 = 'TK/0',

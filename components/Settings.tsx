@@ -1,24 +1,33 @@
 import React, { useState } from 'react';
+import { User } from '../types';
 
-const STORAGE_KEYS = [
+interface SettingsProps {
+  showNotification: (message: string, type?: 'success' | 'error') => void;
+  currentUser: User;
+}
+
+const GENERIC_STORAGE_KEYS = [
     'pph21_employees',
     'pph21_master_employees',
     'pph21_overtime_records',
     'pph21_profile'
 ];
 
-const Settings: React.FC = () => {
+const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser }) => {
     const [restoreFile, setRestoreFile] = useState<File | null>(null);
     const [isRestoring, setIsRestoring] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const handleBackup = () => {
         try {
+            const userStorageKeys = GENERIC_STORAGE_KEYS.map(key => `${key}_${currentUser.id}`);
             const backupData: { [key: string]: any } = {};
-            STORAGE_KEYS.forEach(key => {
-                const data = localStorage.getItem(key);
+            
+            GENERIC_STORAGE_KEYS.forEach((genericKey, index) => {
+                const userSpecificKey = userStorageKeys[index];
+                const data = localStorage.getItem(userSpecificKey);
                 if (data) {
-                    backupData[key] = JSON.parse(data);
+                    // Save with generic key in the backup file
+                    backupData[genericKey] = JSON.parse(data);
                 }
             });
 
@@ -33,27 +42,26 @@ const Settings: React.FC = () => {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            setMessage({ type: 'success', text: 'Database berhasil dicadangkan.' });
+            showNotification('Berhasil Dicadangkan');
         } catch (error) {
             console.error('Backup failed:', error);
-            setMessage({ type: 'error', text: 'Gagal mencadangkan database.' });
+            showNotification('Gagal', 'error');
         }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             setRestoreFile(e.target.files[0]);
-            setMessage(null);
         }
     };
 
     const handleRestore = () => {
         if (!restoreFile) {
-            setMessage({ type: 'error', text: 'Silakan pilih file cadangan terlebih dahulu.' });
+            showNotification('Silakan pilih file cadangan terlebih dahulu.', 'error');
             return;
         }
 
-        if (!window.confirm('Anda yakin ingin memulihkan database? Semua data saat ini akan ditimpa oleh data dari file cadangan.')) {
+        if (!window.confirm('Anda yakin ingin memulihkan database? Semua data saat ini untuk pengguna Anda akan ditimpa oleh data dari file cadangan.')) {
             return;
         }
 
@@ -65,28 +73,28 @@ const Settings: React.FC = () => {
                 const json = event.target?.result as string;
                 const data = JSON.parse(json);
 
-                // Basic validation
-                const missingKeys = STORAGE_KEYS.filter(key => !(key in data));
+                const missingKeys = GENERIC_STORAGE_KEYS.filter(key => !(key in data));
                 if (missingKeys.length > 0) {
                     throw new Error(`File cadangan tidak valid. Kunci yang hilang: ${missingKeys.join(', ')}`);
                 }
 
-                STORAGE_KEYS.forEach(key => {
-                    localStorage.setItem(key, JSON.stringify(data[key]));
+                GENERIC_STORAGE_KEYS.forEach(key => {
+                    const userSpecificKey = `${key}_${currentUser.id}`;
+                    localStorage.setItem(userSpecificKey, JSON.stringify(data[key]));
                 });
 
-                setMessage({ type: 'success', text: 'Database berhasil dipulihkan. Harap muat ulang halaman untuk melihat perubahan.' });
+                showNotification('Berhasil Dipulihkan. Harap muat ulang halaman.');
                 setRestoreFile(null);
             } catch (error: any) {
                 console.error('Restore failed:', error);
-                setMessage({ type: 'error', text: `Gagal memulihkan: ${error.message}` });
+                showNotification(`Gagal: ${error.message}`, 'error');
             } finally {
                 setIsRestoring(false);
             }
         };
         
         reader.onerror = () => {
-             setMessage({ type: 'error', text: 'Gagal membaca file.' });
+             showNotification('Gagal membaca file.', 'error');
              setIsRestoring(false);
         };
 
@@ -97,13 +105,6 @@ const Settings: React.FC = () => {
         <div className="bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20 max-w-2xl mx-auto space-y-8">
             <h2 className="text-2xl font-bold text-primary-400">Pengaturan</h2>
             
-            {message && (
-                <div className={`p-4 rounded-md text-sm ${message.type === 'success' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-                    {message.text}
-                </div>
-            )}
-            
-            {/* Backup Section */}
             <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-gray-200">Cadangkan Database</h3>
                 <p className="text-gray-400">
@@ -120,7 +121,6 @@ const Settings: React.FC = () => {
 
             <hr className="border-gray-700" />
 
-            {/* Restore Section */}
             <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-gray-200">Pulihkan Database</h3>
                 <p className="text-gray-400">
@@ -147,7 +147,6 @@ const Settings: React.FC = () => {
     );
 };
 
-// Icons
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const UploadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4 4m0 0l4-4m-4 4V4" /></svg>;
 const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;

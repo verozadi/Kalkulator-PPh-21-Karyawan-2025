@@ -1,45 +1,52 @@
-
 import { Employee } from '../types';
 import { initialEmployeeData } from './mockData';
 
-const STORAGE_KEY = 'pph21_employees';
+const getStorageKey = (userId: string) => `pph21_employees_${userId}`;
 
-const getStoredEmployees = (): Employee[] => {
+export const initializeEmployeesForUser = (userId: string): void => {
+    const storageKey = getStorageKey(userId);
+    if (!localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, JSON.stringify(initialEmployeeData));
+    }
+};
+
+const getStoredEmployees = (userId: string): Employee[] => {
+    const storageKey = getStorageKey(userId);
     try {
-        const storedData = localStorage.getItem(STORAGE_KEY);
+        const storedData = localStorage.getItem(storageKey);
         if (storedData) {
             return JSON.parse(storedData);
         }
     } catch (error) {
         console.error("Failed to parse employees from localStorage", error);
     }
-    // If nothing in storage, initialize with mock data
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialEmployeeData));
+    localStorage.setItem(storageKey, JSON.stringify(initialEmployeeData));
     return initialEmployeeData;
 };
 
-let employees: Employee[] = getStoredEmployees();
-
-export const getEmployees = (): Employee[] => {
-    employees = getStoredEmployees();
+export const getEmployees = (userId: string): Employee[] => {
+    const employees = getStoredEmployees(userId);
     return [...employees].sort((a, b) => a.name.localeCompare(b.name));
 };
 
-export const getEmployeeById = (id: string): Employee | undefined => {
+export const getEmployeeById = (userId: string, id: string): Employee | undefined => {
+    const employees = getStoredEmployees(userId);
     return employees.find(e => e.id === id);
 };
 
-export const saveEmployee = (employee: Employee): void => {
+export const saveEmployee = (userId: string, employee: Employee): void => {
+    let employees = getStoredEmployees(userId);
     const index = employees.findIndex(e => e.id === employee.id);
     if (index > -1) {
         employees[index] = employee;
     } else {
         employees.push(employee);
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(employees));
 };
 
-export const deleteEmployee = (id: string): void => {
+export const deleteEmployee = (userId: string, id: string): void => {
+    let employees = getStoredEmployees(userId);
     employees = employees.filter(e => e.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(employees));
 };
