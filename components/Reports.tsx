@@ -279,14 +279,14 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
           onClick={handleExportXLSX} 
           className="w-full bg-primary-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
         >
-          <DocumentDownloadIcon />
+          <ReportIcon />
           <span>Export ke Excel (.xlsx)</span>
         </button>
         <button 
           onClick={handleExportXML} 
           className="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
         >
-          <DocumentDownloadIcon />
+          <ReportIcon />
           <span>Export ke XML</span>
         </button>
       </div>
@@ -295,7 +295,7 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
   );
 };
 
-const DocumentDownloadIcon = () => (
+const ReportIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>

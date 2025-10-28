@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MasterEmployee } from '../types';
 import MasterEmployeeFormModal from './MasterEmployeeFormModal';
@@ -35,7 +36,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                     onClick={handleAddNew}
                     className="bg-accent-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-accent-600 transition-colors flex items-center space-x-2"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-5-6a3 3 0 100-6 3 3 0 000 6zM13 18a6 6 0 00-6-6H5a6 6 0 00-6 6v1h14v-1z" /></svg>
                     <span>Tambah Karyawan Baru</span>
                 </button>
             </div>

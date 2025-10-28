@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { MasterEmployee, OvertimeRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -198,7 +199,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
                   <tr className="border-t border-b border-gray-700 bg-gray-700/30">
                     <td className="px-6 py-3"><div className="text-sm font-medium text-gray-200">{employee.fullName}</div><div className="text-sm text-gray-400">{employee.position}</div></td>
                     <td className="px-6 py-3 text-right">{formatCurrency(employee.baseSalary)}</td>
-                    <td className="px-6 py-3 text-center"><button onClick={() => handleAddOvertime(employee.id)} className="text-sm font-semibold text-green-400 hover:text-green-300 flex items-center justify-center gap-1 mx-auto"><PlusIcon /> Tambah Lembur</button></td>
+                    <td className="px-6 py-3 text-center"><button onClick={() => handleAddOvertime(employee.id)} className="text-sm font-semibold text-green-400 hover:text-green-300 flex items-center justify-center gap-1 mx-auto"><PlusCircleIcon /> Tambah Lembur</button></td>
                     <td></td>
                     <td className="px-6 py-3 text-right font-bold text-lg text-accent-300">{formatCurrency(employeeTotalPay)}</td>
                   </tr>
@@ -232,7 +233,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
   );
 };
 
-const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>;
+const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
 export default Overtime;
