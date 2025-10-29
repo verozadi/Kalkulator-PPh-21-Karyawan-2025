@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+
+import * as React from 'react';
 import { MasterEmployee, OvertimeRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,7 +10,8 @@ interface OvertimeProps {
   onSave: (records: OvertimeRecord[]) => void;
 }
 
-const formatCurrency = (value: number) => {
+const formatCurrency = (value: number): string => {
+    if (value === 0) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
 };
 
@@ -61,13 +63,15 @@ const calculateDepnakerOvertimePay = (
     return Math.round(overtimePay);
 };
 
-const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, onSave }) => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [workSystem, setWorkSystem] = useState<'5-day' | '6-day'>('5-day');
-  const [currentPeriodRecords, setCurrentPeriodRecords] = useState<OvertimeRecord[]>([]);
+const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 
-  useEffect(() => {
+const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, onSave }) => {
+  const [selectedYear, setSelectedYear] = React.useState(2025);
+  const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth() + 1);
+  const [workSystem, setWorkSystem] = React.useState<'5-day' | '6-day'>('5-day');
+  const [currentPeriodRecords, setCurrentPeriodRecords] = React.useState<OvertimeRecord[]>([]);
+
+  React.useEffect(() => {
     const relevantRecords = existingRecords.filter(r => r.year === selectedYear && r.month === selectedMonth);
     setCurrentPeriodRecords(relevantRecords);
     
@@ -79,7 +83,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
   }, [selectedYear, selectedMonth, existingRecords]);
   
   // Recalculate all pays when workSystem changes
-  useEffect(() => {
+  React.useEffect(() => {
     setCurrentPeriodRecords(prevRecords =>
         prevRecords.map(rec => {
             const employee = masterEmployees.find(emp => emp.id === rec.masterEmployeeId);
@@ -140,75 +144,62 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     onSave([...otherRecords, ...recordsToSave]);
   };
 
-  const { totalHours, totalMinutes, totalPay } = useMemo(() => {
-      let hours = 0;
-      let minutes = 0;
-      let pay = 0;
-      currentPeriodRecords.forEach(r => {
-          hours += r.overtimeHours;
-          minutes += r.overtimeMinutes;
-          pay += r.totalPay;
-      });
-      hours += Math.floor(minutes / 60);
-      minutes = minutes % 60;
-      return { totalHours: hours, totalMinutes: minutes, totalPay: pay };
-  }, [currentPeriodRecords]);
-
-  const uniqueYears = useMemo(() => {
-    // Fix: Explicitly type the Set to prevent its elements from being inferred as 'unknown', which causes type errors in filter and sort.
-    const years = new Set<number>(masterEmployees.map(e => new Date(e.hireDate).getFullYear()));
-    const currentYear = new Date().getFullYear();
-    years.add(currentYear);
-    return Array.from(years).filter(y => y <= currentYear).sort((a, b) => b - a);
-  }, [masterEmployees]);
-
+  const years = [2026, 2025, 2024];
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   return (
-    <div className="bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl shadow-black/20">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-        <h2 className="text-2xl font-bold text-primary-400">Input & Perhitungan Lembur (Depnaker)</h2>
-        <button onClick={handleSaveClick} className="bg-accent-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent-600 transition-colors">
+    <div className="space-y-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+            <div className="flex items-center space-x-3">
+                <ClockIcon />
+                <h1 className="text-3xl font-bold text-gray-100">Input & Perhitungan Lembur</h1>
+            </div>
+            <p className="text-gray-400 mt-1">Kelola data lembur karyawan sesuai peraturan Depnaker.</p>
+        </div>
+        <button onClick={handleSaveClick} className="bg-accent-500 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-accent-600 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-accent-900/50">
           Simpan Data Lembur
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-black/20">
-        <div className="flex-1"><label className="text-sm font-medium text-gray-300 mb-1 block">Tahun</label><select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">{uniqueYears.map(year => <option key={year} value={year}>{year}</option>)}</select></div>
-        <div className="flex-1"><label className="text-sm font-medium text-gray-300 mb-1 block">Bulan</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select></div>
-        <div className="flex-1"><label className="text-sm font-medium text-gray-300 mb-1 block">Sistem Jam Kerja</label><select value={workSystem} onChange={(e) => setWorkSystem(e.target.value as '5-day' | '6-day')} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"><option value="5-day">5 Hari Kerja (40 Jam/Minggu)</option><option value="6-day">6 Hari Kerja (40 Jam/Minggu)</option></select></div>
+      <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Tahun</label><select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">{years.map(year => <option key={year} value={year}>{year}</option>)}</select></div>
+          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Bulan</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select></div>
+          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Sistem Jam Kerja</label><select value={workSystem} onChange={(e) => setWorkSystem(e.target.value as '5-day' | '6-day')} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"><option value="5-day">5 Hari Kerja (40 Jam/Minggu)</option><option value="6-day">6 Hari Kerja (40 Jam/Minggu)</option></select></div>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-gray-800 rounded-lg border border-gray-700">
         <table className="min-w-full">
-          <thead className="bg-gray-700">
+          <thead className="bg-gray-700/50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider w-1/4">Nama Karyawan</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-300 uppercase tracking-wider">Gaji Pokok</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">Gaji Pokok</th>
               <th className="px-6 py-3 text-center text-xs font-bold text-gray-300 uppercase tracking-wider">Tipe Hari</th>
               <th className="px-6 py-3 text-center text-xs font-bold text-gray-300 uppercase tracking-wider">Durasi Lembur</th>
               <th className="px-6 py-3 text-right text-xs font-bold text-gray-300 uppercase tracking-wider">Total Upah Lembur</th>
             </tr>
           </thead>
           <tbody className="bg-gray-800">
-            {masterEmployees.map(employee => {
+            {masterEmployees.map((employee) => {
               const employeeRecords = currentPeriodRecords.filter(r => r.masterEmployeeId === employee.id);
               const employeeTotalPay = employeeRecords.reduce((sum, r) => sum + r.totalPay, 0);
               return (
                 <React.Fragment key={employee.id}>
                   <tr className="border-t border-b border-gray-700 bg-gray-700/30">
                     <td className="px-6 py-3"><div className="text-sm font-medium text-gray-200">{employee.fullName}</div><div className="text-sm text-gray-400">{employee.position}</div></td>
-                    <td className="px-6 py-3 text-right">{formatCurrency(employee.baseSalary)}</td>
+                    <td className="px-6 py-3 text-left">{formatCurrency(employee.baseSalary)}</td>
                     <td className="px-6 py-3 text-center"><button onClick={() => handleAddOvertime(employee.id)} className="text-sm font-semibold text-green-400 hover:text-green-300 flex items-center justify-center gap-1 mx-auto"><PlusCircleIcon /> Tambah Lembur</button></td>
                     <td></td>
-                    <td className="px-6 py-3 text-right font-bold text-lg text-accent-300">{formatCurrency(employeeTotalPay)}</td>
+                    <td className="px-6 py-3 text-right font-bold text-lg text-accent-400">{formatCurrency(employeeTotalPay)}</td>
                   </tr>
                   {employeeRecords.map(record => (
                     <tr key={record.id} className="hover:bg-gray-700/50">
                       <td colSpan={2}></td>
                       <td className="px-6 py-4 whitespace-nowrap"><select value={record.dayType} onChange={(e) => handleInputChange(record.id, 'dayType', e.target.value)} className="w-full px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 focus:ring-primary-500 focus:border-primary-500"><option value="workday">Hari Kerja Biasa</option><option value="holiday">Hari Libur / Minggu</option></select></td>
-                      <td className="px-6 py-4 whitespace-nowrap"><div className="flex items-center justify-center gap-2"><input type="number" value={record.overtimeHours || ''} onChange={(e) => handleInputChange(record.id, 'overtimeHours', e.target.value)} className="w-16 px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-center" placeholder="Jam" /><span className="text-gray-400">:</span><input type="number" value={record.overtimeMinutes || ''} onChange={(e) => handleInputChange(record.id, 'overtimeMinutes', e.target.value)} className="w-16 px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-center" placeholder="Menit" max="59" /></div></td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end"><span className="text-sm font-semibold text-accent-400 mr-4">{formatCurrency(record.totalPay)}</span><button onClick={() => handleDeleteOvertime(record.id)} className="p-1 text-red-500 hover:bg-red-800 rounded-full" title="Hapus entri"><TrashIcon /></button></td>
+                      <td className="px-6 py-4 whitespace-nowrap"><div className="flex items-center justify-center gap-2"><input type="number" min="0" value={record.overtimeHours || ''} onChange={(e) => handleInputChange(record.id, 'overtimeHours', e.target.value)} className="w-16 px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-center" placeholder="Jam" /><span className="text-gray-400">:</span><input type="number" min="0" max="59" value={record.overtimeMinutes || ''} onChange={(e) => handleInputChange(record.id, 'overtimeMinutes', e.target.value)} className="w-16 px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-center" placeholder="Menit" /></div></td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2"><span className="text-sm font-semibold text-accent-400">{formatCurrency(record.totalPay)}</span><button onClick={() => handleDeleteOvertime(record.id)} className="p-1 text-red-500 hover:text-red-400 hover:bg-red-800/50 rounded-full" title="Hapus entri"><TrashIcon /></button></td>
                     </tr>
                   ))}
                 </React.Fragment>
@@ -218,15 +209,6 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
                 <tr><td colSpan={5} className="text-center py-10 text-gray-500">Tidak ada data karyawan. Silakan tambah di "Daftar Nama Karyawan".</td></tr>
             )}
           </tbody>
-          {currentPeriodRecords.length > 0 && (
-            <tfoot className="bg-gray-700">
-                <tr>
-                    <th colSpan={3} className="px-6 py-3 text-right text-sm font-bold text-gray-300 uppercase">Total Periode Ini</th>
-                    <th className="px-6 py-3 text-center text-sm font-bold text-gray-200">{`${totalHours} jam ${totalMinutes} menit`}</th>
-                    <th className="px-6 py-3 text-right text-sm font-bold text-accent-300">{formatCurrency(totalPay)}</th>
-                </tr>
-            </tfoot>
-          )}
         </table>
       </div>
     </div>

@@ -1,11 +1,11 @@
 
-import React from 'react';
-import { Page, Profile } from '../types';
+
+import * as React from 'react';
+import { Page } from '../types';
 
 interface SidebarProps {
   currentPage: Page;
   navigateTo: (page: Page) => void;
-  profile: Profile;
   isOpen: boolean;
 }
 
@@ -38,16 +38,10 @@ const NavLink: React.FC<{
 };
 
 
-const Sidebar: React.FC<SidebarProps> = ({ currentPage, navigateTo, profile, isOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentPage, navigateTo, isOpen }) => {
   return (
     <aside className={`flex-shrink-0 bg-gray-800 border-r border-gray-700 flex flex-col transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-20'}`}>
-      <div className={`h-16 flex items-center border-b border-gray-700 ${isOpen ? 'px-6' : 'px-4 justify-center'}`}>
-        <div className="flex items-center space-x-3">
-            <img src={profile.logoUrl} alt="Logo" className="h-8 w-8 rounded-md object-cover bg-gray-700 flex-shrink-0"/>
-            <span className={`text-xl font-bold text-gray-100 whitespace-nowrap transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>{profile.appName}</span>
-        </div>
-      </div>
-      <div className="flex-1 flex flex-col p-2 space-y-6 overflow-y-auto">
+      <div className="flex-1 flex flex-col p-2 space-y-6 overflow-y-auto pt-4">
         <nav className="space-y-1">
           <NavLink page="dashboard" label="Dashboard" navigateTo={navigateTo} isActive={currentPage === 'dashboard'} icon={<ChartPieIcon />} isOpen={isOpen} />
           <NavLink page="employeeMasterList" label="Daftar Nama Karyawan" navigateTo={navigateTo} isActive={currentPage === 'employeeMasterList'} icon={<IdentificationIcon />} isOpen={isOpen} />

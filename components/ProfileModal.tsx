@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+
+import * as React from 'react';
 import { Profile } from '../types';
 
 interface ProfileModalProps {
@@ -26,11 +27,11 @@ const InputField: React.FC<{ label: string; name: keyof Profile; value: string; 
 
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, profile }) => {
-    const [formData, setFormData] = useState<Profile>(profile);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [formData, setFormData] = React.useState<Profile>(profile);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
 
-    useEffect(() => {
+    React.useEffect(() => {
         setFormData(profile);
     }, [profile]);
 
@@ -58,8 +59,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, pr
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-full overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 animate-fade-in">
+            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-full overflow-y-auto animate-fade-in-up" onClick={e => e.stopPropagation()}>
                 <form onSubmit={handleSubmit}>
                     <div className="p-6">
                         <h2 className="text-xl font-bold text-gray-100">Edit Profil</h2>

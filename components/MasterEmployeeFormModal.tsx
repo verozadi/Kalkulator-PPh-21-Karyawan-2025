@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import { MasterEmployee, MaritalStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { validateTaxId } from '../services/taxValidationService';
@@ -59,12 +59,12 @@ const InputField: React.FC<{ label: string; name: keyof MasterEmployee; value: s
 const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 
 const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpen, onClose, onSave, existingEmployee }) => {
-    const [formData, setFormData] = useState<Omit<MasterEmployee, 'id'>>(initialFormData);
-    const [isValidating, setIsValidating] = useState<'npwp' | 'ktp' | null>(null);
-    const [validationMessage, setValidationMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [formData, setFormData] = React.useState<Omit<MasterEmployee, 'id'>>(initialFormData);
+    const [isValidating, setIsValidating] = React.useState<'npwp' | 'ktp' | null>(null);
+    const [validationMessage, setValidationMessage] = React.useState<{ type: 'success' | 'error', text: string } | null>(null);
 
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (existingEmployee) {
             setFormData(existingEmployee);
         } else {
@@ -126,8 +126,8 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-start p-4 pt-10 overflow-y-auto animate-fade-in">
+            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in-up" onClick={e => e.stopPropagation()}>
                 <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
                     <div className="p-6 border-b border-gray-700">
                         <h2 className="text-xl font-bold text-gray-100">{existingEmployee ? 'Edit Karyawan' : 'Tambah Karyawan Baru'}</h2>

@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
+
+import * as React from 'react';
 import * as XLSX from 'xlsx';
 import { Employee, MasterEmployee, Profile, MaritalStatus } from '../types';
 import { TER_RATES, TER_CATEGORY_MAP } from '../constants';
@@ -33,10 +34,11 @@ const getTerRateForCategory = (category: 'A' | 'B' | 'C', monthlyGross: number):
     return ratesForCategory[ratesForCategory.length - 1]?.rate || 0;
 };
 
+const DocumentDownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
 
 const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, showNotification }) => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth() + 1);
 
   const handleExportXML = () => {
     try {
@@ -239,58 +241,66 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
   };
 
   // Fix: Explicitly type the Set to prevent its elements from being inferred as 'unknown', which causes type errors in sort.
-  const uniqueYears = useMemo(() => Array.from(new Set<number>(employees.map(e => e.periodYear))).sort((a,b) => b - a), [employees]);
+  const uniqueYears = React.useMemo(() => Array.from(new Set<number>(employees.map(e => e.periodYear))).sort((a,b) => b - a), [employees]);
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   return (
-    <div className="bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-primary-400">Laporan & Export</h2>
-      <p className="text-gray-400 mb-6">
-        Pilih periode laporan yang ingin Anda generate, kemudian export ke format yang diinginkan.
-      </p>
-      
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="flex-1">
-          <label htmlFor="year-select" className="block text-sm font-medium text-gray-300 mb-1">Tahun Laporan</label>
-          <select 
-              id="year-select" 
-              value={selectedYear} 
-              onChange={e => setSelectedYear(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
-          >
-            {uniqueYears.length > 0 ? uniqueYears.map(year => <option key={year} value={year}>{year}</option>) : <option>{new Date().getFullYear()}</option>}
-          </select>
+    <div className="space-y-6 animate-fade-in-up max-w-2xl mx-auto">
+        <div>
+            <div className="flex items-center space-x-3">
+                <DocumentDownloadIcon />
+                <h1 className="text-3xl font-bold text-gray-100">Laporan & Export</h1>
+            </div>
+            <p className="text-gray-400 mt-1">Generate laporan PPh 21 bulanan dalam format Excel atau XML.</p>
         </div>
-        <div className="flex-1">
-          <label htmlFor="month-select" className="block text-sm font-medium text-gray-300 mb-1">Bulan Laporan</label>
-          <select 
-              id="month-select" 
-              value={selectedMonth} 
-              onChange={e => setSelectedMonth(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
-          >
-            {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
-          </select>
+
+        <div className="bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20">
+          <p className="text-gray-400 mb-6">
+            Pilih periode laporan yang ingin Anda generate, kemudian export ke format yang diinginkan.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="flex-1">
+              <label htmlFor="year-select" className="block text-sm font-medium text-gray-300 mb-1">Tahun Laporan</label>
+              <select 
+                  id="year-select" 
+                  value={selectedYear} 
+                  onChange={e => setSelectedYear(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
+              >
+                {uniqueYears.length > 0 ? uniqueYears.map(year => <option key={year} value={year}>{year}</option>) : <option>{new Date().getFullYear()}</option>}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label htmlFor="month-select" className="block text-sm font-medium text-gray-300 mb-1">Bulan Laporan</label>
+              <select 
+                  id="month-select" 
+                  value={selectedMonth} 
+                  onChange={e => setSelectedMonth(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
+              >
+                {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button 
+              onClick={handleExportXLSX} 
+              className="w-full bg-primary-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <ReportIcon />
+              <span>Export ke Excel (.xlsx)</span>
+            </button>
+            <button 
+              onClick={handleExportXML} 
+              className="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <ReportIcon />
+              <span>Export ke XML</span>
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4">
-         <button 
-          onClick={handleExportXLSX} 
-          className="w-full bg-primary-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-        >
-          <ReportIcon />
-          <span>Export ke Excel (.xlsx)</span>
-        </button>
-        <button 
-          onClick={handleExportXML} 
-          className="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-        >
-          <ReportIcon />
-          <span>Export ke XML</span>
-        </button>
-      </div>
-
     </div>
   );
 };

@@ -1,4 +1,4 @@
-export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings' | 'login' | 'register' | 'forgotPassword';
+export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings' | 'login' | 'register' | 'forgotPassword' | 'landing';
 
 export interface User {
   id: string;

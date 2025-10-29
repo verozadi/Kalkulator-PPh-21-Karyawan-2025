@@ -1,5 +1,6 @@
 
-import React, { useEffect } from 'react';
+
+import * as React from 'react';
 
 interface NotificationProps {
   message: string;
@@ -8,7 +9,7 @@ interface NotificationProps {
 }
 
 const Notification: React.FC<NotificationProps> = ({ message, type, onClose }) => {
-  useEffect(() => {
+  React.useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
     }, 4000); // Auto-close after 4 seconds

@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+
+import * as React from 'react';
 
 // Component Imports
-import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
@@ -12,11 +12,14 @@ import Sidebar from './components/Sidebar';
 import ProfileModal from './components/ProfileModal';
 import Overtime from './components/Overtime';
 import EmployeeMasterList from './components/EmployeeMasterList';
+import MasterEmployeeFormModal from './components/MasterEmployeeFormModal';
 import Settings from './components/Settings';
 import Notification from './components/Notification';
 import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
+import LandingPage from './components/LandingPage';
+import EmployeeDetailModal from './components/EmployeeDetailModal';
 
 // Type Imports
 import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User } from './types';
@@ -31,25 +34,34 @@ import { getOvertimeRecords, saveOvertimeRecords as saveOvertimeRecordsService }
 
 const App: React.FC = () => {
     // --- AUTHENTICATION STATE ---
-    const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser());
-    const [authPage, setAuthPage] = useState<Extract<Page, 'login' | 'register' | 'forgotPassword'>>('login');
-    const [isLoading, setIsLoading] = useState(true);
+    const [currentUser, setCurrentUser] = React.useState<User | null>(authService.getCurrentUser());
+    const [authPage, setAuthPage] = React.useState<Extract<Page, 'login' | 'register' | 'forgotPassword' | 'landing'>>('landing');
+    const [isLoading, setIsLoading] = React.useState(true);
 
     // --- APP STATE (only initialized if logged in) ---
-    const [currentPage, setCurrentPage] = useState<Page>('dashboard');
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [masterEmployees, setMasterEmployees] = useState<MasterEmployee[]>([]);
-    const [overtimeRecords, setOvertimeRecords] = useState<OvertimeRecord[]>([]);
-    const [profile, setProfile] = useState<Profile | null>(null);
-    const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-    const [isProfileModalOpen, setProfileModalOpen] = useState(false);
-    const [isSidebarOpen, setSidebarOpen] = useState(true);
-    const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [currentPage, setCurrentPage] = React.useState<Page>('dashboard');
+    const [employees, setEmployees] = React.useState<Employee[]>([]);
+    const [masterEmployees, setMasterEmployees] = React.useState<MasterEmployee[]>([]);
+    const [overtimeRecords, setOvertimeRecords] = React.useState<OvertimeRecord[]>([]);
+    const [profile, setProfile] = React.useState<Profile | null>(null);
+    const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
+    const [isProfileModalOpen, setProfileModalOpen] = React.useState(false);
+    const [isSidebarOpen, setSidebarOpen] = React.useState(true);
+    const [notification, setNotification] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [isMasterEmployeeModalOpen, setMasterEmployeeModalOpen] = React.useState(false);
+    const [editingMasterEmployee, setEditingMasterEmployee] = React.useState<MasterEmployee | null>(null);
+    const [detailEmployee, setDetailEmployee] = React.useState<Employee | null>(null);
+
+
+    // Profile Dropdown state
+    const [isProfileDropdownOpen, setProfileDropdownOpen] = React.useState(false);
+    const profileDropdownRef = React.useRef<HTMLDivElement>(null);
+
 
     // --- EFFECTS ---
 
     // Effect to load user-specific data upon login
-    useEffect(() => {
+    React.useEffect(() => {
         if (currentUser) {
             setProfile(getProfile(currentUser.id));
             setEmployees(getEmployees(currentUser.id));
@@ -58,6 +70,19 @@ const App: React.FC = () => {
         }
         setIsLoading(false);
     }, [currentUser]);
+
+    // Effect for profile dropdown
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+            setProfileDropdownOpen(false);
+          }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // --- HANDLERS ---
     const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -71,6 +96,7 @@ const App: React.FC = () => {
     const handleLogout = () => {
         authService.logout();
         setCurrentUser(null);
+        setAuthPage('landing'); // Redirect to landing page on logout
     };
 
     const handleSaveProfile = (updatedProfile: Profile) => {
@@ -128,12 +154,23 @@ const App: React.FC = () => {
     };
 
     // Master Employee Handlers
+    const handleOpenMasterEmployeeModal = (employee: MasterEmployee | null) => {
+        setEditingMasterEmployee(employee);
+        setMasterEmployeeModalOpen(true);
+    };
+
+    const handleCloseMasterEmployeeModal = () => {
+        setEditingMasterEmployee(null);
+        setMasterEmployeeModalOpen(false);
+    };
+    
     const handleSaveMasterEmployee = (masterEmployee: MasterEmployee) => {
         if (!currentUser) return;
         try {
             saveMasterEmployeeService(currentUser.id, masterEmployee);
             setMasterEmployees(getMasterEmployees(currentUser.id));
             showNotification('Tersimpan');
+            handleCloseMasterEmployeeModal();
         } catch (error) {
             showNotification('Gagal menyimpan karyawan', 'error');
             console.error(error);
@@ -165,15 +202,10 @@ const App: React.FC = () => {
         }
     };
 
-    // --- MEMOIZED DATA ---
-    const summaryData = useMemo(() => {
-        const totalEmployees = masterEmployees.length;
-        const totalGrossSalary = employees.reduce((sum, e) => sum + e.grossIncome, 0);
-        const totalPPh21 = employees.reduce((sum, e) => sum + e.pph21Monthly, 0);
-        return { totalEmployees, totalGrossSalary, totalPPh21 };
-    }, [employees, masterEmployees]);
-
-    const recentEmployees = useMemo(() => employees.slice(-5).reverse(), [employees]);
+    // Detail Modal Handler
+    const handleOpenDetailModal = (employee: Employee) => {
+        setDetailEmployee(employee);
+    };
 
     // --- RENDER LOGIC ---
 
@@ -193,8 +225,10 @@ const App: React.FC = () => {
             case 'forgotPassword':
                 return <ForgotPassword onNavigate={setAuthPage} />;
             case 'login':
-            default:
                 return <Login onLoginSuccess={handleLoginSuccess} onNavigate={setAuthPage} />;
+            case 'landing':
+            default:
+                return <LandingPage onNavigate={setAuthPage} />;
         }
     }
 
@@ -202,13 +236,27 @@ const App: React.FC = () => {
     const renderContent = () => {
         switch (currentPage) {
             case 'dashboard':
-                return <Dashboard summaryData={summaryData} recentEmployees={recentEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee} />;
+                return <Dashboard employees={employees} masterEmployees={masterEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee} />;
             case 'employeeMasterList':
-                return <EmployeeMasterList masterEmployees={masterEmployees} onSave={handleSaveMasterEmployee} onDelete={handleDeleteMasterEmployee} />;
+                return <EmployeeMasterList 
+                            masterEmployees={masterEmployees} 
+                            onEdit={handleOpenMasterEmployeeModal}
+                            onAddNew={() => handleOpenMasterEmployeeModal(null)}
+                            onDelete={handleDeleteMasterEmployee} 
+                        />;
             case 'employeeList':
-                return <EmployeeList employees={employees} onEdit={handleEditEmployee} onDelete={handleDeleteEmployee} navigateTo={navigateTo} />;
+                return <EmployeeList employees={employees} masterEmployees={masterEmployees} onEdit={handleEditEmployee} onDelete={handleDeleteEmployee} navigateTo={navigateTo} onOpenDetailModal={handleOpenDetailModal} />;
             case 'employeeInput':
-                return <EmployeeForm onSave={handleSaveEmployee} existingEmployee={editingEmployee} onCancel={() => navigateTo('employeeList')} profile={profile!} masterEmployees={masterEmployees} overtimeRecords={overtimeRecords} />;
+                return <EmployeeForm 
+                            onSave={handleSaveEmployee} 
+                            existingEmployee={editingEmployee} 
+                            onCancel={() => navigateTo('employeeList')} 
+                            profile={profile!} 
+                            masterEmployees={masterEmployees} 
+                            overtimeRecords={overtimeRecords} 
+                            employees={employees}
+                            showNotification={showNotification}
+                        />;
             case 'taxRules':
                 return <TaxRules />;
             case 'reports':
@@ -218,7 +266,7 @@ const App: React.FC = () => {
             case 'settings':
                 return <Settings showNotification={showNotification} currentUser={currentUser} />;
             default:
-                return <Dashboard summaryData={summaryData} recentEmployees={recentEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee} />;
+                return <Dashboard employees={employees} masterEmployees={masterEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee} />;
         }
     };
 
@@ -231,21 +279,91 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="flex h-screen bg-gray-900 font-sans text-gray-200">
-            <Sidebar currentPage={currentPage} navigateTo={navigateTo} profile={profile} isOpen={isSidebarOpen} />
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <Navbar profile={profile} onOpenProfileModal={() => setProfileModalOpen(true)} onToggleSidebar={toggleSidebar} onLogout={handleLogout} />
+        <div className="flex flex-col h-screen bg-gray-900 font-sans text-gray-200">
+            {/* Unified Header */}
+            <header className="flex-shrink-0 bg-gray-800 border-b border-gray-700 flex items-center h-16 z-10">
+                {/* Logo and App name */}
+                <div className={`flex-shrink-0 h-full flex items-center border-r border-gray-700 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64 px-6' : 'w-20 px-4 justify-center'}`}>
+                    <div className="flex items-center space-x-3">
+                        <img src={profile.logoUrl} alt="Logo" className="h-8 w-8 rounded-md object-cover bg-gray-700 flex-shrink-0"/>
+                        <span className={`text-xl font-bold text-gray-100 whitespace-nowrap transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>{profile.appName}</span>
+                    </div>
+                </div>
+
+                {/* Main Header Content */}
+                <div className="flex-1 flex justify-between items-center px-4 sm:px-6">
+                    {/* Left side: Hamburger */}
+                     <div>
+                        <button onClick={toggleSidebar} className="p-2 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+                            <span className="sr-only">Toggle sidebar</span>
+                            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Right side: Notifications and Profile */}
+                    <div className="flex items-center space-x-4">
+                        <button className="p-2 rounded-full hover:bg-gray-700" title="Notifikasi">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        </button>
+                        <div className="relative" ref={profileDropdownRef}>
+                            <button onClick={() => setProfileDropdownOpen(prev => !prev)} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700">
+                                <img className="h-9 w-9 rounded-full object-cover bg-gray-700" src={profile.logoUrl} alt="Company Logo" />
+                                <div>
+                                    <div className="text-sm font-semibold text-gray-200 text-left">{profile.contactName}</div>
+                                    <div className="text-xs text-gray-400 text-left">{profile.companyName}</div>
+                                </div>
+                            </button>
+                            {isProfileDropdownOpen && (
+                                <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-50 border border-gray-600">
+                                <button
+                                    onClick={() => { setProfileModalOpen(true); setProfileDropdownOpen(false); }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
+                                >
+                                    Profil
+                                </button>
+                                <button
+                                    onClick={() => { handleLogout(); setProfileDropdownOpen(false); }}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600"
+                                >
+                                    Logout
+                                </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div className="flex flex-1 overflow-hidden">
+                <Sidebar currentPage={currentPage} navigateTo={navigateTo} isOpen={isSidebarOpen} />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8">
                     {renderContent()}
                     <Footer />
                 </main>
             </div>
+
+            {detailEmployee && (
+                <EmployeeDetailModal
+                    employee={detailEmployee}
+                    onClose={() => setDetailEmployee(null)}
+                />
+            )}
             {isProfileModalOpen && (
                 <ProfileModal
                     isOpen={isProfileModalOpen}
                     onClose={() => setProfileModalOpen(false)}
                     onSave={handleSaveProfile}
                     profile={profile}
+                />
+            )}
+             {isMasterEmployeeModalOpen && (
+                <MasterEmployeeFormModal
+                    isOpen={isMasterEmployeeModalOpen}
+                    onClose={handleCloseMasterEmployeeModal}
+                    onSave={handleSaveMasterEmployee}
+                    existingEmployee={editingMasterEmployee}
                 />
             )}
             {notification && (

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import * as React from 'react';
 import { Profile } from '../types';
 
 interface NavbarProps {
@@ -9,10 +10,10 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ profile, onOpenProfileModal, onToggleSidebar, onLogout }) => {
-  const [isDropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isDropdownOpen, setDropdownOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);

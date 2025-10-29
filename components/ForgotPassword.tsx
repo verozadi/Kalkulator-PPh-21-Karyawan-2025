@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+
+import * as React from 'react';
 
 interface ForgotPasswordProps {
-    onNavigate: (page: 'login') => void;
+    onNavigate: (page: 'login' | 'landing') => void;
 }
 
 const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigate }) => {
-    const [email, setEmail] = useState('');
-    const [message, setMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [email, setEmail] = React.useState('');
+    const [message, setMessage] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,7 +25,9 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onNavigate }) => {
     return (
         <div className="min-h-screen bg-gray-900 flex flex-col justify-center items-center p-4">
              <div className="text-center mb-8">
-                <h1 className="text-4xl font-bold text-primary-400">VerozTax</h1>
+                <button type="button" onClick={() => onNavigate('landing')} className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary-500 rounded-lg">
+                    <h1 className="text-4xl font-bold text-primary-400">VerozTax</h1>
+                </button>
             </div>
             <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20 border border-gray-700">
                 <h2 className="text-2xl font-bold text-center text-gray-100 mb-2">Lupa Kata Sandi</h2>

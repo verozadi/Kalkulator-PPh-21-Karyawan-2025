@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import * as React from 'react';
 import { Employee, EmployeeData, MaritalStatus, Profile, MasterEmployee, OvertimeRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { TER_RATES, TER_CATEGORY_MAP } from '../constants';
@@ -10,6 +11,8 @@ interface EmployeeFormProps {
   profile: Profile;
   masterEmployees: MasterEmployee[];
   overtimeRecords: OvertimeRecord[];
+  employees: Employee[];
+  showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 const initialFormData: Omit<EmployeeData, 'id'> = {
@@ -86,14 +89,15 @@ const CurrencyInputWithButton: React.FC<{ label: string; name: string; value: nu
 );
 
 
-const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, onCancel, profile, masterEmployees, overtimeRecords }) => {
-  const [formData, setFormData] = useState<Omit<EmployeeData, 'id'>>(initialFormData);
-  const [selectedMasterEmployeeId, setSelectedMasterEmployeeId] = useState<string>('');
-  const [nameSearchTerm, setNameSearchTerm] = useState('');
-  const [suggestions, setSuggestions] = useState<MasterEmployee[]>([]);
+const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, onCancel, profile, masterEmployees, overtimeRecords, employees, showNotification }) => {
+  const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>(initialFormData);
+  const [selectedMasterEmployeeId, setSelectedMasterEmployeeId] = React.useState<string>('');
+  const [nameSearchTerm, setNameSearchTerm] = React.useState('');
+  const [suggestions, setSuggestions] = React.useState<MasterEmployee[]>([]);
+  const months = React.useMemo(() => ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"], []);
 
   // Effect to setup the form for editing an existing PPh21 record or creating a new one.
-  useEffect(() => {
+  React.useEffect(() => {
     if (existingEmployee) {
         const masterData = masterEmployees.find(emp => emp.id === existingEmployee.masterEmployeeId);
         setSelectedMasterEmployeeId(existingEmployee.masterEmployeeId);
@@ -104,6 +108,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
         setSelectedMasterEmployeeId('');
         setNameSearchTerm('');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingEmployee]);
 
 
@@ -189,7 +194,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
 
   // Effect to update overtime pay if the period changes for an already selected employee.
   // This does NOT reset other transactional data.
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectedMasterEmployeeId) {
         const employeeOvertimeRecords = overtimeRecords.filter(o => 
             o.masterEmployeeId === selectedMasterEmployeeId &&
@@ -201,10 +206,10 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
             setFormData(prev => ({...prev, overtimePay: totalOvertimePay}));
         }
     }
-  }, [formData.periodYear, formData.periodMonth, selectedMasterEmployeeId, overtimeRecords]);
+  }, [formData.periodYear, formData.periodMonth, selectedMasterEmployeeId, overtimeRecords, formData.overtimePay]);
 
 
-  const totalPenghasilan = useMemo(() => {
+  const totalPenghasilan = React.useMemo(() => {
     return (
         formData.baseSalary + formData.tunjanganPph + formData.tunjanganJabatan + formData.tunjanganTelekomunikasi +
         formData.tunjanganMakan + formData.tunjanganTransportasi + formData.overtimePay +
@@ -212,13 +217,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     );
   }, [formData]);
 
-  const biayaJabatan = useMemo(() => Math.min(totalPenghasilan * 0.05, 500000), [totalPenghasilan]);
+  const biayaJabatan = React.useMemo(() => Math.min(totalPenghasilan * 0.05, 500000), [totalPenghasilan]);
 
-  const totalPengurangan = useMemo(() => {
+  const totalPengurangan = React.useMemo(() => {
     return biayaJabatan + formData.pensionDeduction + formData.bpjsDeduction + formData.loan + formData.otherDeductions;
   }, [biayaJabatan, formData.pensionDeduction, formData.bpjsDeduction, formData.loan, formData.otherDeductions]);
   
-  const penghasilanNetoBulanan = useMemo(() => {
+  const penghasilanNetoBulanan = React.useMemo(() => {
     return totalPenghasilan - totalPengurangan;
   }, [totalPenghasilan, totalPengurangan]);
 
@@ -232,14 +237,90 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     return ratesForCategory[ratesForCategory.length - 1]?.rate || 0;
   };
   
-  const terRate = useMemo(() => getTerRate(formData.status, totalPenghasilan), [formData.status, totalPenghasilan]);
+  const terRate = React.useMemo(() => getTerRate(formData.status, totalPenghasilan), [formData.status, totalPenghasilan]);
   
-  const pph21 = useMemo(() => totalPenghasilan * terRate, [totalPenghasilan, terRate]);
+  const pph21 = React.useMemo(() => totalPenghasilan * terRate, [totalPenghasilan, terRate]);
   
-  const takeHomePay = useMemo(() => {
+  const takeHomePay = React.useMemo(() => {
     const cashDeductions = formData.pensionDeduction + formData.bpjsDeduction + formData.loan + formData.otherDeductions;
     return totalPenghasilan - cashDeductions - pph21;
   }, [totalPenghasilan, formData.pensionDeduction, formData.bpjsDeduction, formData.loan, formData.otherDeductions, pph21]);
+
+  const handleSyncMasterData = () => {
+        if (!formData.masterEmployeeId) return;
+        const masterData = masterEmployees.find(emp => emp.id === formData.masterEmployeeId);
+        if (!masterData) {
+            showNotification('Data master karyawan tidak ditemukan.', 'error');
+            return;
+        }
+
+        const employeeOvertimeRecords = overtimeRecords.filter(o => 
+            o.masterEmployeeId === masterData.id &&
+            o.year === formData.periodYear &&
+            o.month === formData.periodMonth
+        );
+        const totalOvertimePay = employeeOvertimeRecords.reduce((sum, record) => sum + record.totalPay, 0);
+
+        setFormData(prev => ({
+            ...prev,
+            name: masterData.fullName,
+            npwp: masterData.npwp,
+            address: masterData.address,
+            status: masterData.ptkpStatus,
+            employeeStatus: masterData.employeeStatus,
+            isForeigner: masterData.isForeigner,
+            baseSalary: masterData.baseSalary,
+            overtimePay: totalOvertimePay,
+        }));
+
+        showNotification('Data berhasil disinkronkan dengan data master.');
+    };
+
+    const handleFetchPreviousMonthData = () => {
+        if (!formData.masterEmployeeId) {
+            showNotification('Pilih karyawan terlebih dahulu.', 'error');
+            return;
+        }
+
+        const currentMonth = formData.periodMonth;
+        const currentYear = formData.periodYear;
+
+        const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+        const previousRecord = employees.find(emp => 
+            emp.masterEmployeeId === formData.masterEmployeeId &&
+            emp.periodYear === prevYear &&
+            emp.periodMonth === prevMonth
+        );
+
+        if (!previousRecord) {
+            showNotification(`Data untuk bulan ${months[prevMonth - 1]} ${prevYear} tidak ditemukan.`, 'error');
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            tunjanganPph: previousRecord.tunjanganPph,
+            tunjanganJabatan: previousRecord.tunjanganJabatan,
+            tunjanganTelekomunikasi: previousRecord.tunjanganTelekomunikasi,
+            tunjanganMakan: previousRecord.tunjanganMakan,
+            tunjanganTransportasi: previousRecord.tunjanganTransportasi,
+            bonus: previousRecord.bonus,
+            facilityValue: previousRecord.facilityValue,
+            loan: previousRecord.loan,
+            otherDeductions: previousRecord.otherDeductions,
+            bpjsDeduction: previousRecord.bpjsDeduction,
+            pensionDeduction: previousRecord.pensionDeduction,
+            isGrossUp: previousRecord.isGrossUp,
+            taxFacility: previousRecord.taxFacility,
+            taxObjectName: previousRecord.taxObjectName,
+            taxObjectCode: previousRecord.taxObjectCode,
+            signerIdentity: previousRecord.signerIdentity,
+        }));
+        
+        showNotification(`Data dari bulan ${months[prevMonth - 1]} ${prevYear} berhasil dimuat.`);
+    };
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -251,17 +332,31 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     onSave({ id: existingEmployee?.id || uuidv4(), ...formData });
   };
   
-  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2023 + 1 }, (_, i) => 2024 + i);
 
   return (
-    <form onSubmit={handleSubmit} className="bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl shadow-black/20 max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-            <h2 className="text-2xl font-bold text-primary-400">{existingEmployee ? 'Edit Perhitungan PPh 21' : 'Hitung PPh 21 Karyawan'}</h2>
+    <form onSubmit={handleSubmit} className="bg-gray-800 p-6 sm:p-8 rounded-lg shadow-xl shadow-black/20 max-w-7xl mx-auto animate-fade-in">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6 gap-4 animate-fade-in-up">
+            <div>
+                 <h2 className="text-2xl font-bold text-primary-400">{existingEmployee ? 'Edit Perhitungan PPh 21' : 'Hitung PPh 21 Karyawan'}</h2>
+                 <p className="text-gray-400 text-sm mt-1">Isi detail penghasilan dan potongan untuk menghitung pajak.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-shrink-0">
+                {existingEmployee && (
+                     <button type="button" onClick={handleSyncMasterData} className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-md flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h5M20 20v-5h-5M4 4l5 5M20 20l-5-5M4 20l5-5M20 4l-5 5" /></svg>
+                        <span>Sinkronkan Data Master</span>
+                    </button>
+                )}
+                <button type="button" onClick={handleFetchPreviousMonthData} disabled={!formData.masterEmployeeId} className="text-sm font-semibold text-white bg-gray-600 hover:bg-gray-500 px-3 py-2 rounded-md disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7l4-4m0 0l4 4m-4-4v18" /></svg>
+                    <span>Ambil Data Bulan Sebelumnya</span>
+                </button>
+            </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-black/20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-black/20 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             <InputField label="Masa Pajak" name="periodMonth" value={formData.periodMonth} onChange={handleChange}>
                 {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
             </InputField>
@@ -314,7 +409,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
 
         <div className="flex flex-col lg:flex-row gap-6">
             {/* Left Panel */}
-            <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg">
+            <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <h3 className="text-lg font-bold text-gray-200 mb-4 text-center">Perhitungan Gaji</h3>
                 <div className="space-y-6">
                     <div>
@@ -349,7 +444,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
             </div>
 
             {/* Right Panel */}
-            <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg">
+            <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg animate-fade-in-up" style={{ animationDelay: '300ms' }}>
                 <h3 className="text-lg font-bold text-gray-200 mb-4 text-center">Perhitungan PPh 21 Tarif TER 2025</h3>
                 <div className="space-y-4">
                     <InputField label="Fasilitas" name="taxFacility" value={formData.taxFacility} onChange={handleChange}>

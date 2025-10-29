@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+
+import * as React from 'react';
 import { User } from '../types';
 
 interface SettingsProps {
@@ -14,9 +15,11 @@ const GENERIC_STORAGE_KEYS = [
     'pph21_profile'
 ];
 
+const CogIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+
 const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser }) => {
-    const [restoreFile, setRestoreFile] = useState<File | null>(null);
-    const [isRestoring, setIsRestoring] = useState(false);
+    const [restoreFile, setRestoreFile] = React.useState<File | null>(null);
+    const [isRestoring, setIsRestoring] = React.useState(false);
 
     const handleBackup = () => {
         try {
@@ -103,45 +106,53 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser }) =>
     };
 
     return (
-        <div className="bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20 max-w-2xl mx-auto space-y-8">
-            <h2 className="text-2xl font-bold text-primary-400">Pengaturan</h2>
-            
-            <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-200">Cadangkan Database</h3>
-                <p className="text-gray-400">
-                    Simpan semua data Anda (karyawan, perhitungan PPh 21, lembur, profil) ke dalam satu file JSON. Simpan file ini di tempat yang aman.
-                </p>
-                <button 
-                    onClick={handleBackup} 
-                    className="w-full sm:w-auto bg-primary-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-                >
-                    <BackupIcon />
-                    <span>Cadangkan Sekarang</span>
-                </button>
+        <div className="space-y-6 animate-fade-in-up max-w-2xl mx-auto">
+            <div>
+                <div className="flex items-center space-x-3">
+                    <CogIcon />
+                    <h1 className="text-3xl font-bold text-gray-100">Pengaturan</h1>
+                </div>
+                <p className="text-gray-400 mt-1">Kelola pencadangan dan pemulihan data aplikasi Anda.</p>
             </div>
-
-            <hr className="border-gray-700" />
-
-            <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-200">Pulihkan Database</h3>
-                <p className="text-gray-400">
-                    Pulihkan data dari file cadangan. <strong className="text-red-400">Perhatian:</strong> Tindakan ini akan menimpa semua data yang ada saat ini.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 items-center">
-                    <input 
-                        type="file" 
-                        accept=".json" 
-                        onChange={handleFileChange} 
-                        className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 w-full text-sm text-gray-400"
-                    />
+            
+            <div className="bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20 space-y-8">
+                <div className="space-y-4">
+                    <h3 className="text-xl font-semibold text-gray-200">Cadangkan Database</h3>
+                    <p className="text-gray-400">
+                        Simpan semua data Anda (karyawan, perhitungan PPh 21, lembur, profil) ke dalam satu file JSON. Simpan file ini di tempat yang aman.
+                    </p>
                     <button 
-                        onClick={handleRestore} 
-                        disabled={!restoreFile || isRestoring}
-                        className="w-full sm:w-auto bg-accent-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent-700 transition-colors flex items-center justify-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        onClick={handleBackup} 
+                        className="w-full sm:w-auto bg-primary-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
                     >
-                        {isRestoring ? <SpinnerIcon/> : <RestoreIcon />}
-                        <span>{isRestoring ? 'Memulihkan...' : 'Pulihkan'}</span>
+                        <BackupIcon />
+                        <span>Cadangkan Sekarang</span>
                     </button>
+                </div>
+
+                <hr className="border-gray-700" />
+
+                <div className="space-y-4">
+                    <h3 className="text-xl font-semibold text-gray-200">Pulihkan Database</h3>
+                    <p className="text-gray-400">
+                        Pulihkan data dari file cadangan. <strong className="text-red-400">Perhatian:</strong> Tindakan ini akan menimpa semua data yang ada saat ini.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                        <input 
+                            type="file" 
+                            accept=".json" 
+                            onChange={handleFileChange} 
+                            className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-gray-300 hover:file:bg-gray-600 w-full text-sm text-gray-400"
+                        />
+                        <button 
+                            onClick={handleRestore} 
+                            disabled={!restoreFile || isRestoring}
+                            className="w-full sm:w-auto bg-accent-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent-700 transition-colors flex items-center justify-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            {isRestoring ? <SpinnerIcon/> : <RestoreIcon />}
+                            <span>{isRestoring ? 'Memulihkan...' : 'Pulihkan'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
