@@ -50,6 +50,11 @@ export interface OvertimeRecord {
   totalPay: number;
 }
 
+export interface CustomAllowance {
+  id: string;
+  name: string;
+  value: number;
+}
 
 // Represents a single monthly PPh 21 calculation record
 export interface EmployeeData {
@@ -78,6 +83,8 @@ export interface EmployeeData {
   overtimePay: number; // Replaces overtimeHours and overtimeRate
   bonus: number;
   facilityValue: number; // Mapped to Natura/Kenikmatan
+  customFixedAllowances: CustomAllowance[];
+  customVariableAllowances: CustomAllowance[];
   
   // Deduction Components
   loan: number;

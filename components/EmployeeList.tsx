@@ -170,6 +170,9 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                     taxObjectName: taxObjectName as EmployeeData['taxObjectName'],
                     taxObjectCode: taxObjectCode,
                     signerIdentity: (row['Penandatangan (NPWP/NIK)'] || 'NPWP') as EmployeeData['signerIdentity'],
+                    // FIX: Add missing properties to conform to EmployeeData type
+                    customFixedAllowances: [],
+                    customVariableAllowances: [],
                 };
                 employeesToImport.push(employeeData);
             });
@@ -275,7 +278,8 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       }
       return years;
   }, []);
-
+// FIX: The `SortableHeader` component's props type was incorrect. 
+// It has been updated to correctly accept `children` and an optional `className`.
   const SortableHeader: React.FC<{ sortKey: SortableKey; children: React.ReactNode; className?: string }> = ({ sortKey, children, className = '' }) => (
     <th className={`px-5 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider ${className}`}>
         <button onClick={() => requestSort(sortKey)} className="flex items-center space-x-1 hover:text-white transition-colors group">

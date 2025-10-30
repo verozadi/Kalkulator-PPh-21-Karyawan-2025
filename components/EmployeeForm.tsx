@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Employee, EmployeeData, MaritalStatus, Profile, MasterEmployee, OvertimeRecord } from '../types';
+import { Employee, EmployeeData, MaritalStatus, Profile, MasterEmployee, OvertimeRecord, CustomAllowance } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { TER_RATES, TER_CATEGORY_MAP } from '../constants';
 
@@ -27,6 +27,8 @@ const initialFormData: Omit<EmployeeData, 'id'> = {
   tunjanganTelekomunikasi: 0,
   tunjanganMakan: 0,
   tunjanganTransportasi: 0,
+  customFixedAllowances: [],
+  customVariableAllowances: [],
   taxFacility: 'Tanpa Fasilitas',
   taxObjectName: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap',
   taxObjectCode: '21-100-01',
@@ -59,17 +61,17 @@ const InputField: React.FC<{ label: string; name: string; value: string | number
                 <div className="relative group ml-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <div className="absolute bottom-full mb-2 w-72 p-2 bg-gray-900 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                        {tooltip} <a href="https://ortax.org/ortax/?mod=peraturan&page=show&id=17900" target="_blank" rel="noopener noreferrer" className="text-primary-400 underline">PMK 168/2023</a>.
+                        {tooltip}
                     </div>
                 </div>
             )}
         </label>
         {children ? (
-            <select id={name} name={name} value={value} onChange={onChange} disabled={disabled || readOnly} className={`w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm ${disabled || readOnly ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-800'}`}>
+            <select id={name} name={name} value={value} onChange={onChange} disabled={disabled || readOnly} className={`w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm ${disabled || readOnly ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-700 text-gray-200'}`}>
                 {children}
             </select>
         ) : (
-            <input type={type} id={name} name={name} value={value} onChange={onChange} readOnly={readOnly} disabled={disabled} className={`w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm ${readOnly ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-800'}`} />
+            <input type={type} id={name} name={name} value={value} onChange={onChange} readOnly={readOnly} disabled={disabled} className={`w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm ${readOnly ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-700 text-gray-200'}`} />
         )}
     </div>
 );
@@ -79,7 +81,7 @@ const CurrencyInputWithButton: React.FC<{ label: string; name: string; value: nu
     <div>
          <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
         <div className="flex">
-            <input type="text" name={name} value={formatNumberForDisplay(value)} onChange={onChange} className="w-full px-3 py-2 border border-gray-600 rounded-l-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-white text-gray-800 text-sm" />
+            <input type="text" name={name} value={formatNumberForDisplay(value)} onChange={onChange} className="w-full px-3 py-2 border border-gray-600 rounded-l-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 text-sm" />
             <button type="button" onClick={onButtonClick} className="px-2 py-1 border border-l-0 border-primary-500 bg-primary-800 text-primary-300 text-xs font-semibold rounded-r-md hover:bg-primary-700">
                 {buttonText}
             </button>
@@ -87,6 +89,17 @@ const CurrencyInputWithButton: React.FC<{ label: string; name: string; value: nu
     </div>
 );
 
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+
+const getTerRate = (status: MaritalStatus, monthlyGross: number): number => {
+    const category = TER_CATEGORY_MAP[status] || 'A';
+    const ratesForCategory = TER_RATES[category];
+    for (const bracket of ratesForCategory) {
+        if (monthlyGross <= bracket.limit) return bracket.rate;
+    }
+    return ratesForCategory[ratesForCategory.length - 1]?.rate || 0;
+};
 
 const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, onCancel, profile, masterEmployees, overtimeRecords, employees, showNotification }) => {
   const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>(initialFormData);
@@ -103,7 +116,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
         const masterData = masterEmployees.find(emp => emp.id === existingEmployee.masterEmployeeId);
         setSelectedMasterEmployeeId(existingEmployee.masterEmployeeId);
         setNameSearchTerm(masterData?.fullName || '');
-        setFormData({ ...initialFormData, ...existingEmployee });
+        setFormData({ 
+            ...initialFormData, 
+            ...existingEmployee,
+            customFixedAllowances: existingEmployee.customFixedAllowances || [],
+            customVariableAllowances: existingEmployee.customVariableAllowances || [],
+        });
     } else {
         setFormData(initialFormData);
         setSelectedMasterEmployeeId('');
@@ -194,7 +212,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
   };
 
   // Effect to update overtime pay if the period changes for an already selected employee.
-  // This does NOT reset other transactional data.
   React.useEffect(() => {
     if (selectedMasterEmployeeId) {
         const employeeOvertimeRecords = overtimeRecords.filter(o => 
@@ -209,12 +226,68 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     }
   }, [formData.periodYear, formData.periodMonth, selectedMasterEmployeeId, overtimeRecords, formData.overtimePay]);
 
+  // Effect for automatic Gross Up calculation and setting tunjanganPph to 0 if not gross up
+  React.useEffect(() => {
+    if (!formData.isGrossUp) {
+      if (formData.tunjanganPph !== 0) {
+        setFormData((prev) => ({ ...prev, tunjanganPph: 0 }));
+      }
+      return;
+    }
+
+    // Iterative calculation to find the correct PPh 21 allowance for gross-up
+    const calculateGrossUpValue = () => {
+      let tunjanganPph = 0;
+      let previousTunjanganPph = -1;
+      let iterations = 0;
+      const MAX_ITERATIONS = 15; // Safeguard against infinite loops
+      
+      const customFixedTotal = (formData.customFixedAllowances || []).reduce((sum, item) => sum + item.value, 0);
+      const customVariableTotal = (formData.customVariableAllowances || []).reduce((sum, item) => sum + item.value, 0);
+
+      const baseIncome =
+        formData.baseSalary +
+        formData.tunjanganJabatan +
+        formData.tunjanganTelekomunikasi +
+        formData.tunjanganMakan +
+        formData.tunjanganTransportasi +
+        formData.overtimePay +
+        formData.bonus +
+        formData.facilityValue +
+        customFixedTotal +
+        customVariableTotal;
+
+      // Loop until the calculated tax equals the allowance (stabilizes)
+      while (tunjanganPph !== previousTunjanganPph && iterations < MAX_ITERATIONS) {
+        previousTunjanganPph = tunjanganPph;
+        const grossIncome = baseIncome + tunjanganPph;
+        const terRate = getTerRate(formData.status, grossIncome);
+        const pph21 = grossIncome * terRate;
+        tunjanganPph = Math.round(pph21);
+        iterations++;
+      }
+      return tunjanganPph;
+    };
+
+    const newTunjanganPph = calculateGrossUpValue();
+
+    // Only update state if the calculated value is different to prevent re-renders
+    if (newTunjanganPph !== formData.tunjanganPph) {
+      setFormData((prev) => ({
+        ...prev,
+        tunjanganPph: newTunjanganPph,
+      }));
+    }
+  }, [formData]); // Listen to the entire formData object to recalculate on any income change.
 
   const totalPenghasilan = React.useMemo(() => {
+    const customFixedTotal = (formData.customFixedAllowances || []).reduce((sum, item) => sum + item.value, 0);
+    const customVariableTotal = (formData.customVariableAllowances || []).reduce((sum, item) => sum + item.value, 0);
+
     return (
         formData.baseSalary + formData.tunjanganPph + formData.tunjanganJabatan + formData.tunjanganTelekomunikasi +
         formData.tunjanganMakan + formData.tunjanganTransportasi + formData.overtimePay +
-        formData.bonus + formData.facilityValue
+        formData.bonus + formData.facilityValue + customFixedTotal + customVariableTotal
     );
   }, [formData]);
 
@@ -228,23 +301,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     return totalPenghasilan - totalPengurangan;
   }, [totalPenghasilan, totalPengurangan]);
 
-
-  const getTerRate = (status: MaritalStatus, monthlyGross: number): number => {
-    const category = TER_CATEGORY_MAP[status] || 'A';
-    const ratesForCategory = TER_RATES[category];
-    for (const bracket of ratesForCategory) {
-        if (monthlyGross <= bracket.limit) return bracket.rate;
-    }
-    return ratesForCategory[ratesForCategory.length - 1]?.rate || 0;
-  };
-  
   const terRate = React.useMemo(() => getTerRate(formData.status, totalPenghasilan), [formData.status, totalPenghasilan]);
   
   const pph21 = React.useMemo(() => totalPenghasilan * terRate, [totalPenghasilan, terRate]);
   
   const takeHomePay = React.useMemo(() => {
     const cashDeductions = formData.pensionDeduction + formData.bpjsDeduction + formData.loan + formData.otherDeductions;
-    return totalPenghasilan - cashDeductions - pph21;
+    return Math.round(totalPenghasilan - cashDeductions - pph21);
   }, [totalPenghasilan, formData.pensionDeduction, formData.bpjsDeduction, formData.loan, formData.otherDeductions, pph21]);
 
   const handleSyncMasterData = () => {
@@ -318,9 +381,45 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
             taxObjectName: previousRecord.taxObjectName,
             taxObjectCode: previousRecord.taxObjectCode,
             signerIdentity: previousRecord.signerIdentity,
+            customFixedAllowances: previousRecord.customFixedAllowances || [],
+            customVariableAllowances: previousRecord.customVariableAllowances || [],
         }));
         
         showNotification(`Data dari bulan ${months[prevMonth - 1]} ${prevYear} berhasil dimuat.`);
+    };
+    
+    // Handlers for custom allowances
+    const handleAddCustomAllowance = (type: 'fixed' | 'variable') => {
+        const newAllowance = { id: uuidv4(), name: '', value: 0 };
+        const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
+        setFormData(prev => ({
+            ...prev,
+            [key]: [...(prev[key] || []), newAllowance]
+        }));
+    };
+
+    const handleCustomAllowanceChange = (type: 'fixed' | 'variable', index: number, field: 'name' | 'value', value: string) => {
+        const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
+        setFormData(prev => {
+            const updatedList = [...(prev[key] || [])];
+            const updatedItem = { ...updatedList[index] };
+
+            if (field === 'name') {
+                updatedItem.name = value;
+            } else {
+                updatedItem.value = parseFormattedNumber(value);
+            }
+            updatedList[index] = updatedItem;
+            return { ...prev, [key]: updatedList };
+        });
+    };
+
+    const handleDeleteCustomAllowance = (type: 'fixed' | 'variable', idToDelete: string) => {
+        const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
+        setFormData(prev => ({
+            ...prev,
+            [key]: (prev[key] || []).filter(item => item.id !== idToDelete)
+        }));
     };
 
 
@@ -373,7 +472,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
                     value={nameSearchTerm}
                     onChange={handleNameSearchChange}
                     onBlur={() => setTimeout(() => setSuggestions([]), 200)} // Delay to allow click
-                    className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm bg-white text-gray-800"
+                    className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm bg-gray-700 text-gray-200"
                     placeholder="Ketik min. 2 huruf nama..."
                     autoComplete="off"
                     disabled={!!existingEmployee}
@@ -413,26 +512,113 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
             <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <h3 className="text-lg font-bold text-gray-200 mb-4 text-center">Perhitungan Gaji</h3>
                 <div className="space-y-6">
-                    <div>
-                        <h4 className="text-md font-semibold text-primary-400 mb-2">Komponen Penghasilan</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-900 rounded-md">
-                            <InputField label="Gaji Pokok" name="baseSalary" type="text" value={formatNumberForDisplay(formData.baseSalary)} onChange={()=>{}} readOnly={true}/>
-                            <InputField label="Tunjangan PPh" name="tunjanganPph" type="text" value={formatNumberForDisplay(formData.tunjanganPph)} onChange={handleChange} />
-                            <InputField label="Tunj. Jabatan" name="tunjanganJabatan" type="text" value={formatNumberForDisplay(formData.tunjanganJabatan)} onChange={handleChange} />
-                            <InputField label="Tunj. Telekomunikasi" name="tunjanganTelekomunikasi" type="text" value={formatNumberForDisplay(formData.tunjanganTelekomunikasi)} onChange={handleChange} />
-                            <InputField label="Tunj. Makan" name="tunjanganMakan" type="text" value={formatNumberForDisplay(formData.tunjanganMakan)} onChange={handleChange} />
-                            <InputField label="Tunj. Transportasi" name="tunjanganTransportasi" type="text" value={formatNumberForDisplay(formData.tunjanganTransportasi)} onChange={handleChange} />
-                            <InputField label="Lembur" name="overtimePay" type="text" value={formatNumberForDisplay(formData.overtimePay)} onChange={()=>{}} readOnly={true}/>
-                            <InputField label="Natura/Kenikmatan" name="facilityValue" type="text" value={formatNumberForDisplay(formData.facilityValue)} onChange={handleChange} />
-                            <InputField label="THR/Bonus" name="bonus" type="text" value={formatNumberForDisplay(formData.bonus)} onChange={handleChange} />
+                    <div className="space-y-4">
+                        {/* Penghasilan Pokok */}
+                        <div>
+                            <h4 className="text-md font-semibold text-primary-400 mb-2">Penghasilan Pokok</h4>
+                            <div className="p-4 bg-gray-900 rounded-md">
+                                <InputField label="Gaji Pokok" name="baseSalary" type="text" value={formatNumberForDisplay(formData.baseSalary)} onChange={() => { }} readOnly={true} />
+                            </div>
+                        </div>
+
+                        {/* Tunjangan Tetap */}
+                        <div>
+                            <h4 className="text-md font-semibold text-primary-400 mb-2">Tunjangan Tetap</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-900 rounded-md">
+                                <InputField label="Tunjangan Jabatan" name="tunjanganJabatan" type="text" value={formatNumberForDisplay(formData.tunjanganJabatan)} onChange={handleChange} />
+                                <InputField
+                                    label="Tunjangan PPh 21"
+                                    name="tunjanganPph"
+                                    type="text"
+                                    value={formatNumberForDisplay(formData.tunjanganPph)}
+                                    onChange={() => {}}
+                                    readOnly={true}
+                                    tooltip="Otomatis terisi 0 jika 'Gross Up' adalah 'Tidak', atau dihitung otomatis jika 'Ya'."
+                                />
+                                <InputField label="Tunjangan Telekomunikasi" name="tunjanganTelekomunikasi" type="text" value={formatNumberForDisplay(formData.tunjanganTelekomunikasi)} onChange={handleChange} />
+                            </div>
+                            <div className="p-4 bg-gray-900 rounded-md mt-2 space-y-3">
+                                {(formData.customFixedAllowances || []).map((allowance, index) => (
+                                    <div key={allowance.id} className="grid grid-cols-10 gap-2 items-end">
+                                        <div className="col-span-5">
+                                            {index === 0 && <label className="block text-xs font-medium text-gray-400 mb-1">Nama Tunjangan Lain</label>}
+                                            <input type="text" placeholder="Nama Tunjangan" value={allowance.name} onChange={(e) => handleCustomAllowanceChange('fixed', index, 'name', e.target.value)} className="w-full text-sm px-2 py-1.5 border border-gray-600 rounded-md bg-gray-700 text-gray-200" />
+                                        </div>
+                                        <div className="col-span-4">
+                                             {index === 0 && <label className="block text-xs font-medium text-gray-400 mb-1">Jumlah</label>}
+                                            <input type="text" placeholder="Jumlah" value={formatNumberForDisplay(allowance.value)} onChange={(e) => handleCustomAllowanceChange('fixed', index, 'value', e.target.value)} className="w-full text-sm px-2 py-1.5 border border-gray-600 rounded-md bg-gray-700 text-gray-200" />
+                                        </div>
+                                        <div className="col-span-1">
+                                            <button type="button" onClick={() => handleDeleteCustomAllowance('fixed', allowance.id)} className="p-1.5 text-red-500 hover:text-red-400 bg-gray-700 hover:bg-gray-600 rounded-md"><TrashIcon /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <button type="button" onClick={() => handleAddCustomAllowance('fixed')} className="w-full text-sm font-semibold text-primary-300 hover:text-primary-200 bg-primary-900/50 hover:bg-primary-800/50 py-1.5 px-3 rounded-md flex items-center justify-center space-x-2 transition-colors">
+                                    <PlusIcon /><span>Tambah Tunjangan Tetap</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Tunjangan Tidak Tetap */}
+                        <div>
+                            <h4 className="text-md font-semibold text-primary-400 mb-2">Tunjangan Tidak Tetap / Insidentil</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-900 rounded-md">
+                                <InputField label="Tunjangan Makan" name="tunjanganMakan" type="text" value={formatNumberForDisplay(formData.tunjanganMakan)} onChange={handleChange} />
+                                <InputField label="Tunjangan Transportasi" name="tunjanganTransportasi" type="text" value={formatNumberForDisplay(formData.tunjanganTransportasi)} onChange={handleChange} />
+                                <InputField label="Lembur" name="overtimePay" type="text" value={formatNumberForDisplay(formData.overtimePay)} onChange={() => { }} readOnly={true} />
+                                <InputField label="Natura/Kenikmatan" name="facilityValue" type="text" value={formatNumberForDisplay(formData.facilityValue)} onChange={handleChange} />
+                                <InputField label="THR/Bonus" name="bonus" type="text" value={formatNumberForDisplay(formData.bonus)} onChange={handleChange} />
+                            </div>
+                            <div className="p-4 bg-gray-900 rounded-md mt-2 space-y-3">
+                                {(formData.customVariableAllowances || []).map((allowance, index) => (
+                                    <div key={allowance.id} className="grid grid-cols-10 gap-2 items-end">
+                                        <div className="col-span-5">
+                                            {index === 0 && <label className="block text-xs font-medium text-gray-400 mb-1">Nama Tunjangan Lain</label>}
+                                            <input type="text" placeholder="Nama Tunjangan" value={allowance.name} onChange={(e) => handleCustomAllowanceChange('variable', index, 'name', e.target.value)} className="w-full text-sm px-2 py-1.5 border border-gray-600 rounded-md bg-gray-700 text-gray-200" />
+                                        </div>
+                                        <div className="col-span-4">
+                                            {index === 0 && <label className="block text-xs font-medium text-gray-400 mb-1">Jumlah</label>}
+                                            <input type="text" placeholder="Jumlah" value={formatNumberForDisplay(allowance.value)} onChange={(e) => handleCustomAllowanceChange('variable', index, 'value', e.target.value)} className="w-full text-sm px-2 py-1.5 border border-gray-600 rounded-md bg-gray-700 text-gray-200" />
+                                        </div>
+                                        <div className="col-span-1">
+                                            <button type="button" onClick={() => handleDeleteCustomAllowance('variable', allowance.id)} className="p-1.5 text-red-500 hover:text-red-400 bg-gray-700 hover:bg-gray-600 rounded-md"><TrashIcon /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <button type="button" onClick={() => handleAddCustomAllowance('variable')} className="w-full text-sm font-semibold text-primary-300 hover:text-primary-200 bg-primary-900/50 hover:bg-primary-800/50 py-1.5 px-3 rounded-md flex items-center justify-center space-x-2 transition-colors">
+                                    <PlusIcon /><span>Tambah Tunjangan Tdk Tetap</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                      <div>
                         <h4 className="text-md font-semibold text-primary-400 mb-2">Komponen Pengurangan Penghasilan</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-900 rounded-md">
                            <InputField label="Biaya Jabatan (5%)" name="biayaJabatan" type="text" value={formatNumberForDisplay(biayaJabatan)} onChange={()=>{}} readOnly={true}/>
-                           <CurrencyInputWithButton label="JHT - Karyawan (2%)" name="pensionDeduction" value={formData.pensionDeduction} onChange={handleChange} onButtonClick={() => setFormData(prev => ({...prev, pensionDeduction: (prev.baseSalary + prev.tunjanganJabatan + prev.tunjanganPph) * 0.02}))} buttonText="Auto"/>
-                           <CurrencyInputWithButton label="BPJS Kesehatan (1%)" name="bpjsDeduction" value={formData.bpjsDeduction} onChange={handleChange} onButtonClick={() => setFormData(prev => ({...prev, bpjsDeduction: Math.min(prev.baseSalary + prev.tunjanganJabatan + prev.tunjanganPph, 12000000) * 0.01}))} buttonText="Auto"/>
+                           <CurrencyInputWithButton 
+                                label="JHT - Karyawan (2%)" 
+                                name="pensionDeduction" 
+                                value={formData.pensionDeduction} 
+                                onChange={handleChange} 
+                                onButtonClick={() => setFormData(prev => {
+                                    const customFixedTotal = (prev.customFixedAllowances || []).reduce((sum, item) => sum + item.value, 0);
+                                    const deductionBase = prev.baseSalary + prev.tunjanganJabatan + prev.tunjanganPph + prev.tunjanganTelekomunikasi + customFixedTotal;
+                                    return {...prev, pensionDeduction: Math.round(deductionBase * 0.02)};
+                                })} 
+                                buttonText="Auto"
+                            />
+                           <CurrencyInputWithButton 
+                                label="BPJS Kesehatan (1%)" 
+                                name="bpjsDeduction" 
+                                value={formData.bpjsDeduction} 
+                                onChange={handleChange} 
+                                onButtonClick={() => setFormData(prev => {
+                                    const customFixedTotal = (prev.customFixedAllowances || []).reduce((sum, item) => sum + item.value, 0);
+                                    const deductionBase = prev.baseSalary + prev.tunjanganJabatan + prev.tunjanganPph + prev.tunjanganTelekomunikasi + customFixedTotal;
+                                    return {...prev, bpjsDeduction: Math.round(Math.min(deductionBase, 12000000) * 0.01)};
+                                })} 
+                                buttonText="Auto"
+                            />
                            <InputField label="Pot. Pinjaman/Kasbon" name="loan" type="text" value={formatNumberForDisplay(formData.loan)} onChange={handleChange} />
                            <InputField label="Potongan Lain" name="otherDeductions" type="text" value={formatNumberForDisplay(formData.otherDeductions)} onChange={handleChange} />
                         </div>
@@ -458,7 +644,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
                     </InputField>
                     <InputField label="Kode Objek Pajak" name="taxObjectCode" value={formData.taxObjectCode} onChange={()=>{}} readOnly={true} />
                     <InputField label="Penghasilan Bruto" name="grossIncomeDisplay" type="text" value={formatNumberForDisplay(totalPenghasilan)} onChange={()=>{}} readOnly={true} />
-                    <InputField label="Tarif TER" name="terRate" value={`${(terRate * 100).toFixed(4)}%`} onChange={()=>{}} readOnly={true} className="font-bold text-xl" tooltip="Tarif Efektif Rata-rata berdasarkan"/>
+                    <InputField label="Tarif TER" name="terRate" value={`${(terRate * 100).toFixed(2)}%`} onChange={()=>{}} readOnly={true} className="font-bold text-xl" tooltip="Tarif Efektif Rata-rata berdasarkan PMK 168/2023."/>
                     <InputField label="PPh Pasal 21" name="pph21" type="text" value={formatNumberForDisplay(pph21)} onChange={()=>{}} readOnly={true} />
                     <div className="p-4 bg-accent-800 rounded-lg text-white mt-4">
                         <p className="text-sm font-semibold text-accent-200">Take Home Pay</p>

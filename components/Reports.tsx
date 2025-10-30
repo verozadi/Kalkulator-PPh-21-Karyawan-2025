@@ -233,7 +233,7 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
     }
   };
 
-  // Fix: Explicitly type the Set to prevent its elements from being inferred as 'unknown', which causes type errors in sort.
+  // FIX: Explicitly typed the Set to prevent its elements from being inferred as 'unknown', which causes type errors in sort.
   const uniqueYears = React.useMemo(() => Array.from(new Set<number>(employees.map(e => e.periodYear))).sort((a,b) => b - a), [employees]);
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 

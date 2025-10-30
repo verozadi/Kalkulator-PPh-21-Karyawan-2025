@@ -75,6 +75,9 @@ const rawEmployeeData: Omit<EmployeeData, 'id'>[] = [
         taxObjectName: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap',
         taxObjectCode: '21-100-01',
         signerIdentity: 'NPWP',
+        // FIX: Add missing properties to conform to EmployeeData type
+        customFixedAllowances: [],
+        customVariableAllowances: [],
     }
 ];
 

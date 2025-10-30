@@ -21,6 +21,10 @@ const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 
 const SortAscIcon = () => <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg>;
 const SortDescIcon = () => <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" /></svg>;
 const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>;
+const ViewIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
+const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+
 
 const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees, onAddNew, onEdit, onDelete, onImport, showNotification }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -208,8 +212,9 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
         reader.readAsBinaryString(file);
     };
 
-    const SortableHeader: React.FC<{ sortKey: SortableKey; children: React.ReactNode }> = ({ sortKey, children }) => (
-        <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">
+    // FIX: Added 'children' to props type to allow content within the component tags.
+    const SortableHeader: React.FC<{ sortKey: SortableKey; children: React.ReactNode; className?: string; }> = ({ sortKey, children, className = '' }) => (
+        <th className={`px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider ${className}`}>
             <button onClick={() => requestSort(sortKey)} className="flex items-center space-x-1 hover:text-white">
                 <span>{children}</span>
                 {sortConfig.key === sortKey && (sortConfig.direction === 'ascending' ? <SortAscIcon /> : <SortDescIcon />)}
@@ -329,8 +334,11 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                    <button onClick={() => onEdit(employee)} className="text-primary-400 hover:text-primary-300 mr-4">Edit</button>
-                                    <button onClick={() => window.confirm(`Anda yakin ingin menghapus ${employee.fullName}? Ini tidak akan menghapus data PPh 21 yang sudah ada.`) && onDelete(employee.id)} className="text-red-400 hover:text-red-300">Hapus</button>
+                                    <div className="flex items-center justify-center space-x-2">
+                                        <button onClick={() => onEdit(employee)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md" title="Lihat Detail"><ViewIcon /></button>
+                                        <button onClick={() => onEdit(employee)} className="p-2 text-gray-400 hover:text-primary-400 hover:bg-gray-700 rounded-md" title="Edit"><EditIcon /></button>
+                                        <button onClick={() => window.confirm(`Anda yakin ingin menghapus ${employee.fullName}? Ini tidak akan menghapus data PPh 21 yang sudah ada.`) && onDelete(employee.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md" title="Hapus"><TrashIcon /></button>
+                                    </div>
                                 </td>
                             </tr>
                         )) : (
