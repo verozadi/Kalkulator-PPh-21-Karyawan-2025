@@ -29,7 +29,7 @@ import { calculatePPh21 } from './services/taxCalculator';
 import * as authService from './services/authService';
 import { getEmployees, saveEmployee as saveEmployeeService, deleteEmployee as deleteEmployeeService } from './services/employeeService';
 import { getProfile, saveProfile as saveProfileService } from './services/profileService';
-import { getMasterEmployees, saveMasterEmployee as saveMasterEmployeeService, deleteMasterEmployee as deleteMasterEmployeeService } from './services/masterEmployeeService';
+import { getMasterEmployees, saveMasterEmployee as saveMasterEmployeeService, deleteMasterEmployee as deleteMasterEmployeeService, importMasterEmployees as importMasterEmployeesService } from './services/masterEmployeeService';
 import { getOvertimeRecords, saveOvertimeRecords as saveOvertimeRecordsService } from './services/overtimeService';
 
 const App: React.FC = () => {
@@ -189,6 +189,18 @@ const App: React.FC = () => {
         }
     };
 
+    const handleImportMasterEmployees = (employeesToImport: Omit<MasterEmployee, 'id'>[]) => {
+        if (!currentUser) return;
+        try {
+            importMasterEmployeesService(currentUser.id, employeesToImport);
+            setMasterEmployees(getMasterEmployees(currentUser.id)); // Refresh state
+            showNotification(`${employeesToImport.length} karyawan berhasil diimpor.`);
+        } catch (error) {
+            showNotification('Gagal mengimpor data karyawan.', 'error');
+            console.error(error);
+        }
+    };
+
     // Overtime Handlers
     const handleSaveOvertime = (records: OvertimeRecord[]) => {
         if (!currentUser) return;
@@ -243,6 +255,8 @@ const App: React.FC = () => {
                             onEdit={handleOpenMasterEmployeeModal}
                             onAddNew={() => handleOpenMasterEmployeeModal(null)}
                             onDelete={handleDeleteMasterEmployee} 
+                            onImport={handleImportMasterEmployees}
+                            showNotification={showNotification}
                         />;
             case 'employeeList':
                 return <EmployeeList employees={employees} masterEmployees={masterEmployees} onEdit={handleEditEmployee} onDelete={handleDeleteEmployee} navigateTo={navigateTo} onOpenDetailModal={handleOpenDetailModal} />;

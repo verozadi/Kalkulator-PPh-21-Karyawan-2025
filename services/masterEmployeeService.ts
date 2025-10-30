@@ -1,3 +1,4 @@
+
 import { MasterEmployee } from '../types';
 import { initialMasterEmployees } from './mockData';
 import { v4 as uuidv4 } from 'uuid';
@@ -53,4 +54,11 @@ export const deleteMasterEmployee = (userId: string, id: string): void => {
     let masterEmployees = getStoredMasterEmployees(userId);
     masterEmployees = masterEmployees.filter(e => e.id !== id);
     localStorage.setItem(getStorageKey(userId), JSON.stringify(masterEmployees));
+};
+
+export const importMasterEmployees = (userId: string, newEmployees: Omit<MasterEmployee, 'id'>[]): void => {
+    let masterEmployees = getStoredMasterEmployees(userId);
+    const employeesToAdd = newEmployees.map(e => ({ ...e, id: uuidv4() }));
+    const updatedEmployees = [...masterEmployees, ...employeesToAdd];
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(updatedEmployees));
 };

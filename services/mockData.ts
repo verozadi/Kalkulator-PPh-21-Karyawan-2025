@@ -20,6 +20,7 @@ export const initialMasterEmployees: MasterEmployee[] = [
         ptkpStatus: MaritalStatus.K3,
         baseSalary: 15000000,
         passportNumber: '',
+        isActive: true,
     },
     {
         id: 'master-002',
@@ -38,6 +39,7 @@ export const initialMasterEmployees: MasterEmployee[] = [
         ptkpStatus: MaritalStatus.TK2,
         baseSalary: 10000000,
         passportNumber: '',
+        isActive: true,
     },
 ];
 

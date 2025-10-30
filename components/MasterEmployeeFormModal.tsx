@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { MasterEmployee, MaritalStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,6 +27,7 @@ const initialFormData: Omit<MasterEmployee, 'id'> = {
     ptkpStatus: MaritalStatus.TK0,
     baseSalary: 0,
     passportNumber: '',
+    isActive: true,
 };
 
 const formatNumberForDisplay = (num: number): string => {
@@ -78,7 +78,7 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
         const { name, value, type } = e.target;
         
         let processedValue: any = value;
-        if(name === 'isForeigner' || name === 'isPph21Applicable') {
+        if(name === 'isForeigner' || name === 'isPph21Applicable' || name === 'isActive') {
             processedValue = value === 'true';
         } else if (name === 'baseSalary') {
             processedValue = parseFormattedNumber(value);
@@ -192,6 +192,10 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                              <InputField label="Dikenakan PPh 21" name="isPph21Applicable" value={String(formData.isPph21Applicable)} onChange={handleChange} required>
                                 <option value="true">Ya</option>
                                 <option value="false">Tidak</option>
+                            </InputField>
+                            <InputField label="Status Karyawan" name="isActive" value={String(formData.isActive)} onChange={handleChange} required>
+                                <option value="true">Aktif</option>
+                                <option value="false">Tidak Aktif</option>
                             </InputField>
                         </div>
                          <div>

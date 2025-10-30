@@ -1,5 +1,3 @@
-
-
 import * as React from 'react';
 import { MasterEmployee, OvertimeRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -70,6 +68,9 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth() + 1);
   const [workSystem, setWorkSystem] = React.useState<'5-day' | '6-day'>('5-day');
   const [currentPeriodRecords, setCurrentPeriodRecords] = React.useState<OvertimeRecord[]>([]);
+  
+  const activeMasterEmployees = React.useMemo(() => masterEmployees.filter(emp => emp.isActive), [masterEmployees]);
+
 
   React.useEffect(() => {
     const relevantRecords = existingRecords.filter(r => r.year === selectedYear && r.month === selectedMonth);
@@ -182,7 +183,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
             </tr>
           </thead>
           <tbody className="bg-gray-800">
-            {masterEmployees.map((employee) => {
+            {activeMasterEmployees.map((employee) => {
               const employeeRecords = currentPeriodRecords.filter(r => r.masterEmployeeId === employee.id);
               const employeeTotalPay = employeeRecords.reduce((sum, r) => sum + r.totalPay, 0);
               return (
@@ -207,6 +208,9 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
             })}
              {masterEmployees.length === 0 && (
                 <tr><td colSpan={5} className="text-center py-10 text-gray-500">Tidak ada data karyawan. Silakan tambah di "Daftar Nama Karyawan".</td></tr>
+            )}
+            {masterEmployees.length > 0 && activeMasterEmployees.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-10 text-gray-500">Tidak ada karyawan aktif yang dapat diinputkan lemburnya.</td></tr>
             )}
           </tbody>
         </table>

@@ -35,6 +35,7 @@ export interface MasterEmployee {
   passportNumber: string;
   ptkpStatus: MaritalStatus;
   baseSalary: number; // Moved here for overtime calculation base
+  isActive: boolean;
 }
 
 export interface OvertimeRecord {

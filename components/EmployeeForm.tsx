@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { Employee, EmployeeData, MaritalStatus, Profile, MasterEmployee, OvertimeRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -96,6 +95,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
   const [suggestions, setSuggestions] = React.useState<MasterEmployee[]>([]);
   const months = React.useMemo(() => ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"], []);
 
+  const activeMasterEmployees = React.useMemo(() => masterEmployees.filter(emp => emp.isActive), [masterEmployees]);
+
   // Effect to setup the form for editing an existing PPh21 record or creating a new one.
   React.useEffect(() => {
     if (existingEmployee) {
@@ -148,7 +149,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     }
 
     if (value.length >= 2) {
-        const filteredSuggestions = masterEmployees.filter(emp =>
+        const filteredSuggestions = activeMasterEmployees.filter(emp =>
             emp.fullName.toLowerCase().includes(value.toLowerCase())
         );
         setSuggestions(filteredSuggestions);

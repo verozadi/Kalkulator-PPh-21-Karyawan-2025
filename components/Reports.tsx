@@ -1,5 +1,4 @@
 
-
 import * as React from 'react';
 import * as XLSX from 'xlsx';
 import { Employee, MasterEmployee, Profile, MaritalStatus } from '../types';
@@ -24,16 +23,6 @@ function getTerRate(status: MaritalStatus, monthlyGross: number): number {
     return ratesForCategory[ratesForCategory.length - 1]?.rate || 0;
 }
 
-const getTerRateForCategory = (category: 'A' | 'B' | 'C', monthlyGross: number): number => {
-    const ratesForCategory = TER_RATES[category];
-    for (const bracket of ratesForCategory) {
-        if (monthlyGross <= bracket.limit) {
-            return bracket.rate;
-        }
-    }
-    return ratesForCategory[ratesForCategory.length - 1]?.rate || 0;
-};
-
 const DocumentDownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
 
 const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, showNotification }) => {
@@ -49,22 +38,22 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
         }
 
         const companyTin = profile.companyNpwp.replace(/\D/g, '');
-        const idPlaceOfBusiness = (profile.idTku || (companyTin + '0000')).replace(/\D/g, '');
-        
-        // Force these long numbers to be treated as text by prepending a zero-width space.
-        // This prevents spreadsheet programs from converting them to scientific notation.
-        const textFormattedCompanyTin = `\u200B${companyTin}`;
-        const textFormattedIdPlaceOfBusiness = `\u200B${idPlaceOfBusiness}`;
 
+        const escapeXML = (str: string | number | undefined | null): string => {
+            if (str === undefined || str === null) return '';
+            const s = String(str);
+            return s.replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&apos;');
+        };
 
-        const dataRows = filteredEmployees.map(emp => {
+        const mmPayrollList = filteredEmployees.map(emp => {
             const masterEmp = masterEmployees.find(m => m.id === emp.masterEmployeeId);
-            
             const counterpartOpt = emp.isForeigner ? 'Foreign' : 'Resident';
-            const counterpartPassport = masterEmp?.passportNumber || '';
-            const rawCounterpartTin = masterEmp?.ktp?.replace(/\D/g, '') || '';
-            const textFormattedCounterpartTin = `\u200B${rawCounterpartTin}`;
-
+            const counterpartPassport = masterEmp?.passportNumber;
+            const counterpartTin = masterEmp?.ktp?.replace(/\D/g, '') || '';
             
             let taxCertificate = 'N/A';
             if (emp.taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
@@ -72,54 +61,61 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
             } else if (emp.taxFacility === 'Fasilitas Lainnya') {
                 taxCertificate = 'ETC';
             }
-
-            const terRate = getTerRate(emp.status, emp.grossIncome);
-            const ratePercentage = terRate * 100;
-            const rateFormatted = ratePercentage.toLocaleString('de-DE', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 4
-            });
-
-            const withholdingDate = new Date(emp.periodYear, emp.periodMonth, 3);
-            const withholdingDateStr = `${withholdingDate.getFullYear()}-${(withholdingDate.getMonth() + 1).toString().padStart(2, '0')}-${withholdingDate.getDate().toString().padStart(2, '0')}`;
             
-            return `  <Karyawan>
-        <TIN>${textFormattedCompanyTin}</TIN>
-        <TaxPeriodMonth>${emp.periodMonth}</TaxPeriodMonth>
-        <TaxPeriodYear>${emp.periodYear}</TaxPeriodYear>
-        <CounterpartOpt>${counterpartOpt}</CounterpartOpt>
-        <CounterpartPassport>${counterpartPassport}</CounterpartPassport>
-        <CounterpartTin>${textFormattedCounterpartTin}</CounterpartTin>
-        <StatusTaxExemption>${emp.status}</StatusTaxExemption>
-        <Position>${masterEmp?.position || 'N/A'}</Position>
-        <TaxCertificate>${taxCertificate}</TaxCertificate>
-        <TaxObjectCode>${emp.taxObjectCode || '21-100-01'}</TaxObjectCode>
-        <Gross>${Math.round(emp.grossIncome)}</Gross>
-        <Rate>${rateFormatted}</Rate>
-        <IDPlaceOfBusinessActivity>${textFormattedIdPlaceOfBusiness}</IDPlaceOfBusinessActivity>
-        <WithholdingDate>${withholdingDateStr}</WithholdingDate>
-    </Karyawan>`;
-        }).join('\n');
+            const terRate = getTerRate(emp.status, emp.grossIncome);
+            const rateValue = terRate * 100;
 
-        const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
-    <LaporanPPh21>
-    ${dataRows}
-    </LaporanPPh21>`;
+            const lastDay = new Date(emp.periodYear, emp.periodMonth, 0);
+            const withholdingDateStr = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
 
-        const blob = new Blob([xmlString.trim()], { type: 'application/xml;charset=utf-8;' });
+            const idPlaceOfBusiness = (profile.idTku || (companyTin + '000000')).replace(/\D/g, '');
+
+            const passportField = counterpartPassport 
+                ? `<CounterpartPassport>${escapeXML(counterpartPassport)}</CounterpartPassport>` 
+                : `<CounterpartPassport xsi:nil="true"/>`;
+
+            return `
+		<MmPayroll>
+			<TaxPeriodMonth>${emp.periodMonth}</TaxPeriodMonth>
+			<TaxPeriodYear>${emp.periodYear}</TaxPeriodYear>
+			<CounterpartOpt>${escapeXML(counterpartOpt)}</CounterpartOpt>
+			${passportField}
+			<CounterpartTin>${escapeXML(counterpartTin)}</CounterpartTin>
+			<StatusTaxExemption>${escapeXML(emp.status)}</StatusTaxExemption>
+			<Position>${escapeXML(masterEmp?.position || 'N/A')}</Position>
+			<TaxCertificate>${escapeXML(taxCertificate)}</TaxCertificate>
+			<TaxObjectCode>${escapeXML(emp.taxObjectCode || '21-100-01')}</TaxObjectCode>
+			<Gross>${Math.round(emp.grossIncome)}</Gross>
+			<Rate>${rateValue}</Rate>
+			<IDPlaceOfBusinessActivity>${escapeXML(idPlaceOfBusiness)}</IDPlaceOfBusinessActivity>
+			<WithholdingDate>${withholdingDateStr}</WithholdingDate>
+		</MmPayroll>`;
+        }).join('');
+
+        const xmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<MmPayrollBulk xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<TIN>${escapeXML(companyTin)}</TIN>
+	<ListOfMmPayroll>${mmPayrollList}
+	</ListOfMmPayroll>
+</MmPayrollBulk>`;
+        
+        const blob = new Blob([xmlContent.trim()], { type: 'application/xml;charset=utf-8' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        link.setAttribute("download", `laporan_pph21_${selectedYear}_${selectedMonth}.xml`);
+        link.setAttribute("download", `PPh21_Bulk_${selectedYear}_${selectedMonth}.xml`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
         showNotification('Berhasil Unduh');
+
     } catch (error) {
         showNotification('Gagal', 'error');
         console.error(error);
     }
   };
+
 
   const handleExportXLSX = () => {
     try {
@@ -133,28 +129,34 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
         const idTku = profile.idTku || (companyTinRaw + '0000');
         
         const headers = [
-            null, // Column A is empty for the header row
-            'Masa Pajak', 'Tahun Pajak', 'Status Pegawai', 'NPWP/NIK/TIN', 'Nomor Passport',
-            'Status', 'Posisi', 'Sertifikat/Fasilitas', 'Kode Objek Pajak', 'Penghasilan Kotor',
-            'Tarif', 'ID TKU', 'Tgl Pemotongan', null, 'TER A', 'TER B', 'TER C'
+            'TIN',
+            'TaxPeriodMonth',
+            'TaxPeriodYear',
+            'CounterpartOpt',
+            'CounterpartPassport',
+            'CounterpartTin',
+            'StatusTaxExemption',
+            'Position',
+            'TaxCertificate',
+            'TaxObjectCode',
+            'Gross',
+            'Rate',
+            'IDPlaceOfBusinessActivity',
+            'WithholdingDate'
         ];
 
-        const dataForSheet: any[][] = [
-            ['NPWP Pemotong', companyTinRaw],
-            [], // Empty Row 2
-            [], // Empty Row 3
-            headers // Headers start on Row 4
-        ];
+        const dataForSheet: any[][] = [headers];
 
         filteredEmployees.forEach(emp => {
             const masterEmp = masterEmployees.find(m => m.id === emp.masterEmployeeId);
+            
             let counterpartTin = (emp.npwp || '').replace(/\D/g, '');
             if (!counterpartTin && masterEmp?.ktp) {
                 counterpartTin = masterEmp.ktp.replace(/\D/g, '');
             }
-
-            const withholdingDate = new Date(emp.periodYear, emp.periodMonth, 3);
-            const formattedWithholdingDate = `${withholdingDate.getDate().toString().padStart(2, '0')}/${(withholdingDate.getMonth() + 1).toString().padStart(2, '0')}/${withholdingDate.getFullYear()}`;
+            
+            const lastDayOfMonth = new Date(emp.periodYear, emp.periodMonth, 0);
+            const formattedWithholdingDate = `${lastDayOfMonth.getDate().toString().padStart(2, '0')}/${(lastDayOfMonth.getMonth() + 1).toString().padStart(2, '0')}/${lastDayOfMonth.getFullYear()}`;
 
             let taxCertificate = 'N/A';
             if (emp.taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
@@ -164,12 +166,12 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
             }
 
             const employeeRow = [
-                null, // Column A is empty
+                companyTinRaw,
                 emp.periodMonth,
                 emp.periodYear,
                 emp.isForeigner ? 'Foreign' : 'Resident',
-                counterpartTin || '',
                 masterEmp?.passportNumber || '',
+                counterpartTin || '',
                 emp.status,
                 masterEmp?.position || 'N/A',
                 taxCertificate,
@@ -178,56 +180,47 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
                 getTerRate(emp.status, emp.grossIncome) * 100,
                 idTku,
                 formattedWithholdingDate,
-                null, // Empty column O
-                getTerRateForCategory('A', emp.grossIncome) * 100,
-                getTerRateForCategory('B', emp.grossIncome) * 100,
-                getTerRateForCategory('C', emp.grossIncome) * 100,
             ];
             dataForSheet.push(employeeRow);
         });
         
         const ws = XLSX.utils.aoa_to_sheet(dataForSheet);
 
-        // Apply number formatting for specific columns
         const integerFormat = '#,##0';
         const decimalFormat = '#,##0.00';
 
-        for (let R = 4; R < dataForSheet.length; ++R) { // Data starts at row 5 (Excel), which is index 4
-            // Penghasilan Kotor (Column K, index 10)
+        // Data starts at row 2 (Excel), which is index 1
+        for (let R = 1; R < dataForSheet.length; ++R) { 
+            // Gross (Column K, index 10)
             const cellK = XLSX.utils.encode_cell({r: R, c: 10});
-            if(ws[cellK]) ws[cellK].z = integerFormat;
+            if(ws[cellK]) {
+                ws[cellK].t = 'n';
+                ws[cellK].z = integerFormat;
+            }
             
-            // Tarif (Column L, index 11)
+            // Rate (Column L, index 11)
             const cellL = XLSX.utils.encode_cell({r: R, c: 11});
-            if(ws[cellL]) ws[cellL].z = decimalFormat;
-
-            // TER A, B, C (Columns P, Q, R, indices 15, 16, 17)
-            [15, 16, 17].forEach(C => {
-                const cell = XLSX.utils.encode_cell({r: R, c: C});
-                if (ws[cell]) ws[cell].z = decimalFormat;
-            });
+            if(ws[cellL]) {
+                ws[cellL].t = 'n';
+                ws[cellL].z = decimalFormat;
+            }
         }
 
-        // Set Column Widths
         ws['!cols'] = [
-            { wch: 2 },  // A (very narrow as it's empty)
-            { wch: 12 }, // B Masa Pajak
-            { wch: 12 }, // C Tahun Pajak
-            { wch: 15 }, // D Status Pegawai
-            { wch: 20 }, // E NPWP/NIK
-            { wch: 15 }, // F Passport
-            { wch: 10 }, // G Status PTKP
-            { wch: 20 }, // H Posisi
-            { wch: 20 }, // I Sertifikat
-            { wch: 15 }, // J Kode Objek
-            { wch: 20 }, // K Penghasilan
-            { wch: 10 }, // L Tarif
-            { wch: 25 }, // M ID TKU
-            { wch: 15 }, // N Tgl Pemotongan
-            { wch: 2 },  // O (empty column)
-            { wch: 10 }, // P TER A
-            { wch: 10 }, // Q TER B
-            { wch: 10 }  // R TER C
+            { wch: 20 }, // A: TIN
+            { wch: 15 }, // B: TaxPeriodMonth
+            { wch: 15 }, // C: TaxPeriodYear
+            { wch: 15 }, // D: CounterpartOpt
+            { wch: 20 }, // E: CounterpartPassport
+            { wch: 20 }, // F: CounterpartTin
+            { wch: 20 }, // G: StatusTaxExemption
+            { wch: 20 }, // H: Position
+            { wch: 15 }, // I: TaxCertificate
+            { wch: 15 }, // J: TaxObjectCode
+            { wch: 15 }, // K: Gross
+            { wch: 10 }, // L: Rate
+            { wch: 25 }, // M: IDPlaceOfBusinessActivity
+            { wch: 15 }, // N: WithholdingDate
         ];
 
         const wb = XLSX.utils.book_new();
