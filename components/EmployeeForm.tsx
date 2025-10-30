@@ -431,8 +431,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
                         <h4 className="text-md font-semibold text-primary-400 mb-2">Komponen Pengurangan Penghasilan</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-900 rounded-md">
                            <InputField label="Biaya Jabatan (5%)" name="biayaJabatan" type="text" value={formatNumberForDisplay(biayaJabatan)} onChange={()=>{}} readOnly={true}/>
-                           <CurrencyInputWithButton label="JHT - Karyawan (2%)" name="pensionDeduction" value={formData.pensionDeduction} onChange={handleChange} onButtonClick={() => setFormData(prev => ({...prev, pensionDeduction: prev.baseSalary * 0.02}))} buttonText="Auto"/>
-                           <CurrencyInputWithButton label="BPJS Kesehatan (1%)" name="bpjsDeduction" value={formData.bpjsDeduction} onChange={handleChange} onButtonClick={() => setFormData(prev => ({...prev, bpjsDeduction: prev.baseSalary * 0.01}))} buttonText="Auto"/>
+                           <CurrencyInputWithButton label="JHT - Karyawan (2%)" name="pensionDeduction" value={formData.pensionDeduction} onChange={handleChange} onButtonClick={() => setFormData(prev => ({...prev, pensionDeduction: (prev.baseSalary + prev.tunjanganJabatan + prev.tunjanganPph) * 0.02}))} buttonText="Auto"/>
+                           <CurrencyInputWithButton label="BPJS Kesehatan (1%)" name="bpjsDeduction" value={formData.bpjsDeduction} onChange={handleChange} onButtonClick={() => setFormData(prev => ({...prev, bpjsDeduction: Math.min(prev.baseSalary + prev.tunjanganJabatan + prev.tunjanganPph, 12000000) * 0.01}))} buttonText="Auto"/>
                            <InputField label="Pot. Pinjaman/Kasbon" name="loan" type="text" value={formatNumberForDisplay(formData.loan)} onChange={handleChange} />
                            <InputField label="Potongan Lain" name="otherDeductions" type="text" value={formatNumberForDisplay(formData.otherDeductions)} onChange={handleChange} />
                         </div>

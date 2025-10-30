@@ -27,7 +27,7 @@ import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, 
 // Service Imports
 import { calculatePPh21 } from './services/taxCalculator';
 import * as authService from './services/authService';
-import { getEmployees, saveEmployee as saveEmployeeService, deleteEmployee as deleteEmployeeService } from './services/employeeService';
+import { getEmployees, saveEmployee as saveEmployeeService, deleteEmployee as deleteEmployeeService, importEmployees as importEmployeesService } from './services/employeeService';
 import { getProfile, saveProfile as saveProfileService } from './services/profileService';
 import { getMasterEmployees, saveMasterEmployee as saveMasterEmployeeService, deleteMasterEmployee as deleteMasterEmployeeService, importMasterEmployees as importMasterEmployeesService } from './services/masterEmployeeService';
 import { getOvertimeRecords, saveOvertimeRecords as saveOvertimeRecordsService } from './services/overtimeService';
@@ -153,6 +153,18 @@ const App: React.FC = () => {
         }
     };
 
+     const handleImportEmployees = (employeesToImport: Omit<EmployeeData, 'id'>[]) => {
+        if (!currentUser) return;
+        try {
+            importEmployeesService(currentUser.id, employeesToImport);
+            setEmployees(getEmployees(currentUser.id)); // Refresh state
+            showNotification(`${employeesToImport.length} data PPh 21 berhasil diimpor.`);
+        } catch (error) {
+            showNotification('Gagal mengimpor data PPh 21.', 'error');
+            console.error(error);
+        }
+    };
+
     // Master Employee Handlers
     const handleOpenMasterEmployeeModal = (employee: MasterEmployee | null) => {
         setEditingMasterEmployee(employee);
@@ -259,7 +271,17 @@ const App: React.FC = () => {
                             showNotification={showNotification}
                         />;
             case 'employeeList':
-                return <EmployeeList employees={employees} masterEmployees={masterEmployees} onEdit={handleEditEmployee} onDelete={handleDeleteEmployee} navigateTo={navigateTo} onOpenDetailModal={handleOpenDetailModal} />;
+                return <EmployeeList 
+                            employees={employees} 
+                            masterEmployees={masterEmployees} 
+                            overtimeRecords={overtimeRecords}
+                            onEdit={handleEditEmployee} 
+                            onDelete={handleDeleteEmployee} 
+                            navigateTo={navigateTo} 
+                            onOpenDetailModal={handleOpenDetailModal}
+                            onImport={handleImportEmployees}
+                            showNotification={showNotification}
+                        />;
             case 'employeeInput':
                 return <EmployeeForm 
                             onSave={handleSaveEmployee} 

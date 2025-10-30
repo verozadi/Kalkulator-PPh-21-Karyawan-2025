@@ -1,5 +1,8 @@
-import { Employee } from '../types';
+
+import { Employee, EmployeeData, TaxCalculationResult } from '../types';
 import { initialEmployeeData } from './mockData';
+import { calculatePPh21 } from './taxCalculator';
+import { v4 as uuidv4 } from 'uuid';
 
 const getStorageKey = (userId: string) => `pph21_employees_${userId}`;
 
@@ -49,4 +52,20 @@ export const deleteEmployee = (userId: string, id: string): void => {
     let employees = getStoredEmployees(userId);
     employees = employees.filter(e => e.id !== id);
     localStorage.setItem(getStorageKey(userId), JSON.stringify(employees));
+};
+
+export const importEmployees = (userId: string, employeesToImport: Omit<EmployeeData, 'id'>[]): void => {
+    let allEmployees = getStoredEmployees(userId);
+
+    const newlyCalculatedEmployees: Employee[] = employeesToImport.map(data => {
+        const fullData: EmployeeData = { ...data, id: uuidv4() };
+        const taxData: TaxCalculationResult = calculatePPh21(fullData);
+        return {
+            ...fullData,
+            ...taxData
+        };
+    });
+    
+    allEmployees = [...allEmployees, ...newlyCalculatedEmployees];
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(allEmployees));
 };
