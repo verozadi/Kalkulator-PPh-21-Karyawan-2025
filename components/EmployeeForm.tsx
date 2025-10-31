@@ -106,6 +106,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
   const [selectedMasterEmployeeId, setSelectedMasterEmployeeId] = React.useState<string>('');
   const [nameSearchTerm, setNameSearchTerm] = React.useState('');
   const [suggestions, setSuggestions] = React.useState<MasterEmployee[]>([]);
+  const [isDuplicate, setIsDuplicate] = React.useState(false);
   const months = React.useMemo(() => ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"], []);
 
   const activeMasterEmployees = React.useMemo(() => masterEmployees.filter(emp => emp.isActive), [masterEmployees]);
@@ -127,8 +128,30 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
         setSelectedMasterEmployeeId('');
         setNameSearchTerm('');
     }
+    setIsDuplicate(false); // Reset duplicate status on form load
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingEmployee]);
+
+  // Effect to check for duplicate entries when employee or period changes
+  React.useEffect(() => {
+      if (!formData.masterEmployeeId) {
+          setIsDuplicate(false);
+          return;
+      }
+
+      const duplicateExists = employees.some(emp =>
+          emp.masterEmployeeId === formData.masterEmployeeId &&
+          emp.periodYear === formData.periodYear &&
+          emp.periodMonth === formData.periodMonth &&
+          emp.id !== (existingEmployee?.id || '')
+      );
+      
+      setIsDuplicate(duplicateExists);
+
+      if (duplicateExists) {
+          showNotification('Data PPh 21 untuk karyawan ini pada periode tersebut sudah ada.', 'error');
+      }
+  }, [formData.masterEmployeeId, formData.periodMonth, formData.periodYear, employees, existingEmployee, showNotification]);
 
 
   // Effect to handle selecting a new employee from autocomplete
@@ -164,6 +187,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     // Clear selection if user is typing a new name
     if (selectedMasterEmployeeId) {
         setSelectedMasterEmployeeId('');
+        setFormData(prev => ({ ...prev, masterEmployeeId: '' }));
     }
 
     if (value.length >= 2) {
@@ -426,7 +450,11 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.masterEmployeeId) {
-        alert("Silakan pilih karyawan terlebih dahulu.");
+        showNotification("Silakan pilih karyawan terlebih dahulu.", "error");
+        return;
+    }
+    if (isDuplicate) {
+        showNotification("Tidak dapat menyimpan karena data untuk periode ini sudah ada.", "error");
         return;
     }
     onSave({ id: existingEmployee?.id || uuidv4(), ...formData });
@@ -662,7 +690,14 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
 
         <div className="mt-8 flex justify-end space-x-4">
             <button type="button" onClick={onCancel} className="bg-gray-600 text-gray-200 font-bold py-2 px-6 rounded-lg hover:bg-gray-500 transition-colors">Batal</button>
-            <button type="submit" className="bg-accent-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent-600 transition-colors">Simpan & Hitung Pajak</button>
+            <button
+                type="submit"
+                disabled={isDuplicate || !formData.masterEmployeeId}
+                className="bg-accent-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent-600 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                title={isDuplicate ? 'Data untuk karyawan dan periode ini sudah ada.' : !formData.masterEmployeeId ? 'Pilih karyawan terlebih dahulu' : 'Simpan Perhitungan PPh 21'}
+            >
+                Simpan & Hitung Pajak
+            </button>
         </div>
     </form>
   );

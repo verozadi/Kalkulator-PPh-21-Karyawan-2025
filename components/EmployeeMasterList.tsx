@@ -53,6 +53,12 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
         setFilterIsActive('all');
         setSortConfig({ key: 'fullName', direction: 'ascending' });
     };
+
+    const handleDeleteClick = (employee: MasterEmployee) => {
+        if (window.confirm(`Anda yakin ingin menghapus ${employee.fullName}? Ini tidak akan menghapus data PPh 21 yang sudah ada.`)) {
+            onDelete(employee.id);
+        }
+    };
     
     const filteredAndSortedEmployees = React.useMemo(() => {
         let sortableEmployees = [...masterEmployees];
@@ -338,7 +344,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                                     <div className="flex items-center justify-center space-x-2">
                                         <button onClick={() => onOpenDetailModal(employee)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md" title="Lihat Detail"><ViewIcon /></button>
                                         <button onClick={() => onEdit(employee)} className="p-2 text-gray-400 hover:text-primary-400 hover:bg-gray-700 rounded-md" title="Edit"><EditIcon /></button>
-                                        <button onClick={() => window.confirm(`Anda yakin ingin menghapus ${employee.fullName}? Ini tidak akan menghapus data PPh 21 yang sudah ada.`) && onDelete(employee.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md" title="Hapus"><TrashIcon /></button>
+                                        <button onClick={() => handleDeleteClick(employee)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md" title="Hapus"><TrashIcon /></button>
                                     </div>
                                 </td>
                             </tr>

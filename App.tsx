@@ -147,7 +147,7 @@ const App: React.FC = () => {
         if (!currentUser) return;
         try {
             deleteEmployeeService(currentUser.id, employeeId);
-            setEmployees(getEmployees(currentUser.id));
+            setEmployees(prevEmployees => prevEmployees.filter(e => e.id !== employeeId));
             showNotification('Data PPh 21 berhasil dihapus');
         } catch (error) {
             showNotification('Gagal menghapus data PPh 21', 'error');
@@ -199,7 +199,7 @@ const App: React.FC = () => {
         if (!currentUser) return;
         try {
             deleteMasterEmployeeService(currentUser.id, id);
-            setMasterEmployees(getMasterEmployees(currentUser.id));
+            setMasterEmployees(prevMasterEmployees => prevMasterEmployees.filter(e => e.id !== id));
             showNotification('Karyawan berhasil dihapus');
         } catch (error) {
             showNotification('Gagal menghapus karyawan', 'error');
