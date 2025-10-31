@@ -76,8 +76,8 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
 
             return `
 		<MmPayroll>
-			<TaxPeriodMonth>${emp.periodMonth}</TaxPeriodMonth>
-			<TaxPeriodYear>${emp.periodYear}</TaxPeriodYear>
+			<TaxPeriodMonth>${escapeXML(emp.periodMonth)}</TaxPeriodMonth>
+			<TaxPeriodYear>${escapeXML(emp.periodYear)}</TaxPeriodYear>
 			<CounterpartOpt>${escapeXML(counterpartOpt)}</CounterpartOpt>
 			${passportField}
 			<CounterpartTin>${escapeXML(counterpartTin)}</CounterpartTin>
@@ -85,10 +85,10 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
 			<Position>${escapeXML(masterEmp?.position || 'N/A')}</Position>
 			<TaxCertificate>${escapeXML(taxCertificate)}</TaxCertificate>
 			<TaxObjectCode>${escapeXML(emp.taxObjectCode || '21-100-01')}</TaxObjectCode>
-			<Gross>${Math.round(emp.grossIncome)}</Gross>
-			<Rate>${rateValue}</Rate>
+			<Gross>${escapeXML(Math.round(emp.grossIncome))}</Gross>
+			<Rate>${escapeXML(rateValue)}</Rate>
 			<IDPlaceOfBusinessActivity>${escapeXML(idPlaceOfBusiness)}</IDPlaceOfBusinessActivity>
-			<WithholdingDate>${withholdingDateStr}</WithholdingDate>
+			<WithholdingDate>${escapeXML(withholdingDateStr)}</WithholdingDate>
 		</MmPayroll>`;
         }).join('');
 
@@ -233,7 +233,6 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
     }
   };
 
-  // FIX: Explicitly typed the Set to prevent its elements from being inferred as 'unknown', which causes type errors in sort.
   const uniqueYears = React.useMemo(() => Array.from(new Set<number>(employees.map(e => e.periodYear))).sort((a,b) => b - a), [employees]);
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
