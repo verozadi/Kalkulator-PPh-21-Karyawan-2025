@@ -126,15 +126,15 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-start p-4 pt-10 overflow-y-auto animate-fade-in">
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 animate-fade-in">
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in-up" onClick={e => e.stopPropagation()}>
-                <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-                    <div className="p-6 border-b border-gray-700">
+                <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+                    <div className="p-6 border-b border-gray-700 flex-shrink-0">
                         <h2 className="text-xl font-bold text-gray-100">{existingEmployee ? 'Edit Karyawan' : 'Tambah Karyawan Baru'}</h2>
                         <p className="text-sm text-gray-400 mt-1">Informasi ini akan menjadi data master untuk perhitungan PPh 21.</p>
                     </div>
 
-                    <div className="p-6 space-y-4 overflow-y-auto">
+                    <div className="flex-1 p-6 space-y-4 overflow-y-auto">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputField label="Nama Lengkap" name="fullName" value={formData.fullName} onChange={handleChange} required />
                             <InputField label="ID Karyawan" name="employeeId" value={formData.employeeId} onChange={handleChange} required />
@@ -205,7 +205,7 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
 
                     </div>
 
-                    <div className="flex justify-end p-6 bg-gray-900 rounded-b-lg space-x-3 mt-auto">
+                    <div className="flex justify-end p-6 bg-gray-900 rounded-b-lg space-x-3 flex-shrink-0">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-md hover:bg-gray-600">
                             Batal
                         </button>

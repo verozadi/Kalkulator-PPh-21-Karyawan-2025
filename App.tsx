@@ -20,6 +20,7 @@ import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import LandingPage from './components/LandingPage';
 import EmployeeDetailModal from './components/EmployeeDetailModal';
+import MasterEmployeeDetailModal from './components/MasterEmployeeDetailModal';
 
 // Type Imports
 import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User } from './types';
@@ -51,6 +52,7 @@ const App: React.FC = () => {
     const [isMasterEmployeeModalOpen, setMasterEmployeeModalOpen] = React.useState(false);
     const [editingMasterEmployee, setEditingMasterEmployee] = React.useState<MasterEmployee | null>(null);
     const [detailEmployee, setDetailEmployee] = React.useState<Employee | null>(null);
+    const [detailMasterEmployee, setDetailMasterEmployee] = React.useState<MasterEmployee | null>(null);
 
 
     // Profile Dropdown state
@@ -170,6 +172,10 @@ const App: React.FC = () => {
         setEditingMasterEmployee(employee);
         setMasterEmployeeModalOpen(true);
     };
+    
+    const handleOpenMasterDetailModal = (employee: MasterEmployee) => {
+        setDetailMasterEmployee(employee);
+    };
 
     const handleCloseMasterEmployeeModal = () => {
         setEditingMasterEmployee(null);
@@ -269,6 +275,7 @@ const App: React.FC = () => {
                             onDelete={handleDeleteMasterEmployee} 
                             onImport={handleImportMasterEmployees}
                             showNotification={showNotification}
+                            onOpenDetailModal={handleOpenMasterDetailModal}
                         />;
             case 'employeeList':
                 return <EmployeeList 
@@ -384,6 +391,12 @@ const App: React.FC = () => {
                 <EmployeeDetailModal
                     employee={detailEmployee}
                     onClose={() => setDetailEmployee(null)}
+                />
+            )}
+            {detailMasterEmployee && (
+                <MasterEmployeeDetailModal
+                    employee={detailMasterEmployee}
+                    onClose={() => setDetailMasterEmployee(null)}
                 />
             )}
             {isProfileModalOpen && (

@@ -49,7 +49,7 @@ const calculateDepnakerOvertimePay = (
         } else { // 5-day
             if (totalDuration > 0) {
                 const first8HoursPay = Math.min(8, totalDuration) * 2 * hourlyRate;
-                const ninthHour = totalDuration > 8 ? Math.min(1, totalDuration - 8) : 0;
+                const ninthHour = totalDuration > 8 ? Math.min(1, totalDuration - 9) : 0;
                 const ninthHourPay = ninthHour * 3 * hourlyRate;
                 const subsequentHours = Math.max(0, totalDuration - 9);
                 const subsequentHoursPay = subsequentHours * 4 * hourlyRate;
@@ -61,16 +61,128 @@ const calculateDepnakerOvertimePay = (
     return Math.round(overtimePay);
 };
 
+
+// --- Icons ---
 const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+
+
+const AddEmployeeOvertimeModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onAdd: (masterEmployeeId: string) => void;
+    availableEmployees: MasterEmployee[];
+}> = ({ isOpen, onClose, onAdd, availableEmployees }) => {
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [suggestions, setSuggestions] = React.useState<MasterEmployee[]>([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (isOpen) {
+            setSearchTerm('');
+            setSuggestions([]);
+            setSelectedEmployeeId(null);
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        setSelectedEmployeeId(null);
+
+        if (value.length >= 2) {
+            const filtered = availableEmployees.filter(emp =>
+                emp.fullName.toLowerCase().includes(value.toLowerCase()) ||
+                emp.employeeId.toLowerCase().includes(value.toLowerCase())
+            );
+            setSuggestions(filtered);
+        } else {
+            setSuggestions([]);
+        }
+    };
+
+    const handleSuggestionClick = (employee: MasterEmployee) => {
+        setSearchTerm(employee.fullName);
+        setSelectedEmployeeId(employee.id);
+        setSuggestions([]);
+    };
+
+    const handleAddClick = () => {
+        if (selectedEmployeeId) {
+            onAdd(selectedEmployeeId);
+            onClose();
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 animate-fade-in" onClick={onClose}>
+            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-gray-700">
+                    <h2 className="text-xl font-bold text-gray-100">Tambah Lembur Karyawan</h2>
+                    <p className="text-sm text-gray-400 mt-1">Pilih karyawan untuk ditambahkan ke daftar lembur periode ini.</p>
+                </div>
+                <div className="p-6">
+                    {availableEmployees.length > 0 ? (
+                        <div className="relative">
+                            <label htmlFor="employee-search" className="block text-sm font-medium text-gray-300 mb-2">
+                                Cari Karyawan (min. 2 huruf)
+                            </label>
+                            <input
+                                id="employee-search"
+                                type="text"
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                onBlur={() => setTimeout(() => setSuggestions([]), 200)}
+                                autoComplete="off"
+                                className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
+                                placeholder="Ketik nama atau ID karyawan..."
+                            />
+                            {suggestions.length > 0 && (
+                                <ul className="absolute z-10 w-full bg-gray-700 border border-gray-600 rounded-md mt-1 max-h-48 overflow-y-auto shadow-lg">
+                                    {suggestions.map(emp => (
+                                        <li
+                                            key={emp.id}
+                                            className="px-4 py-2 text-gray-200 cursor-pointer hover:bg-primary-800"
+                                            onMouseDown={() => handleSuggestionClick(emp)}
+                                        >
+                                            {emp.fullName} ({emp.employeeId})
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-center text-gray-400">Semua karyawan aktif sudah ada di daftar lembur.</p>
+                    )}
+                </div>
+                <div className="flex justify-end p-4 bg-gray-900 rounded-b-lg space-x-3">
+                    <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-600 rounded-md hover:bg-gray-500">Batal</button>
+                    <button
+                        type="button"
+                        onClick={handleAddClick}
+                        disabled={!selectedEmployeeId}
+                        className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    >
+                        Tambah
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, onSave }) => {
   const [selectedYear, setSelectedYear] = React.useState(2025);
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth() + 1);
   const [workSystem, setWorkSystem] = React.useState<'5-day' | '6-day'>('5-day');
   const [currentPeriodRecords, setCurrentPeriodRecords] = React.useState<OvertimeRecord[]>([]);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
   
   const activeMasterEmployees = React.useMemo(() => masterEmployees.filter(emp => emp.isActive), [masterEmployees]);
-
 
   React.useEffect(() => {
     const relevantRecords = existingRecords.filter(r => r.year === selectedYear && r.month === selectedMonth);
@@ -83,7 +195,6 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     }
   }, [selectedYear, selectedMonth, existingRecords]);
   
-  // Recalculate all pays when workSystem changes
   React.useEffect(() => {
     setCurrentPeriodRecords(prevRecords =>
         prevRecords.map(rec => {
@@ -98,7 +209,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     );
   }, [workSystem, masterEmployees]);
 
-  const handleAddOvertime = (masterEmployeeId: string) => {
+  const handleAddOvertimeEntry = (masterEmployeeId: string) => {
     const newRecord: OvertimeRecord = {
       id: uuidv4(),
       masterEmployeeId,
@@ -113,7 +224,15 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     setCurrentPeriodRecords(prev => [...prev, newRecord]);
   };
 
-  const handleDeleteOvertime = (recordId: string) => {
+  const handleAddEmployeeToOvertime = (masterEmployeeId: string) => {
+    handleAddOvertimeEntry(masterEmployeeId);
+  };
+
+  const handleRemoveEmployeeOvertime = (masterEmployeeId: string) => {
+      setCurrentPeriodRecords(prev => prev.filter(r => r.masterEmployeeId !== masterEmployeeId));
+  };
+
+  const handleDeleteOvertimeEntry = (recordId: string) => {
     setCurrentPeriodRecords(prev => prev.filter(r => r.id !== recordId));
   };
 
@@ -145,6 +264,16 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     onSave([...otherRecords, ...recordsToSave]);
   };
 
+  const employeesWithOvertime = React.useMemo(() => {
+      const employeeIdsInPeriod = new Set(currentPeriodRecords.map(r => r.masterEmployeeId));
+      return activeMasterEmployees.filter(emp => employeeIdsInPeriod.has(emp.id));
+  }, [currentPeriodRecords, activeMasterEmployees]);
+
+  const availableEmployeesForModal = React.useMemo(() => {
+      const employeeIdsInPeriod = new Set(currentPeriodRecords.map(r => r.masterEmployeeId));
+      return activeMasterEmployees.filter(emp => !employeeIdsInPeriod.has(emp.id));
+  }, [currentPeriodRecords, activeMasterEmployees]);
+
   const years = [2026, 2025, 2024];
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
@@ -158,9 +287,15 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
             </div>
             <p className="text-gray-400 mt-1">Kelola data lembur karyawan sesuai peraturan Depnaker.</p>
         </div>
-        <button onClick={handleSaveClick} className="bg-accent-500 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-accent-600 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-accent-900/50">
-          Simpan Data Lembur
-        </button>
+         <div className="flex items-center space-x-4">
+            <button onClick={() => setIsModalOpen(true)} className="bg-primary-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2">
+              <PlusCircleIcon />
+              <span>Tambah Karyawan</span>
+            </button>
+            <button onClick={handleSaveClick} className="bg-accent-500 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-accent-600 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-accent-900/50">
+              Simpan Data Lembur
+            </button>
+        </div>
       </div>
 
       <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
@@ -183,15 +318,25 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
             </tr>
           </thead>
           <tbody className="bg-gray-800">
-            {activeMasterEmployees.map((employee) => {
+            {employeesWithOvertime.length > 0 ? employeesWithOvertime.map((employee) => {
               const employeeRecords = currentPeriodRecords.filter(r => r.masterEmployeeId === employee.id);
               const employeeTotalPay = employeeRecords.reduce((sum, r) => sum + r.totalPay, 0);
               return (
                 <React.Fragment key={employee.id}>
                   <tr className="border-t border-b border-gray-700 bg-gray-700/30">
-                    <td className="px-6 py-3"><div className="text-sm font-medium text-gray-200">{employee.fullName}</div><div className="text-sm text-gray-400">{employee.position}</div></td>
+                    <td className="px-6 py-3">
+                        <div className="flex items-center gap-2">
+                           <button onClick={() => handleRemoveEmployeeOvertime(employee.id)} className="p-1 text-red-500 hover:text-red-400 hover:bg-red-800/50 rounded-full" title="Hapus Karyawan dari daftar lembur">
+                                <TrashIcon />
+                           </button>
+                           <div>
+                                <div className="text-sm font-medium text-gray-200">{employee.fullName}</div>
+                                <div className="text-sm text-gray-400">{employee.position}</div>
+                           </div>
+                        </div>
+                    </td>
                     <td className="px-6 py-3 text-left">{formatCurrency(employee.baseSalary)}</td>
-                    <td className="px-6 py-3 text-center"><button onClick={() => handleAddOvertime(employee.id)} className="text-sm font-semibold text-green-400 hover:text-green-300 flex items-center justify-center gap-1 mx-auto"><PlusCircleIcon /> Tambah Lembur</button></td>
+                    <td className="px-6 py-3 text-center"><button onClick={() => handleAddOvertimeEntry(employee.id)} className="text-sm font-semibold text-green-400 hover:text-green-300 flex items-center justify-center gap-1 mx-auto"><PlusCircleIcon /> Tambah Waktu</button></td>
                     <td></td>
                     <td className="px-6 py-3 text-right font-bold text-lg text-accent-400">{formatCurrency(employeeTotalPay)}</td>
                   </tr>
@@ -200,26 +345,29 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
                       <td colSpan={2}></td>
                       <td className="px-6 py-4 whitespace-nowrap"><select value={record.dayType} onChange={(e) => handleInputChange(record.id, 'dayType', e.target.value)} className="w-full px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 focus:ring-primary-500 focus:border-primary-500"><option value="workday">Hari Kerja Biasa</option><option value="holiday">Hari Libur / Minggu</option></select></td>
                       <td className="px-6 py-4 whitespace-nowrap"><div className="flex items-center justify-center gap-2"><input type="number" min="0" value={record.overtimeHours || ''} onChange={(e) => handleInputChange(record.id, 'overtimeHours', e.target.value)} className="w-16 px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-center" placeholder="Jam" /><span className="text-gray-400">:</span><input type="number" min="0" max="59" value={record.overtimeMinutes || ''} onChange={(e) => handleInputChange(record.id, 'overtimeMinutes', e.target.value)} className="w-16 px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-center" placeholder="Menit" /></div></td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2"><span className="text-sm font-semibold text-accent-400">{formatCurrency(record.totalPay)}</span><button onClick={() => handleDeleteOvertime(record.id)} className="p-1 text-red-500 hover:text-red-400 hover:bg-red-800/50 rounded-full" title="Hapus entri"><TrashIcon /></button></td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2">
+                        <span className="text-sm font-semibold text-accent-400">{formatCurrency(record.totalPay)}</span>
+                        <button onClick={() => handleDeleteOvertimeEntry(record.id)} className="p-1 text-red-500 hover:text-red-400 hover:bg-red-800/50 rounded-full" title="Hapus entri"><TrashIcon /></button>
+                      </td>
                     </tr>
                   ))}
                 </React.Fragment>
               );
-            })}
-             {masterEmployees.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-10 text-gray-500">Tidak ada data karyawan. Silakan tambah di "Daftar Nama Karyawan".</td></tr>
-            )}
-            {masterEmployees.length > 0 && activeMasterEmployees.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-10 text-gray-500">Tidak ada karyawan aktif yang dapat diinputkan lemburnya.</td></tr>
+            }) : (
+                <tr><td colSpan={5} className="text-center py-10 text-gray-500">Tidak ada data lembur untuk periode ini. Klik "Tambah Karyawan" untuk memulai.</td></tr>
             )}
           </tbody>
         </table>
       </div>
+
+       <AddEmployeeOvertimeModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAdd={handleAddEmployeeToOvertime}
+        availableEmployees={availableEmployeesForModal}
+      />
     </div>
   );
 };
-
-const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
 export default Overtime;

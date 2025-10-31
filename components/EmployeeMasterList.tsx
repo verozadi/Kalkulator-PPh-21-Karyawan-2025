@@ -10,6 +10,7 @@ interface EmployeeMasterListProps {
   onDelete: (id: string) => void;
   onImport: (employees: Omit<MasterEmployee, 'id'>[]) => void;
   showNotification: (message: string, type?: 'success' | 'error') => void;
+  onOpenDetailModal: (employee: MasterEmployee) => void;
 }
 
 // --- Icon Components ---
@@ -26,7 +27,7 @@ const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 
 
-const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees, onAddNew, onEdit, onDelete, onImport, showNotification }) => {
+const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees, onAddNew, onEdit, onDelete, onImport, showNotification, onOpenDetailModal }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // State for filtering and sorting
@@ -335,7 +336,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                     <div className="flex items-center justify-center space-x-2">
-                                        <button onClick={() => onEdit(employee)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md" title="Lihat Detail"><ViewIcon /></button>
+                                        <button onClick={() => onOpenDetailModal(employee)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md" title="Lihat Detail"><ViewIcon /></button>
                                         <button onClick={() => onEdit(employee)} className="p-2 text-gray-400 hover:text-primary-400 hover:bg-gray-700 rounded-md" title="Edit"><EditIcon /></button>
                                         <button onClick={() => window.confirm(`Anda yakin ingin menghapus ${employee.fullName}? Ini tidak akan menghapus data PPh 21 yang sudah ada.`) && onDelete(employee.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md" title="Hapus"><TrashIcon /></button>
                                     </div>
