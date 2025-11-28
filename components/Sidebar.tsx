@@ -1,5 +1,4 @@
 
-
 import * as React from 'react';
 import { Page } from '../types';
 
@@ -45,6 +44,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, navigateTo, isOpen }) =>
         <nav className="space-y-1">
           <NavLink page="dashboard" label="Dashboard" navigateTo={navigateTo} isActive={currentPage === 'dashboard'} icon={<ChartPieIcon />} isOpen={isOpen} />
           <NavLink page="employeeMasterList" label="Daftar Nama Karyawan" navigateTo={navigateTo} isActive={currentPage === 'employeeMasterList'} icon={<IdentificationIcon />} isOpen={isOpen} />
+          {/* Moved and Renamed */}
+          <NavLink page="employeeInput" label="Perhitungan PPh 21" navigateTo={navigateTo} isActive={currentPage === 'employeeInput'} icon={<CalculatorIcon />} isOpen={isOpen} />
           <NavLink page="employeeList" label="Daftar PPh 21 Karyawan" navigateTo={navigateTo} isActive={currentPage === 'employeeList'} icon={<ClipboardListIcon />} isOpen={isOpen} />
           <NavLink page="overtime" label="Lembur" navigateTo={navigateTo} isActive={currentPage === 'overtime'} icon={<ClockIcon />} isOpen={isOpen} />
           <NavLink page="taxRules" label="Aturan Pajak" navigateTo={navigateTo} isActive={currentPage === 'taxRules'} icon={<ScaleIcon />} isOpen={isOpen} />
@@ -52,20 +53,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, navigateTo, isOpen }) =>
           <NavLink page="settings" label="Pengaturan" navigateTo={navigateTo} isActive={currentPage === 'settings'} icon={<CogIcon />} isOpen={isOpen} />
         </nav>
 
-        <div className={`space-y-2 pt-4 border-t border-gray-700 transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 invisible'}`}>
-            <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Akses Cepat</h3>
-            <div className="px-2 space-y-2">
-                <button onClick={() => navigateTo('employeeInput')} className="w-full flex items-center justify-center space-x-2 bg-accent-500 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-accent-600 transition-colors">
-                    <CalculatorIcon />
-                    <span>Hitung PPh 21</span>
-                </button>
-                 <button onClick={() => navigateTo('reports')} className="w-full flex items-center justify-center space-x-2 bg-primary-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-primary-700 transition-colors">
-                    <ExportIcon />
-                    <span>Export Laporan</span>
-                </button>
-            </div>
-        </div>
-
+        {/* Removed Quick Access Section */}
       </div>
     </aside>
   );

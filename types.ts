@@ -1,3 +1,4 @@
+
 export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings' | 'login' | 'register' | 'forgotPassword' | 'landing';
 
 export interface User {
@@ -48,6 +49,12 @@ export interface OvertimeRecord {
   overtimeHours: number;
   overtimeMinutes: number;
   totalPay: number;
+  // New Fields
+  overtimeDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  activity: string;
+  isManualPay?: boolean;
 }
 
 export interface CustomAllowance {
@@ -56,10 +63,13 @@ export interface CustomAllowance {
   value: number;
 }
 
+export type CalculationType = 'monthly' | 'nonFinal' | 'annual';
+
 // Represents a single monthly PPh 21 calculation record
 export interface EmployeeData {
   id: string; // Transaction ID
   masterEmployeeId: string; // Link to the master employee
+  calculationType: CalculationType;
   
   // Fields from Master that might be snapshot at time of calculation
   name: string;
@@ -98,6 +108,11 @@ export interface EmployeeData {
   taxObjectName: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap' | 'Penghasilan yang Diterima atau Diperoleh Pensiunan Secara Teratur' | 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap yang Menerima fasilitas di Daerah Tertentu';
   taxObjectCode: '21-100-01' | '21-100-02' | '21-100-03' | '';
   signerIdentity: 'NPWP' | 'NIK';
+
+  // Fields for Annual A1 Calculation
+  grossIncomeAccumulated?: number; // Penghasilan Bruto Jan-Nov (or prev period)
+  taxPaidAccumulated?: number; // PPh yang telah dipotong s.d. masa sebelumnya
+  netIncomeAccumulated?: number; // Penghasilan Neto Masa Sebelumnya
   
   // Deprecated fields, kept for potential data migration but not used in new forms
   dependents?: number;
@@ -123,6 +138,8 @@ export interface TaxCalculationResult {
     finalPPh21Monthly: number;
     dtpIncentive: number;
     paymentStatus: 'Paid' | 'Unpaid';
+    // For Annual
+    taxUnderOverPayment?: number; // Kurang/Lebih Bayar
 }
 
 

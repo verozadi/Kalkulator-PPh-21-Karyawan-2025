@@ -36,15 +36,25 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onNavigate }) =>
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 flex flex-col justify-center items-center p-4">
-            <div className="text-center mb-8">
-                <button type="button" onClick={() => onNavigate('landing')} className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary-500 rounded-lg">
-                    <h1 className="text-4xl font-bold text-primary-400">VerozTax</h1>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm animate-fade-in">
+             <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-2xl shadow-black/50 border border-gray-700 relative animate-fade-in-up">
+                <button 
+                    onClick={() => onNavigate('landing')}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-white focus:outline-none"
+                    aria-label="Tutup"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
-                <p className="text-gray-400 mt-2">Buat akun baru Anda</p>
-            </div>
-            <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20 border border-gray-700">
-                <h2 className="text-2xl font-bold text-center text-gray-100 mb-6">Daftar</h2>
+
+                <div className="text-center mb-6">
+                    <h1 className="text-3xl font-bold text-primary-400">VerozTax</h1>
+                    <p className="text-gray-400 mt-2">Buat akun baru Anda</p>
+                </div>
+
+                <h2 className="text-xl font-bold text-center text-gray-100 mb-6 border-b border-gray-700 pb-2">Daftar</h2>
+                
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-300">Nama</label>

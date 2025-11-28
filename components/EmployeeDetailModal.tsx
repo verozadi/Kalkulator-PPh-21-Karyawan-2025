@@ -1,3 +1,4 @@
+
 import React, { useRef } from 'react';
 import { Employee } from '../types';
 
@@ -35,9 +36,36 @@ const EmployeeDetailModal: React.FC<{ employee: Employee | null; onClose: () => 
             return;
         }
 
-        html2canvas(modalContentRef.current, {
+        // Clone the element to ensure we capture full height even if scrolled
+        const originalElement = modalContentRef.current;
+        const clone = originalElement.cloneNode(true) as HTMLElement;
+
+        // Reset styles on clone to ensure full visibility
+        clone.style.height = 'auto';
+        clone.style.maxHeight = 'none';
+        clone.style.overflow = 'visible';
+        clone.style.width = `${originalElement.offsetWidth}px`;
+        
+        // Find the scrollable body inside the clone and expand it
+        const bodyContent = clone.querySelector('.modal-body-scroll') as HTMLElement;
+        if (bodyContent) {
+            bodyContent.style.height = 'auto';
+            bodyContent.style.maxHeight = 'none';
+            bodyContent.style.overflow = 'visible';
+        }
+
+        // Position off-screen
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        clone.style.top = '0';
+        clone.style.zIndex = '-1';
+        
+        document.body.appendChild(clone);
+
+        html2canvas(clone, {
             useCORS: true,
-            backgroundColor: '#1f2937' 
+            backgroundColor: '#1f2937',
+            windowHeight: clone.scrollHeight
         }).then((canvas: HTMLCanvasElement) => {
             const imgData = canvas.toDataURL('image/png');
             
@@ -64,6 +92,12 @@ const EmployeeDetailModal: React.FC<{ employee: Employee | null; onClose: () => 
             const filename = `Detail_PPh21_${employee.name.replace(/ /g, '_')}_${months[employee.periodMonth - 1]}_${employee.periodYear}.pdf`;
             
             pdf.save(filename);
+            
+            document.body.removeChild(clone);
+        }).catch((err: any) => {
+            console.error(err);
+            document.body.removeChild(clone);
+            alert('Terjadi kesalahan saat membuat PDF.');
         });
     };
     
@@ -72,18 +106,20 @@ const EmployeeDetailModal: React.FC<{ employee: Employee | null; onClose: () => 
     const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-start pt-10 px-4 pb-10 overflow-y-auto animate-fade-in" onClick={onClose}>
-            <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col animate-fade-in-up" onClick={e => e.stopPropagation()}>
-                <div ref={modalContentRef}>
-                    <div className="flex justify-between items-center p-4 border-b border-gray-700">
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 animate-fade-in" onClick={onClose}>
+            <div className="bg-gray-800 border border-gray-600 rounded-lg shadow-xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-fade-in-up" onClick={e => e.stopPropagation()}>
+                
+                {/* Ref applied here to capture Header + Body for PDF */}
+                <div ref={modalContentRef} className="flex flex-col overflow-hidden">
+                    <div className="flex justify-between items-center p-4 border-b border-gray-700 flex-shrink-0 bg-gray-800">
                         <div>
                             <h2 className="text-lg font-bold text-gray-100">Detail Perhitungan PPh 21</h2>
                             <p className="text-sm text-gray-400">{employee.name} - {months[employee.periodMonth - 1]} {employee.periodYear}</p>
                         </div>
-                         <button className="p-1 rounded-full text-gray-400 hover:bg-gray-700 invisible">&times;</button>
+                        <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-700 block sm:hidden">&times;</button>
                     </div>
 
-                    <div className="p-6 overflow-y-auto space-y-6">
+                    <div className="p-6 overflow-y-auto space-y-6 modal-body-scroll bg-gray-800" style={{ maxHeight: 'calc(100vh - 200px)' }}>
                         {/* Basic Info */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                             <div className="flex justify-between"><span className="text-gray-400">NPWP:</span><span className="font-mono text-gray-200">{employee.npwp || '-'}</span></div>
@@ -138,7 +174,7 @@ const EmployeeDetailModal: React.FC<{ employee: Employee | null; onClose: () => 
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-gray-700 bg-gray-900 rounded-b-lg flex justify-end items-center space-x-3">
+                <div className="p-4 border-t border-gray-700 bg-gray-900 rounded-b-lg flex justify-end items-center space-x-3 flex-shrink-0">
                      <button onClick={handleDownloadPDF} className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 flex items-center space-x-2">
                         <DownloadIcon />
                         <span>Download PDF</span>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MasterEmployee } from '../types';
 
@@ -8,11 +7,13 @@ const formatCurrency = (value: number) => {
 };
 
 const DetailRow: React.FC<{ label: string; value: string | number | boolean; isCurrency?: boolean; }> = ({ label, value, isCurrency = false }) => {
-    let displayValue: string | number = value;
+    let displayValue: string | number = '';
     if (typeof value === 'boolean') {
         displayValue = value ? 'Ya' : 'Tidak';
     } else if (isCurrency) {
         displayValue = formatCurrency(Number(value));
+    } else {
+        displayValue = value as string | number;
     }
     
     return (

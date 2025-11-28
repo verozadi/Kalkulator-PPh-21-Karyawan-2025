@@ -247,19 +247,16 @@ const App: React.FC = () => {
         );
     }
 
-    // Render Auth pages if not logged in
+    // Render Auth pages (Landing Page is always the base)
     if (!currentUser) {
-        switch (authPage) {
-            case 'register':
-                return <Register onRegisterSuccess={handleLoginSuccess} onNavigate={setAuthPage} />;
-            case 'forgotPassword':
-                return <ForgotPassword onNavigate={setAuthPage} />;
-            case 'login':
-                return <Login onLoginSuccess={handleLoginSuccess} onNavigate={setAuthPage} />;
-            case 'landing':
-            default:
-                return <LandingPage onNavigate={setAuthPage} />;
-        }
+        return (
+            <>
+                <LandingPage onNavigate={setAuthPage} />
+                {authPage === 'login' && <Login onLoginSuccess={handleLoginSuccess} onNavigate={setAuthPage} />}
+                {authPage === 'register' && <Register onRegisterSuccess={handleLoginSuccess} onNavigate={setAuthPage} />}
+                {authPage === 'forgotPassword' && <ForgotPassword onNavigate={setAuthPage} />}
+            </>
+        );
     }
 
     // Render App if logged in

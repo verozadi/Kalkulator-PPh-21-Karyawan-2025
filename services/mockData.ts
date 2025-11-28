@@ -1,3 +1,4 @@
+
 import { Employee, MaritalStatus, EmployeeData, MasterEmployee, OvertimeRecord } from '../types';
 import { calculatePPh21 } from './taxCalculator';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,6 +50,7 @@ export const initialOvertimeRecords: OvertimeRecord[] = [];
 const rawEmployeeData: Omit<EmployeeData, 'id'>[] = [
     {
         masterEmployeeId: 'master-001',
+        calculationType: 'monthly',
         name: 'St Syamsiah',
         npwp: '7371026702680004',
         address: 'Dg. Tata Tmn Artalia Blk.A1',
