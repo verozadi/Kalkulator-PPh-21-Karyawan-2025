@@ -1,4 +1,5 @@
 
+
 export type Page = 'dashboard' | 'employeeInput' | 'employeeList' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings' | 'login' | 'register' | 'forgotPassword' | 'landing';
 
 export interface User {
@@ -104,7 +105,7 @@ export interface EmployeeData {
   
   // Other Configs
   isGrossUp: boolean;
-  taxFacility: 'Fasilitas Lainnya' | 'PPh Ditanggung Pemerintah (DTP)' | 'Tanpa Fasilitas';
+  taxFacility: 'Fasilitas Lainnya' | 'PPh Ditanggung Pemerintah (DTP)' | 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21' | 'Tanpa Fasilitas';
   taxObjectName: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap' | 'Penghasilan yang Diterima atau Diperoleh Pensiunan Secara Teratur' | 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap yang Menerima fasilitas di Daerah Tertentu';
   taxObjectCode: '21-100-01' | '21-100-02' | '21-100-03' | '';
   signerIdentity: 'NPWP' | 'NIK';

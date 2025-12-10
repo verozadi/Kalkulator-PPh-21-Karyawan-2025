@@ -98,12 +98,6 @@ export const calculatePPh21 = (employee: EmployeeData): TaxCalculationResult => 
 
     } else if (calculationType === 'nonFinal') {
         // --- Non-Permanent / Non-Final Calculation ---
-        // Typically simpler: (Gross * 50% - PTKP) or Daily thresholds. 
-        // BUT user asked for "Components similar to Monthly", so we use TER logic 
-        // but typically the 'status' might be different. 
-        // For simplicity and matching current app structure, we use the standard TER logic 
-        // but flagged as 'nonFinal'.
-
         const terRate = getTerRate(status, grossIncome);
         pph21Monthly = grossIncome * terRate;
         finalPPh21Monthly = pph21Monthly;
@@ -144,6 +138,15 @@ export const calculatePPh21 = (employee: EmployeeData): TaxCalculationResult => 
         }
 
         finalPPh21Monthly = pph21Monthly - dtpIncentive;
+    }
+
+    // Apply SKB exemption
+    if (taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') {
+        finalPPh21Monthly = 0;
+        taxUnderOverPayment = 0; // For annual if applicable
+        // dtpIncentive remains calculated for record if needed, or maybe should be 0 too? 
+        // Usually SKB overrides everything.
+        dtpIncentive = 0; 
     }
     
     return {

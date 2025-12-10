@@ -60,6 +60,8 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
                 taxCertificate = 'DTP';
             } else if (emp.taxFacility === 'Fasilitas Lainnya') {
                 taxCertificate = 'ETC';
+            } else if (emp.taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') {
+                taxCertificate = 'SKB';
             }
             
             const terRate = getTerRate(emp.status, emp.grossIncome);
@@ -163,6 +165,8 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
                 taxCertificate = 'DTP';
             } else if (emp.taxFacility === 'Fasilitas Lainnya') {
                 taxCertificate = 'ETC';
+            } else if (emp.taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') {
+                taxCertificate = 'SKB';
             }
 
             const employeeRow = [

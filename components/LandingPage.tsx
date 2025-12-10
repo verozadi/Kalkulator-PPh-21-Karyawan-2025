@@ -232,7 +232,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                         </p>
                         <div className="mt-8 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
                             <button onClick={() => onNavigate('register')} className="bg-primary-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-primary-700 transition-colors text-lg shadow-lg shadow-primary-900/50">
-                                Mulai Gratis
+                                Mulai
                             </button>
                         </div>
                     </div>

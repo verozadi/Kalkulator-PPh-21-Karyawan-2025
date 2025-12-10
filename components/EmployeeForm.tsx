@@ -96,7 +96,7 @@ const CurrencyInputWithButton: React.FC<{ label: string; name: string; value: nu
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197" /></svg>;
-const CogUserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const CogUserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0 3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const HandshakeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" /></svg>;
 
 
@@ -119,6 +119,25 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
   const months = React.useMemo(() => ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"], []);
 
   const activeMasterEmployees = React.useMemo(() => masterEmployees.filter(emp => emp.isActive), [masterEmployees]);
+
+  // Determine available tax facilities based on the calculation type
+  const facilityOptions = React.useMemo(() => {
+      const commonFacilities = [
+          'Tanpa Fasilitas',
+          'PPh Ditanggung Pemerintah (DTP)',
+          'Fasilitas Lainnya'
+      ];
+
+      // SKB is only available for Non-Final calculations
+      if (activeTab === 'nonFinal') {
+          return [
+              ...commonFacilities,
+              'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21'
+          ].sort(); // Optional sorting
+      }
+
+      return commonFacilities;
+  }, [activeTab]);
 
   // Effect to setup the form for editing an existing PPh21 record or creating a new one.
   React.useEffect(() => {
@@ -143,12 +162,28 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existingEmployee]);
 
-  // Effect to switch tab configuration
+  // Effect to switch tab configuration and handle month validation
   React.useEffect(() => {
-    setFormData(prev => ({
-        ...prev,
-        calculationType: activeTab
-    }));
+    setFormData(prev => {
+        let newMonth = prev.periodMonth;
+        // If switching to monthly and month is December (12), switch to November (11)
+        if (activeTab === 'monthly' && prev.periodMonth === 12) {
+            newMonth = 11;
+        }
+
+        // Reset Tax Facility if switching from Non-Final (with SKB) to Monthly/Annual (without SKB)
+        let newFacility = prev.taxFacility;
+        if (activeTab !== 'nonFinal' && prev.taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') {
+            newFacility = 'Tanpa Fasilitas';
+        }
+
+        return {
+            ...prev,
+            calculationType: activeTab,
+            periodMonth: newMonth,
+            taxFacility: newFacility
+        };
+    });
   }, [activeTab]);
 
   // Effect to check for duplicate entries when employee or period changes
@@ -489,7 +524,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
     <div className="bg-gray-800 rounded-lg shadow-xl shadow-black/20 max-w-7xl mx-auto animate-fade-in flex flex-col">
         
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-700 overflow-x-auto">
+        <div className="flex border-b border-gray-700 overflow-x-auto animate-fade-in-up" style={{ animationDelay: '100ms' }}>
             <button
                 onClick={() => setActiveTab('monthly')}
                 className={`flex-1 py-4 text-center font-bold text-sm flex items-center justify-center space-x-2 transition-colors min-w-[150px] ${activeTab === 'monthly' ? 'text-primary-400 border-b-2 border-primary-400 bg-gray-700/50' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}
@@ -514,7 +549,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 w-full">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-start mb-6 gap-4 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
                 <div>
                      <h2 className="text-2xl font-bold text-gray-100">
                         {existingEmployee ? 'Edit Perhitungan PPh 21' : 
@@ -541,9 +576,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-black/20">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 border border-gray-700 rounded-lg bg-black/20 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
                 <InputField label="Masa Pajak" name="periodMonth" value={formData.periodMonth} onChange={handleChange}>
-                    {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
+                    {months.map((month, index) => {
+                        // Filter out December (index 11) for Monthly calculation
+                        if (activeTab === 'monthly' && index === 11) return null;
+                        return <option key={month} value={index + 1}>{month}</option>;
+                    })}
                 </InputField>
                 <InputField label="Tahun Pajak" name="periodYear" value={formData.periodYear} onChange={handleChange}>
                     {years.map(year => <option key={year} value={year}>{year}</option>)}
@@ -594,7 +633,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
 
             <div className="flex flex-col lg:flex-row gap-6">
                 {/* Left Panel */}
-                <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg">
+                <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg animate-fade-in-up" style={{ animationDelay: '400ms' }}>
                     <h3 className="text-lg font-bold text-gray-200 mb-4 text-center">Rincian Penghasilan Bulanan Ini</h3>
                     <div className="space-y-6">
                         <div className="space-y-4">
@@ -716,7 +755,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
                 </div>
 
                 {/* Right Panel */}
-                <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg">
+                <div className="flex-1 lg:w-1/2 p-4 border border-gray-700 rounded-lg animate-fade-in-up" style={{ animationDelay: '500ms' }}>
                     <h3 className="text-lg font-bold text-gray-200 mb-4 text-center">
                         {activeTab === 'annual' ? 'Perhitungan PPh 21 Tahunan (A1)' : 'Perhitungan PPh 21 Bulanan (TER)'}
                     </h3>
@@ -745,7 +784,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
                         )}
 
                         <InputField label="Fasilitas" name="taxFacility" value={formData.taxFacility} onChange={handleChange}>
-                            <option>Tanpa Fasilitas</option><option>PPh Ditanggung Pemerintah (DTP)</option><option>Fasilitas Lainnya</option>
+                            {facilityOptions.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
                         </InputField>
                         <InputField label="Nama Objek Pajak" name="taxObjectName" value={formData.taxObjectName} onChange={handleChange}>
                             <option>Penghasilan yang Diterima atau Diperoleh Pegawai Tetap</option>
@@ -785,7 +826,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSave, existingEmployee, o
                 </div>
             </div>
 
-            <div className="mt-8 flex justify-end space-x-4">
+            <div className="mt-8 flex justify-end space-x-4 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
                 <button type="button" onClick={onCancel} className="bg-gray-600 text-gray-200 font-bold py-2 px-6 rounded-lg hover:bg-gray-500 transition-colors">Batal</button>
                 <button
                     type="submit"
