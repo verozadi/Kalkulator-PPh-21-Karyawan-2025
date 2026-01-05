@@ -7,13 +7,14 @@ import { calculatePasal17 } from '../services/taxCalculator';
 import { getAvailableTaxYears } from '../constants';
 
 interface EmployeeFormProps {
-    onSave: (data: EmployeeData) => void;
+    onSave: (data: EmployeeData) => Promise<void> | void;
     existingEmployee: Employee | null;
     onCancel: () => void;
     profile: Profile;
     masterEmployees: MasterEmployee[];
     showNotification: (message: string, type: 'success' | 'error') => void;
     fixedType: CalculationType;
+    employees?: Employee[]; // Added to access monthly data
 }
 
 const ANNUAL_TAX_OBJECTS = [
@@ -85,11 +86,15 @@ const SearchableEmployeeSelect: React.FC<{
     const [searchTerm, setSearchTerm] = React.useState('');
     const [isOpen, setIsOpen] = React.useState(false);
     const wrapperRef = React.useRef<HTMLDivElement>(null);
+
     const selectedEmployee = React.useMemo(() => masterEmployees.find(e => e.id === value), [value, masterEmployees]);
 
     React.useEffect(() => {
-        if (selectedEmployee) setSearchTerm(selectedEmployee.fullName);
-        else setSearchTerm('');
+        if (selectedEmployee) {
+            setSearchTerm(selectedEmployee.fullName);
+        } else {
+            setSearchTerm('');
+        }
     }, [selectedEmployee]);
 
     React.useEffect(() => {
@@ -104,8 +109,12 @@ const SearchableEmployeeSelect: React.FC<{
     }, [selectedEmployee]);
 
     const filteredEmployees = React.useMemo(() => {
-        if (searchTerm.length < 2) return [];
-        return masterEmployees.filter(e => e.fullName.toLowerCase().includes(searchTerm.toLowerCase()));
+        if (searchTerm.length < 2) return masterEmployees;
+        
+        return masterEmployees.filter(e => 
+            e.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            e.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+        );
     }, [searchTerm, masterEmployees]);
 
     return (
@@ -114,19 +123,34 @@ const SearchableEmployeeSelect: React.FC<{
             <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setIsOpen(true); }}
+                onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setIsOpen(true);
+                }}
                 onFocus={() => setIsOpen(true)}
-                placeholder="Ketik min. 2 huruf nama..."
+                placeholder="Ketik min. 2 huruf atau pilih..."
                 className="w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors"
             />
-            {isOpen && searchTerm.length >= 2 && (
-                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto">
-                    {filteredEmployees.map(emp => (
-                        <button key={emp.id} type="button" onClick={() => { onSelect(emp.id); setIsOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 transition-colors border-b border-gray-700/50 last:border-0">
-                            <div className="font-bold">{emp.fullName}</div>
-                            <div className="text-xs opacity-70">{emp.employeeId} - {emp.position}</div>
-                        </button>
-                    ))}
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                    {filteredEmployees.length > 0 ? (
+                        filteredEmployees.map(emp => (
+                            <button
+                                key={emp.id}
+                                type="button"
+                                onClick={() => {
+                                    onSelect(emp.id);
+                                    setIsOpen(false);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-700/50 last:border-0"
+                            >
+                                <div className="font-bold">{emp.fullName}</div>
+                                <div className="text-xs opacity-70">{emp.employeeId} - {emp.position}</div>
+                            </button>
+                        ))
+                    ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500 italic">Tidak ada karyawan ditemukan.</div>
+                    )}
                 </div>
             )}
         </div>
@@ -137,9 +161,26 @@ const FormSectionHeader: React.FC<{ children: React.ReactNode }> = ({ children }
     <h3 className="text-base font-bold text-gray-100 mb-4 pb-2 border-b border-gray-700/50">{children}</h3>
 );
 
+// New Component for Auto Calc Button
+const AutoCalcButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+    <button 
+        type="button" 
+        onClick={onClick} 
+        className="px-3 py-2 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/50 rounded transition-colors flex items-center justify-center group"
+        title="Hitung Otomatis dari Data Bulanan (Jan-Des)"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transform group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+    </button>
+);
+
+const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+
 const EmployeeForm3: React.FC<EmployeeFormProps> = ({ 
-    onSave, existingEmployee, onCancel, profile, masterEmployees, showNotification, fixedType 
+    onSave, existingEmployee, onCancel, profile, masterEmployees, showNotification, fixedType, employees = []
 }) => {
+    
     const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>({
         masterEmployeeId: '',
         calculationType: 'annual',
@@ -154,7 +195,7 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
         // Income Fields
         baseSalary: 0, 
         tunjanganPph: 0, 
-        tunjanganJabatan: 0, // This will act as "Tunjangan Lainnya" (03)
+        tunjanganJabatan: 0, 
         honorarium: 0, 
         insurancePremi: 0,
         facilityValue: 0,
@@ -164,51 +205,38 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
         jpDeduction: 0, 
         zakatDeduction: 0,
         
-        netIncomePrevious: 0, // 14
-        
+        netIncomePrevious: 0, 
         isGrossUp: false,
         taxFacility: 'Tanpa Fasilitas',
         taxObjectName: 'Pegawai Tetap',
         taxObjectCode: '21-100-01',
         signerIdentity: 'NPWP',
-        pph21PaidPreviously: 0, // 20
+        pph21PaidPreviously: 0, 
         jenisPemotongan: 'Setahun penuh',
         tanggalPemotongan: new Date().toISOString().split('T')[0],
         taxPeriodStart: 1,
         taxPeriodEnd: 12,
         previousTaxReceiptNumber: '',
-        // Manual fields
         manualNetIncomeCalc: 0,
         manualPph21Pkp: 0,
         manualPph21KurangBayar: 0,
         manualPph21Dtp: 0,
-        
-        // Unused in A1 but required by type
         tunjanganTelekomunikasi: 0, tunjanganMakan: 0, tunjanganTransportasi: 0, overtimePay: 0,
         customFixedAllowances: [], customVariableAllowances: [], customDeductions: [],
         loan: 0, otherDeductions: 0, bpjsDeduction: 0,
     });
 
-    // Auto-calc state
     const [calc, setCalc] = React.useState({
-        totalBruto: 0,
-        biayaJabatan: 0,
-        totalPengurangan: 0,
-        neto: 0,
-        netoSetahun: 0,
-        ptkp: 0,
-        pkp: 0,
-        pph21Setahun: 0,
-        pph21Terutang: 0,
-        pph21TerutangBupot: 0,
-        pph21Dtp: 0,
-        pph21KurangBayar: 0
+        totalBruto: 0, biayaJabatan: 0, totalPengurangan: 0,
+        neto: 0, netoSetahun: 0, ptkp: 0, pkp: 0,
+        pph21Setahun: 0, pph21Terutang: 0, pph21TerutangBupot: 0,
+        pph21Dtp: 0, pph21KurangBayar: 0
     });
 
-    // Load Existing Data
+    const [isSaving, setIsSaving] = React.useState(false);
+
     React.useEffect(() => {
         if (existingEmployee) {
-            // Restore Form Data
             setFormData({
                 ...existingEmployee,
                 jenisPemotongan: existingEmployee.jenisPemotongan || 'Setahun penuh',
@@ -223,30 +251,24 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                 manualPph21KurangBayar: existingEmployee.taxUnderOverPayment || 0,
                 manualPph21Dtp: existingEmployee.dtpIncentive || 0,
             });
-
-            // Restore Calculation State explicitly to avoid "jump" or "zero" flicker
             setCalc({
                 totalBruto: existingEmployee.grossIncome,
-                biayaJabatan: existingEmployee.grossIncome - existingEmployee.netIncomeForTax - (existingEmployee.pensionDeduction + existingEmployee.jpDeduction + (existingEmployee.zakatDeduction || 0)), // Approximate reconstruction or use saved if available
+                biayaJabatan: existingEmployee.grossIncome - existingEmployee.netIncomeForTax - (existingEmployee.pensionDeduction + existingEmployee.jpDeduction + (existingEmployee.zakatDeduction || 0)),
                 totalPengurangan: existingEmployee.totalDeductions,
-                neto: existingEmployee.grossIncome - existingEmployee.totalDeductions, // Approximation for display
+                neto: existingEmployee.grossIncome - existingEmployee.totalDeductions,
                 netoSetahun: existingEmployee.netIncomeForTax,
                 ptkp: existingEmployee.ptkp,
                 pkp: existingEmployee.pkpYearly,
                 pph21Setahun: existingEmployee.pph21Yearly,
-                pph21Terutang: existingEmployee.pph21Terutang || existingEmployee.pph21Yearly, // Fallback if missing
-                pph21TerutangBupot: existingEmployee.pph21Monthly, // In A1 context this is "Terutang Bupot Ini"
+                pph21Terutang: existingEmployee.pph21Terutang || existingEmployee.pph21Yearly,
+                pph21TerutangBupot: existingEmployee.pph21Monthly,
                 pph21Dtp: existingEmployee.dtpIncentive,
                 pph21KurangBayar: existingEmployee.taxUnderOverPayment || 0
             });
         }
     }, [existingEmployee]);
 
-    // Gross Up Calculation (Annual Logic) & Main Calculation Loop
     React.useEffect(() => {
-        // Skip calculation if we just loaded existing data and haven't touched anything
-        // But for simplicity, we let it run, relying on inputs being correct.
-        
         const {
             baseSalary, tunjanganJabatan, honorarium, insurancePremi, facilityValue, bonus,
             pensionDeduction, jpDeduction, zakatDeduction, netIncomePrevious,
@@ -254,21 +276,15 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
             taxPeriodStart, taxPeriodEnd, jenisPemotongan
         } = formData;
 
-        // 1. Calculate Gross Components without Tax Allowance
         const grossNoTax = baseSalary + tunjanganJabatan + honorarium + insurancePremi + facilityValue + bonus;
-        
         let calculatedTunjanganPph = 0;
-
-        // Determine number of months for Biaya Jabatan limit calculation
         const startMonth = taxPeriodStart || 1;
         const endMonth = taxPeriodEnd || 12;
         const durationMonths = Math.max(1, (endMonth - startMonth) + 1);
-        const maxBiayaJabatan = durationMonths * 500000; // 500k per month of service
+        const maxBiayaJabatan = durationMonths * 500000;
 
-        // Iterative Gross Up Calculation for Annual Tax (Pasal 17)
         if (isGrossUp) {
             let currentTax = 0;
-            // Simple iteration to converge
             for (let i = 0; i < 15; i++) {
                 const tempGross = grossNoTax + currentTax;
                 const tempBiayaJabatan = Math.min(tempGross * 0.05, maxBiayaJabatan); 
@@ -285,66 +301,37 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
             calculatedTunjanganPph = Math.round(currentTax);
         }
 
-        // Apply Tunjangan PPh if Gross Up is active
         const finalTunjanganPph = isGrossUp ? calculatedTunjanganPph : (formData.tunjanganPph || 0);
-        
-        // 08. Total Bruto
         const totalBruto = grossNoTax + finalTunjanganPph;
-
-        // 09. Biaya Jabatan
         const biayaJabatan = Math.min(totalBruto * 0.05, maxBiayaJabatan);
-
-        // 12. Total Pengurangan
         const totalPengurangan = biayaJabatan + pensionDeduction + jpDeduction + zakatDeduction;
-
-        // 13. Neto
         const neto = totalBruto - totalPengurangan;
-
-        // 15. Neto Setahun
-        // Default: Neto (13) + Neto Sebelumnya (14).
         let netoSetahun = 0;
         const currentTotalNeto = neto + netIncomePrevious;
 
         if (jenisPemotongan === 'Disetahunkan') {
-            // Rumus Disetahunkan: (Neto / Masa Kerja) * 12
-            // Contoh: 83.920.000 / 8 * 12 = 125.880.000
             netoSetahun = (currentTotalNeto / durationMonths) * 12;
         } else {
-            // Setahun Penuh atau Kurang dari Setahun (Tidak disetahunkan)
             netoSetahun = currentTotalNeto;
         }
 
-        // 16. PTKP
         const ptkp = PTKP_RATES[status] || 54000000;
-
-        // 17. PKP
         let pkp = Math.max(0, Math.floor((netoSetahun - ptkp) / 1000) * 1000);
-
-        // 18. PPh 21 Setahun
         let pph21Setahun = calculatePasal17(pkp);
-
-        // 19. PPh Terutang
         let pph21Terutang = pph21Setahun;
         
         if (jenisPemotongan === 'Disetahunkan') {
              pph21Terutang = (pph21Setahun / 12) * durationMonths;
         }
 
-        // 21. PPh Terutang Bupot Ini
         const pph21TerutangBupot = Math.max(0, pph21Terutang - pph21PaidPreviously);
-
-        // 22. PPh DTP
         let pph21Dtp = 0;
         if (taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
-            // Auto calculate theoretical DTP
             let autoDtp = 0;
-            // Cek syarat DTP (Gross <= 10jt/bulan rata-rata)
             const annualizedGross = (totalBruto / durationMonths) * 12;
             if ((annualizedGross / 12) <= 10000000) {
                 autoDtp = pph21TerutangBupot;
             }
-            
-            // Check manual override
             if (manualPph21Dtp !== undefined && manualPph21Dtp !== null) {
                 pph21Dtp = manualPph21Dtp;
             } else {
@@ -352,10 +339,8 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
             }
         } 
 
-        // 23. Kurang/Lebih Bayar
         let pph21KurangBayar = pph21TerutangBupot - pph21Dtp;
 
-        // --- Manual Override Logic for Fasilitas Lainnya ---
         if (taxFacility === 'Fasilitas Lainnya') {
             if (formData.manualNetIncomeCalc) {
                 netoSetahun = formData.manualNetIncomeCalc;
@@ -370,7 +355,6 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
             }
         }
 
-        // Update Calc State (Only if values differ to prevent loops)
         setCalc(prev => {
             if (
                 prev.totalBruto !== totalBruto ||
@@ -378,29 +362,18 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                 prev.netoSetahun !== netoSetahun
             ) {
                 return {
-                    totalBruto,
-                    biayaJabatan,
-                    totalPengurangan,
-                    neto,
-                    netoSetahun,
-                    ptkp,
-                    pkp,
-                    pph21Setahun,
-                    pph21Terutang,
-                    pph21TerutangBupot,
-                    pph21Dtp,
-                    pph21KurangBayar
+                    totalBruto, biayaJabatan, totalPengurangan, neto, netoSetahun, ptkp, pkp,
+                    pph21Setahun, pph21Terutang, pph21TerutangBupot, pph21Dtp, pph21KurangBayar
                 };
             }
             return prev;
         });
 
-        // Sync back calculated Tunjangan PPh to form data if it changed (avoid infinite loop)
         if (isGrossUp && formData.tunjanganPph !== calculatedTunjanganPph) {
             setFormData(prev => ({ ...prev, tunjanganPph: calculatedTunjanganPph }));
         }
 
-    }, [formData]); // Keep dependency just on formData to respond to changes
+    }, [formData]);
 
     const handleEmployeeSelect = (empId: string) => {
         const master = masterEmployees.find(m => m.id === empId);
@@ -415,10 +388,75 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                 isForeigner: master.isForeigner,
                 gender: master.gender,
                 position: master.position,
-                baseSalary: master.baseSalary * 12, // Default annualization
+                baseSalary: master.baseSalary * 12,
                 tunjanganJabatan: (master.positionAllowance || 0) * 12
             }));
         }
+    };
+
+    // --- AUTO CALCULATION LOGIC ---
+    const calculateFromMonthly = (type: 'salary' | 'allowance' | 'bonus' | 'natura' | 'pension' | 'zakat') => {
+        if (!formData.masterEmployeeId) {
+            showNotification('Pilih karyawan terlebih dahulu.', 'error');
+            return;
+        }
+
+        const monthlyRecords = employees.filter(e =>
+            e.masterEmployeeId === formData.masterEmployeeId &&
+            e.periodYear === Number(formData.periodYear) &&
+            e.calculationType === 'monthly'
+        );
+
+        if (monthlyRecords.length === 0) {
+            showNotification(`Data Bulanan belum ada untuk ${formData.name} di tahun ${formData.periodYear}.`, 'error');
+            return;
+        }
+
+        let total = 0;
+        monthlyRecords.forEach(rec => {
+            switch (type) {
+                case 'salary':
+                    total += rec.baseSalary || 0;
+                    break;
+                case 'allowance':
+                    // Total Tunjangan Tetap + sebagian Tidak Tetap (Excl Bonus & Natura)
+                    total += (rec.tunjanganJabatan || 0) +
+                             (rec.tunjanganTelekomunikasi || 0) +
+                             (rec.tunjanganMakan || 0) +
+                             (rec.tunjanganTransportasi || 0) +
+                             (rec.overtimePay || 0);
+                    const fixed = (rec.customFixedAllowances || []).reduce((s, i) => s + i.value, 0);
+                    const variable = (rec.customVariableAllowances || []).reduce((s, i) => s + i.value, 0);
+                    total += fixed + variable;
+                    break;
+                case 'bonus':
+                    total += rec.bonus || 0;
+                    break;
+                case 'natura':
+                    total += rec.facilityValue || 0;
+                    break;
+                case 'pension':
+                    // Total JHT (2%) + JP (1%)
+                    total += (rec.pensionDeduction || 0) + (rec.jpDeduction || 0);
+                    break;
+                case 'zakat':
+                    total += rec.zakatDeduction || 0;
+                    break;
+            }
+        });
+
+        // Map to form state keys
+        const fieldName = type === 'salary' ? 'baseSalary' :
+                          type === 'allowance' ? 'tunjanganJabatan' :
+                          type === 'bonus' ? 'bonus' :
+                          type === 'natura' ? 'facilityValue' :
+                          type === 'pension' ? 'pensionDeduction' : 
+                          'zakatDeduction';
+
+        // NOTE: For 'pension', we are summing into 'pensionDeduction' in A1 logic as the aggregate field.
+        
+        setFormData(prev => ({ ...prev, [fieldName]: total }));
+        showNotification(`Berhasil menarik data dari ${monthlyRecords.length} bulan.`, 'success');
     };
 
     const handleUpdateFromMaster = () => {
@@ -457,14 +495,11 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
             'periodYear', 'taxPeriodStart', 'taxPeriodEnd'
         ];
         
-        // Handle explicit "Setahun penuh" change manually to prevent auto-effect logic issues
         if (name === 'jenisPemotongan') {
             const isFullYear = value === 'Setahun penuh';
             setFormData(prev => ({
                 ...prev,
                 jenisPemotongan: value,
-                // Only reset dates if explicitly setting to "Setahun penuh"
-                // Otherwise keep existing values (handled by render logic or user)
                 taxPeriodStart: isFullYear ? 1 : prev.taxPeriodStart,
                 taxPeriodEnd: isFullYear ? 12 : prev.taxPeriodEnd,
                 previousTaxReceiptNumber: isFullYear ? '' : prev.previousTaxReceiptNumber
@@ -488,25 +523,30 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ 
-            id: existingEmployee?.id || uuidv4(), 
-            ...formData,
-            // Save calculated values to the final object
-            grossIncome: calc.totalBruto,
-            totalDeductions: calc.totalPengurangan,
-            netIncomeForTax: calc.netoSetahun,
-            ptkp: calc.ptkp,
-            pkpYearly: calc.pkp,
-            pph21Yearly: calc.pph21Setahun,
-            pph21Terutang: calc.pph21Terutang,
-            pph21Monthly: calc.pph21TerutangBupot, // Field usage override for Annual: this is Tax Payable for this receipt
-            dtpIncentive: calc.pph21Dtp,
-            finalPPh21Monthly: calc.pph21KurangBayar, // Use this for "Kurang/Lebih Bayar"
-            taxUnderOverPayment: calc.pph21KurangBayar,
-            paymentStatus: existingEmployee?.paymentStatus || 'Unpaid'
-        }); 
+        setIsSaving(true);
+        try {
+            const fullEmployee: Employee = { 
+                id: existingEmployee?.id || uuidv4(), 
+                ...formData,
+                grossIncome: calc.totalBruto,
+                totalDeductions: calc.totalPengurangan,
+                netIncomeForTax: calc.netoSetahun,
+                ptkp: calc.ptkp,
+                pkpYearly: calc.pkp,
+                pph21Yearly: calc.pph21Setahun,
+                pph21Terutang: calc.pph21Terutang,
+                pph21Monthly: calc.pph21TerutangBupot,
+                dtpIncentive: calc.pph21Dtp,
+                finalPPh21Monthly: calc.pph21KurangBayar,
+                taxUnderOverPayment: calc.pph21KurangBayar,
+                paymentStatus: existingEmployee?.paymentStatus || 'Unpaid'
+            };
+            await onSave(fullEmployee); 
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const periodOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -518,8 +558,8 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
         <div className="max-w-[1400px] mx-auto pb-10 animate-fade-in-up">
             <div className="mb-6 flex flex-col md:flex-row justify-between items-start gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-100">Bupot Tahunan 1721-A1</h1>
-                    <p className="text-sm text-gray-400">Bukti Pemotongan Pajak Penghasilan Pasal 21 (Final Year).</p>
+                    <h1 className="text-2xl font-bold text-gray-100">PPh 21 Tahunan 1721-A1</h1>
+                    <p className="text-sm text-gray-400">Pemotongan Pajak Penghasilan Pasal 21 Tahunan (Final Year).</p>
                 </div>
                 <button 
                     type="button"
@@ -533,10 +573,9 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
                 
-                {/* --- KOTAK ATAS: Identitas Penerima Penghasilan --- */}
+                {/* --- KOTAK ATAS: Identitas --- */}
                 <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-5 shadow-md">
                     <FormSectionHeader>Identitas Penerima Penghasilan</FormSectionHeader>
-                    {/* Tighter 12-column grid for minimalist alignment */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-4">
                         <div className="md:col-span-4">
                             <FormLabel>NPWP / NIK</FormLabel>
@@ -545,12 +584,10 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                         <div className="md:col-span-8">
                             <SearchableEmployeeSelect masterEmployees={masterEmployees} value={formData.masterEmployeeId} onSelect={handleEmployeeSelect} />
                         </div>
-                        
                         <div className="md:col-span-12">
                             <FormLabel>Alamat</FormLabel>
                             <FormInput value={formData.address} readOnly className="!bg-[#0f172a]/50 border-none" />
                         </div>
-
                         <div className="md:col-span-4">
                             <FormLabel>Jenis Kelamin</FormLabel>
                             <FormInput value={formData.gender || '-'} readOnly className="!bg-[#0f172a]/50 border-none" />
@@ -569,7 +606,6 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                 <span className="text-gray-400 text-xs truncate">{formatCurrency(PTKP_RATES[formData.status])}</span>
                             </div>
                         </div>
-
                         <div className="md:col-span-6">
                             <FormLabel>Jabatan</FormLabel>
                             <FormInput value={formData.position || '-'} readOnly className="!bg-[#0f172a]/50 border-none" />
@@ -581,7 +617,7 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                     </div>
                 </div>
 
-                {/* --- KOTAK TENGAH: Rincian Penghasilan dan Penghitungan PPh Pasal 21 --- */}
+                {/* --- KOTAK TENGAH --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     
                     {/* Left Side: Settings */}
@@ -599,7 +635,7 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                             
                             {showPreviousBupot && (
                                 <div className="animate-fade-in">
-                                    <FormLabel required>Nomor Bupot Sebelumnya</FormLabel>
+                                    <FormLabel>Nomor Bupot Sebelumnya</FormLabel>
                                     <FormInput 
                                         name="previousTaxReceiptNumber" 
                                         value={formData.previousTaxReceiptNumber || ''} 
@@ -679,7 +715,10 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">01.</div>
                                     <div className="col-span-4"><FormLabel>Gaji/Pensiun/THT Berkala</FormLabel></div>
-                                    <div className="col-span-7"><FormInput name="baseSalary" value={formatNumberForDisplay(formData.baseSalary)} onChange={handleChange} /></div>
+                                    <div className="col-span-7 flex gap-2">
+                                        <FormInput name="baseSalary" value={formatNumberForDisplay(formData.baseSalary)} onChange={handleChange} className="flex-1" />
+                                        <AutoCalcButton onClick={() => calculateFromMonthly('salary')} />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">02.</div>
@@ -689,7 +728,10 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">03.</div>
                                     <div className="col-span-4"><FormLabel>Tunjangan Lainnya, Uang Lembur, dsb</FormLabel></div>
-                                    <div className="col-span-7"><FormInput name="tunjanganJabatan" value={formatNumberForDisplay(formData.tunjanganJabatan)} onChange={handleChange} /></div>
+                                    <div className="col-span-7 flex gap-2">
+                                        <FormInput name="tunjanganJabatan" value={formatNumberForDisplay(formData.tunjanganJabatan)} onChange={handleChange} className="flex-1" />
+                                        <AutoCalcButton onClick={() => calculateFromMonthly('allowance')} />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">04.</div>
@@ -704,12 +746,18 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">06.</div>
                                     <div className="col-span-4"><FormLabel>Natura & Kenikmatan</FormLabel></div>
-                                    <div className="col-span-7"><FormInput name="facilityValue" value={formatNumberForDisplay(formData.facilityValue)} onChange={handleChange} /></div>
+                                    <div className="col-span-7 flex gap-2">
+                                        <FormInput name="facilityValue" value={formatNumberForDisplay(formData.facilityValue)} onChange={handleChange} className="flex-1" />
+                                        <AutoCalcButton onClick={() => calculateFromMonthly('natura')} />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">07.</div>
                                     <div className="col-span-4"><FormLabel>Tantiem, Bonus, THR</FormLabel></div>
-                                    <div className="col-span-7"><FormInput name="bonus" value={formatNumberForDisplay(formData.bonus)} onChange={handleChange} /></div>
+                                    <div className="col-span-7 flex gap-2">
+                                        <FormInput name="bonus" value={formatNumberForDisplay(formData.bonus)} onChange={handleChange} className="flex-1" />
+                                        <AutoCalcButton onClick={() => calculateFromMonthly('bonus')} />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-12 items-center gap-2 bg-[#0f172a]/30 p-2 rounded">
                                     <div className="col-span-1 text-xs text-gray-500 font-bold">08.</div>
@@ -731,12 +779,18 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">10.</div>
                                     <div className="col-span-4"><FormLabel>Iuran Pensiun / THT / JHT</FormLabel></div>
-                                    <div className="col-span-7"><FormInput name="pensionDeduction" value={formatNumberForDisplay(formData.pensionDeduction + formData.jpDeduction)} onChange={handleChange} /></div>
+                                    <div className="col-span-7 flex gap-2">
+                                        <FormInput name="pensionDeduction" value={formatNumberForDisplay(formData.pensionDeduction + formData.jpDeduction)} onChange={handleChange} className="flex-1" />
+                                        <AutoCalcButton onClick={() => calculateFromMonthly('pension')} />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-12 items-center gap-2">
                                     <div className="col-span-1 text-xs text-gray-500">11.</div>
                                     <div className="col-span-4"><FormLabel>Zakat / Sumbangan Keagamaan Wajib</FormLabel></div>
-                                    <div className="col-span-7"><FormInput name="zakatDeduction" value={formatNumberForDisplay(formData.zakatDeduction)} onChange={handleChange} /></div>
+                                    <div className="col-span-7 flex gap-2">
+                                        <FormInput name="zakatDeduction" value={formatNumberForDisplay(formData.zakatDeduction)} onChange={handleChange} className="flex-1" />
+                                        <AutoCalcButton onClick={() => calculateFromMonthly('zakat')} />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-12 items-center gap-2 bg-[#0f172a]/30 p-2 rounded">
                                     <div className="col-span-1 text-xs text-gray-500 font-bold">12.</div>
@@ -843,8 +897,17 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                 </div>
 
                 <div className="flex justify-end gap-4 mt-4">
-                    <button type="button" onClick={onCancel} className="px-8 py-3 bg-[#334155]/60 text-gray-200 font-bold rounded-lg border border-[#475569] hover:bg-[#475569] transition-colors">Batal</button>
-                    <button type="submit" className="px-10 py-3 bg-primary-600 text-white font-bold rounded-lg shadow-xl shadow-primary-900/30 hover:bg-primary-700 transition-colors">Simpan A1</button>
+                    <button type="button" onClick={onCancel} disabled={isSaving} className="px-8 py-3 bg-[#334155]/60 text-gray-200 font-bold rounded-lg border border-[#475569] hover:bg-[#475569] transition-colors disabled:opacity-50">Batal</button>
+                    <button type="submit" disabled={isSaving} className="px-10 py-3 bg-primary-600 text-white font-bold rounded-lg shadow-xl shadow-primary-900/30 hover:bg-primary-700 transition-colors flex items-center gap-2 disabled:bg-gray-600">
+                        {isSaving ? (
+                            <>
+                                <SpinnerIcon />
+                                <span>Menyimpan...</span>
+                            </>
+                        ) : (
+                            <span>Simpan A1</span>
+                        )}
+                    </button>
                 </div>
             </form>
         </div>

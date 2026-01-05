@@ -177,8 +177,10 @@ export interface Profile {
   logoUrl: string;
   appName: string;
   companyName: string;
+  companyAddress?: string;
   companyNpwp: string;
   contactName: string;
+  contactPosition?: string; // Added Job Title for PIC
   contactNpwp: string;
   contactNik: string;
   nitku: string;

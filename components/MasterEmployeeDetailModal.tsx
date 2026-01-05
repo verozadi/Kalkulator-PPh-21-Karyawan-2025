@@ -7,12 +7,24 @@ const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
 };
 
-const DetailRow: React.FC<{ label: string; value: string | number | boolean; isCurrency?: boolean; }> = ({ label, value, isCurrency = false }) => {
+const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+    try {
+        const date = new Date(dateString);
+        return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+    } catch (e) {
+        return dateString;
+    }
+};
+
+const DetailRow: React.FC<{ label: string; value: string | number | boolean; isCurrency?: boolean; isDate?: boolean; }> = ({ label, value, isCurrency = false, isDate = false }) => {
     let displayValue: string | number = '';
     if (typeof value === 'boolean') {
         displayValue = value ? 'Ya' : 'Tidak';
     } else if (isCurrency) {
         displayValue = formatCurrency(Number(value));
+    } else if (isDate) {
+        displayValue = formatDate(String(value));
     } else {
         displayValue = value as string | number;
     }
@@ -64,7 +76,7 @@ const MasterEmployeeDetailModal: React.FC<{ employee: MasterEmployee | null; onC
                                 <DetailRow label="ID Karyawan" value={employee.employeeId} />
                                 <DetailRow label="Jenis Kelamin" value={employee.gender} />
                                 <DetailRow label="Jabatan" value={employee.position} />
-                                <DetailRow label="Tanggal Masuk" value={employee.hireDate} />
+                                <DetailRow label="Tanggal Masuk" value={employee.hireDate} isDate />
                                 <DetailRow label="Status Karyawan" value={employee.isActive ? 'Aktif' : 'Tidak Aktif'} />
                             </div>
                         </div>

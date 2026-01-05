@@ -6,12 +6,12 @@ import { getTerRate } from '../services/taxCalculator';
 import { getAvailableTaxYears } from '../constants';
 
 interface EmployeeFormProps {
-    onSave: (data: EmployeeData) => void;
+    onSave: (data: EmployeeData) => Promise<void> | void;
     existingEmployee: Employee | null;
     onCancel: () => void;
     profile: Profile;
     masterEmployees: MasterEmployee[];
-    overtimeRecords?: OvertimeRecord[]; // Optional here as not strictly used for auto-populating in non-final usually, but keeping prop signature
+    overtimeRecords?: OvertimeRecord[];
     employees?: Employee[];
     showNotification: (message: string, type: 'success' | 'error') => void;
     fixedType?: CalculationType;
@@ -116,7 +116,6 @@ const SearchableTaxObjectSelect: React.FC<{
     const [searchTerm, setSearchTerm] = React.useState('');
     const wrapperRef = React.useRef<HTMLDivElement>(null);
 
-    // Initialize/Update search term based on value prop, but only if not currently editing/open
     React.useEffect(() => {
         if (!isOpen) {
              setSearchTerm(value);
@@ -127,7 +126,6 @@ const SearchableTaxObjectSelect: React.FC<{
         const handleClickOutside = (event: MouseEvent) => {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
-                // On close without selection, revert to actual value
                 setSearchTerm(value);
             }
         };
@@ -220,7 +218,8 @@ const SearchableEmployeeSelect: React.FC<{
     }, [selectedEmployee]);
 
     const filteredEmployees = React.useMemo(() => {
-        if (searchTerm.length < 2) return [];
+        if (searchTerm.length < 2) return masterEmployees; // Return all if < 2 chars
+        
         return masterEmployees.filter(e => 
             e.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
             e.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -238,10 +237,10 @@ const SearchableEmployeeSelect: React.FC<{
                     setIsOpen(true);
                 }}
                 onFocus={() => setIsOpen(true)}
-                placeholder="Ketik min. 2 huruf nama..."
+                placeholder="Ketik min. 2 huruf atau pilih..."
                 className="w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors"
             />
-            {isOpen && searchTerm.length >= 2 && (
+            {isOpen && (
                 <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto">
                     {filteredEmployees.length > 0 ? (
                         filteredEmployees.map(emp => (
@@ -275,9 +274,12 @@ const FormSubHeader: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <h4 className="text-sm font-bold text-primary-400 mb-4 border-l-4 border-primary-500 pl-3 uppercase tracking-wider">{children}</h4>
 );
 
+const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+
 const EmployeeForm2: React.FC<EmployeeFormProps> = ({ 
     onSave, existingEmployee, onCancel, profile, masterEmployees, showNotification, fixedType, employees = [] 
 }) => {
+    
     const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>({
         masterEmployeeId: '',
         calculationType: fixedType || 'nonFinal',
@@ -319,6 +321,8 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         periodType: 'fullYear',
     });
 
+    const [isSaving, setIsSaving] = React.useState(false);
+
     React.useEffect(() => {
         if (existingEmployee) {
             const { id, ...data } = existingEmployee;
@@ -326,7 +330,6 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         }
     }, [existingEmployee]);
 
-    // Gross Up Calculation Effect (reused logic)
     React.useEffect(() => {
         const {
             baseSalary, tunjanganJabatan, tunjanganTelekomunikasi,
@@ -375,7 +378,6 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         formData.customVariableAllowances, formData.status, formData.isGrossUp
     ]);
 
-    // Derived values
     const totalPenghasilanBruto = React.useMemo(() => {
         const customFixedTotal = (formData.customFixedAllowances || []).reduce((sum, item) => sum + item.value, 0);
         const customVariableTotal = (formData.customVariableAllowances || []).reduce((sum, item) => sum + item.value, 0);
@@ -387,28 +389,20 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
     }, [formData]);
 
     const biayaJabatanValue = React.useMemo(() => Math.min(totalPenghasilanBruto * 0.05, 500000), [totalPenghasilanBruto]);
-    
-    // Tax Deductible
     const totalTaxDeductions = React.useMemo(() => 
         biayaJabatanValue + formData.pensionDeduction + formData.jpDeduction + (formData.zakatDeduction || 0), 
     [biayaJabatanValue, formData.pensionDeduction, formData.jpDeduction, formData.zakatDeduction]);
-    
-    // Non-Tax Deductible
     const totalNonTaxDeductions = React.useMemo(() => {
         const customDeductionsTotal = (formData.customDeductions || []).reduce((sum, i) => sum + i.value, 0);
         return formData.bpjsDeduction + formData.loan + formData.otherDeductions + customDeductionsTotal;
     }, [formData.bpjsDeduction, formData.loan, formData.otherDeductions, formData.customDeductions]);
-    
     const terRate = getTerRate(formData.status, totalPenghasilanBruto);
     const pph21Est = Math.floor(totalPenghasilanBruto * terRate);
-    
-    // Calculate Take Home Pay
     const takeHomePay = React.useMemo(() => {
         const totalCashDeductions = (totalTaxDeductions - biayaJabatanValue) + totalNonTaxDeductions;
         return Math.round(totalPenghasilanBruto - totalCashDeductions - pph21Est);
     }, [totalPenghasilanBruto, totalTaxDeductions, biayaJabatanValue, totalNonTaxDeductions, pph21Est]);
 
-    // Handlers
     const handleEmployeeSelect = (empId: string) => {
         const master = masterEmployees.find(m => m.id === empId);
         if (master) {
@@ -456,21 +450,17 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
             showNotification('Pilih karyawan terlebih dahulu.', 'error');
             return;
         }
-
         let prevMonth = Number(formData.periodMonth) - 1;
         let prevYear = Number(formData.periodYear);
-
         if (prevMonth === 0) {
             prevMonth = 12;
             prevYear -= 1;
         }
-
         const prevData = employees.find(e => 
             e.masterEmployeeId === formData.masterEmployeeId && 
             e.periodMonth === prevMonth && 
             e.periodYear === prevYear
         );
-
         if (prevData) {
             setFormData(prev => ({
                 ...prev,
@@ -505,7 +495,6 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
     const handleChange = (e: any) => {
         const { name, value } = e.target;
         const numericFields = ['baseSalary', 'tunjanganJabatan', 'tunjanganTelekomunikasi', 'tunjanganMakan', 'tunjanganTransportasi', 'overtimePay', 'bonus', 'facilityValue', 'loan', 'otherDeductions', 'pensionDeduction', 'jpDeduction', 'bpjsDeduction', 'zakatDeduction'];
-        
         if (numericFields.includes(name)) {
             setFormData(prev => ({ ...prev, [name]: parseFormattedNumber(value) }));
         } else if (name === 'isGrossUp') {
@@ -521,17 +510,13 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         if (type === 'jht') val = baseForBpjs * 0.02;
         else if (type === 'jp') val = baseForBpjs * 0.01;
         else if (type === 'bpjs') val = baseForBpjs * 0.01;
-        
         const field = type === 'jht' ? 'pensionDeduction' : type === 'jp' ? 'jpDeduction' : 'bpjsDeduction';
         setFormData(prev => ({ ...prev, [field]: Math.round(val) }));
     };
 
     const handleAddAllowance = (type: 'fixed' | 'variable') => {
         const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
-        setFormData(prev => ({
-            ...prev,
-            [key]: [...(prev[key as any] || []), { id: uuidv4(), name: '', value: 0 }]
-        }));
+        setFormData(prev => ({ ...prev, [key]: [...(prev[key as any] || []), { id: uuidv4(), name: '', value: 0 }] }));
     };
 
     const handleCustomAllowanceChange = (type: 'fixed' | 'variable', index: number, field: 'name' | 'value', value: string) => {
@@ -543,10 +528,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
     };
 
     const handleAddDeduction = () => {
-        setFormData(prev => ({
-            ...prev,
-            customDeductions: [...(prev.customDeductions || []), { id: uuidv4(), name: '', value: 0 }]
-        }));
+        setFormData(prev => ({ ...prev, customDeductions: [...(prev.customDeductions || []), { id: uuidv4(), name: '', value: 0 }] }));
     };
 
     const handleCustomDeductionChange = (index: number, field: 'name' | 'value', value: string) => {
@@ -554,6 +536,16 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         if (field === 'name') list[index].name = value;
         else list[index].value = parseFormattedNumber(value);
         setFormData(prev => ({ ...prev, customDeductions: list }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            await onSave({ id: existingEmployee?.id || uuidv4(), ...formData });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -642,7 +634,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                 </div>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); onSave({ id: existingEmployee?.id || uuidv4(), ...formData }); }} className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
                 
                 {/* Left Column: Earnings & Deductions */}
                 <div className="lg:col-span-3 space-y-8">
@@ -736,6 +728,35 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                                         <FormInput name="bonus" value={formatNumberForDisplay(formData.bonus)} onChange={handleChange} />
                                     </div>
                                 </div>
+
+                                {formData.customVariableAllowances?.map((item, idx) => (
+                                    <div key={item.id} className="flex gap-4 mb-3 items-end">
+                                        <div className="flex-1">
+                                            <FormLabel>Nama Tunjangan Tidak Tetap</FormLabel>
+                                            <FormInput 
+                                                value={item.name} 
+                                                onChange={(e: any) => handleCustomAllowanceChange('variable', idx, 'name', e.target.value)} 
+                                                placeholder="Nama Tunjangan"
+                                            />
+                                        </div>
+                                        <div className="w-36">
+                                            <FormLabel>Jumlah</FormLabel>
+                                            <FormInput 
+                                                value={formatNumberForDisplay(item.value)} 
+                                                onChange={(e: any) => handleCustomAllowanceChange('variable', idx, 'value', e.target.value)} 
+                                                className="text-right"
+                                            />
+                                        </div>
+                                        <button type="button" onClick={() => {
+                                            const list = [...formData.customVariableAllowances];
+                                            list.splice(idx, 1);
+                                            setFormData(prev => ({ ...prev, customVariableAllowances: list }));
+                                        }} className="p-2 bg-red-950/20 text-red-500 hover:bg-red-900/40 border border-red-900/50 rounded mb-0.5 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                ))}
+
                                 <button type="button" onClick={() => handleAddAllowance('variable')} className="w-full mt-6 py-2 bg-primary-900/20 border border-primary-500/30 text-primary-400 text-xs font-bold rounded hover:bg-primary-900/40 transition-colors flex items-center justify-center gap-2">
                                     <span className="text-base">+</span> Tambah Tunjangan Tdk Tetap
                                 </button>
@@ -932,15 +953,24 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                         <button 
                             type="button" 
                             onClick={onCancel}
-                            className="px-8 py-3 bg-[#334155]/60 hover:bg-[#475569] text-gray-200 font-bold rounded-lg transition-all border border-[#475569]"
+                            disabled={isSaving}
+                            className="px-8 py-3 bg-[#334155]/60 hover:bg-[#475569] text-gray-200 font-bold rounded-lg transition-all border border-[#475569] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Batal
                         </button>
                         <button 
                             type="submit"
-                            className="px-10 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg shadow-xl shadow-primary-900/30 transition-all transform active:scale-95"
+                            disabled={isSaving}
+                            className="px-10 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg shadow-xl shadow-primary-900/30 transition-all transform active:scale-95 flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
                         >
-                            Simpan & Hitung Pajak
+                            {isSaving ? (
+                                <>
+                                    <SpinnerIcon />
+                                    <span>Menyimpan...</span>
+                                </>
+                            ) : (
+                                <span>Simpan & Hitung Pajak</span>
+                            )}
                         </button>
                     </div>
                 </div>

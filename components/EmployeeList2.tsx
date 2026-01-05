@@ -26,24 +26,23 @@ const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
 };
 
-// --- Icon Components ---
+// Icons
 const UserGroupIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
 const FilterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>;
 const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
 const ViewIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const ImportIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
-const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const ChevronDownIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 ${className || ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>;
 const SortAscIcon = () => <svg className="h-4 w-4 ml-1 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m-4-4v12" /></svg>;
 const SortDescIcon = () => <svg className="h-4 w-4 ml-1 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m-4 4V4" /></svg>;
 const PrinterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z" /></svg>;
 
+type SortableKey = 'employeeId' | 'name' | 'npwp' | 'period' | 'status' | 'grossIncome' | 'finalPPh21Monthly';
 
-type SortableKey = 'employeeId' | 'name' | 'npwp' | 'period' | 'status' | 'grossIncome' | 'finalPPh21Monthly' | 'netIncomeForTax' | 'pph21Terutang' | 'taxUnderOverPayment';
-
-const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees, overtimeRecords, onEdit, onDelete, navigateTo, onOpenDetailModal, onImport, showNotification, title, addNewPage }) => {
+const EmployeeList2: React.FC<EmployeeListProps> = ({ employees, masterEmployees, onEdit, onDelete, navigateTo, onOpenDetailModal, onImport, showNotification, title, addNewPage }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterYear, setFilterYear] = React.useState('');
   const [filterMonth, setFilterMonth] = React.useState('');
@@ -59,7 +58,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees,
   const [printOrientation, setPrintOrientation] = React.useState<'portrait' | 'landscape'>('portrait');
   
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-  const profile = getProfile(employees[0]?.masterEmployeeId || 'dummy'); // Simple hack to get profile, ideally passed prop or context
+  const profile = getProfile(employees[0]?.masterEmployeeId || 'dummy');
 
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -68,194 +67,6 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees,
     }
     setSortConfig({ key, direction });
   };
-
-  // ... (Keep existing download handlers) ...
-  const handleDownloadPphTemplate = () => {
-    const headers = [
-        'ID Karyawan*', 'Tahun*', 'Bulan*',
-        'Gaji Pokok', 'Tunjangan PPh', 'Tunjangan Jabatan', 'Tunjangan Telekomunikasi',
-        'Tunjangan Makan', 'Tunjangan Transportasi', 'Lembur', 'Bonus/THR', 'Natura/Kenikmatan',
-        'Pot. Pinjaman/Kasbon', 'Potongan Lain', 'JHT (2%)', 'JP (1%)', 'BPJS Kes (1%)', 'Zakat',
-        'Gross Up (YA/TIDAK)', 'Fasilitas (Tanpa Fasilitas/DTP/Fasilitas Lainnya)', 'No SKB/DTP'
-    ];
-    const exampleRow = [
-        'K001', new Date().getFullYear(), new Date().getMonth() + 1,
-        10000000, 0, 500000, 300000,
-        400000, 400000, 0, 0, 0,
-        0, 0, 200000, 100000, 100000, 0,
-        'TIDAK', 'Tanpa Fasilitas', ''
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
-    ws['!cols'] = headers.map(h => ({ wch: h.length + 5 }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template Bulanan");
-    XLSX.writeFile(wb, "template_import_pph21_bulanan.xlsx");
-};
-
-const handleImportPphClick = () => {
-    fileInputRef.current?.click();
-};
-
-const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        try {
-            const data = event.target?.result;
-            const workbook = XLSX.read(data, { type: 'binary' });
-            const sheetName = workbook.SheetNames[0];
-            const sheet = workbook.Sheets[sheetName];
-            const jsonData: any[] = XLSX.utils.sheet_to_json(sheet);
-
-            if (jsonData.length === 0) {
-                showNotification('File Excel kosong atau tidak memiliki data.', 'error');
-                return;
-            }
-
-            const employeesToImport: Omit<EmployeeData, 'id'>[] = [];
-            const errors: string[] = [];
-
-            jsonData.forEach((row, index) => {
-                const employeeId = row['ID Karyawan*'];
-                const year = parseInt(row['Tahun*'], 10);
-                const month = parseInt(row['Bulan*'], 10);
-
-                if (!employeeId || !year || !month || month < 1 || month > 12) {
-                    errors.push(`Baris ${index + 2}: ID Karyawan, Tahun, dan Bulan (1-12) wajib diisi dengan format yang benar.`);
-                    return;
-                }
-
-                const masterEmp = masterEmployees.find(e => e.employeeId === employeeId);
-                if (!masterEmp) {
-                    errors.push(`Baris ${index + 2}: Karyawan dengan ID '${employeeId}' tidak ditemukan di data master.`);
-                    return;
-                }
-
-                // Check for manual overtime input in Excel, if 0/undefined, check system records
-                let overtimeInput = Number(row['Lembur'] || 0);
-                if (overtimeInput === 0) {
-                    const employeeOvertimeRecords = overtimeRecords.filter(o =>
-                        o.masterEmployeeId === masterEmp.id &&
-                        o.year === year &&
-                        o.month === month
-                    );
-                    overtimeInput = employeeOvertimeRecords.reduce((sum, record) => sum + record.totalPay, 0);
-                }
-
-                const employeeData: Omit<EmployeeData, 'id'> = {
-                    masterEmployeeId: masterEmp.id,
-                    calculationType: 'monthly',
-                    name: masterEmp.fullName,
-                    npwp: masterEmp.npwp,
-                    address: masterEmp.address,
-                    status: masterEmp.ptkpStatus,
-                    employeeStatus: masterEmp.employeeStatus,
-                    isForeigner: masterEmp.isForeigner,
-                    periodYear: year,
-                    periodMonth: month,
-                    baseSalary: Number(row['Gaji Pokok'] || masterEmp.baseSalary || 0),
-                    tunjanganPph: Number(row['Tunjangan PPh'] || 0),
-                    tunjanganJabatan: Number(row['Tunjangan Jabatan'] || masterEmp.positionAllowance || 0),
-                    tunjanganTelekomunikasi: Number(row['Tunjangan Telekomunikasi'] || 0),
-                    tunjanganMakan: Number(row['Tunjangan Makan'] || 0),
-                    tunjanganTransportasi: Number(row['Tunjangan Transportasi'] || 0),
-                    overtimePay: overtimeInput,
-                    bonus: Number(row['Bonus/THR'] || 0),
-                    facilityValue: Number(row['Natura/Kenikmatan'] || 0),
-                    loan: Number(row['Pot. Pinjaman/Kasbon'] || 0),
-                    otherDeductions: Number(row['Potongan Lain'] || 0),
-                    pensionDeduction: Number(row['JHT (2%)'] || 0),
-                    jpDeduction: Number(row['JP (1%)'] || 0),
-                    bpjsDeduction: Number(row['BPJS Kes (1%)'] || 0),
-                    zakatDeduction: Number(row['Zakat'] || 0),
-                    isGrossUp: String(row['Gross Up (YA/TIDAK)'] || 'TIDAK').toUpperCase() === 'YA',
-                    taxFacility: (row['Fasilitas (Tanpa Fasilitas/DTP/Fasilitas Lainnya)'] || 'Tanpa Fasilitas') as any,
-                    taxFacilityNumber: row['No SKB/DTP'] || '',
-                    taxObjectName: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap',
-                    taxObjectCode: '21-100-01',
-                    signerIdentity: 'NPWP',
-                    customFixedAllowances: [],
-                    customVariableAllowances: [],
-                    customDeductions: [],
-                };
-                employeesToImport.push(employeeData);
-            });
-
-            if (errors.length > 0) {
-                showNotification(`Gagal mengimpor. Ditemukan ${errors.length} error. Cek konsol browser untuk detail.`, 'error');
-                console.error("Import Errors:", errors);
-            } else if (employeesToImport.length > 0) {
-                onImport(employeesToImport);
-            } else {
-                showNotification('Tidak ada data yang valid untuk diimpor.', 'error');
-            }
-
-        } catch (error) {
-            console.error(error);
-            showNotification('Gagal memproses file. Pastikan format file dan data sudah benar.', 'error');
-        } finally {
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    };
-    reader.readAsBinaryString(file);
-};
-
-
-  const handleResetFilters = () => {
-    setSearchTerm('');
-    setFilterYear('');
-    setFilterMonth('');
-    setFilterStatus('');
-  };
-
-  const handleDeleteClick = (employee: Employee) => {
-    const period = `${months[employee.periodMonth - 1]} ${employee.periodYear}`;
-    if (window.confirm(`Anda yakin ingin menghapus data PPh 21 Bulanan untuk ${employee.name} periode ${period}?`)) {
-        onDelete(employee.id);
-    }
-  };
-
-
-  const filteredAndSortedEmployees = React.useMemo(() => {
-    let processedEmployees = employees.filter(employee => 
-      (employee.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       (employee.npwp && employee.npwp.includes(searchTerm))) &&
-      (filterYear === '' || employee.periodYear.toString() === filterYear) &&
-      (filterMonth === '' || employee.periodMonth.toString() === filterMonth) &&
-      (filterStatus === '' || employee.status === filterStatus)
-    );
-  
-    processedEmployees.sort((a, b) => {
-        const key = sortConfig.key;
-        const getSortableValue = (emp: Employee, sortKey: SortableKey) => {
-            switch (sortKey) {
-                case 'employeeId':
-                    const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
-                    return master ? master.employeeId.toLowerCase() : '';
-                case 'period': return emp.periodYear * 100 + emp.periodMonth;
-                case 'name': return emp.name.toLowerCase();
-                case 'npwp': return emp.npwp;
-                case 'status': return emp.status;
-                case 'grossIncome': return emp.grossIncome;
-                case 'finalPPh21Monthly': return emp.finalPPh21Monthly;
-                default: return '';
-            }
-        };
-
-        const aValue = getSortableValue(a, key);
-        const bValue = getSortableValue(b, key);
-
-        if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-        return 0;
-    });
-
-    return processedEmployees;
-}, [employees, masterEmployees, searchTerm, filterYear, filterMonth, filterStatus, sortConfig]);
 
   // Bulk Selection Logic
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -280,14 +91,12 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
   // Bulk PDF Generation (4 Slips per A4 Page)
   const handleBulkDownload = async () => {
       if (selectedIds.size === 0) {
-          showNotification('Pilih karyawan terlebih dahulu.', 'error');
+          showNotification('Pilih data terlebih dahulu.', 'error');
           return;
       }
       setIsGeneratingBulk(true);
       
       const employeesToPrint = employees.filter(e => selectedIds.has(e.id));
-      
-      // Temporarily render the slips into the hidden container
       setBulkPrintData(employeesToPrint);
       
       // Allow DOM to update
@@ -307,7 +116,6 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
           const pageHeight = isLandscape ? 210 : 297;
           const margin = 10;
           
-          // Calculate grid dimensions (2x2)
           const cellWidth = (pageWidth - (margin * 2)) / 2;
           const cellHeight = (pageHeight - (margin * 2)) / 2;
 
@@ -316,20 +124,18 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
           for (let i = 0; i < slips.length; i++) {
               const slipElement = slips[i] as HTMLElement;
               
-              // Use windowWidth/windowHeight to ensure capture ignores screen scaling
-              // Using content size
               const canvas = await html2canvas(slipElement, { 
                   scale: 2,
                   useCORS: true,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: '#ffffff'
               });
               const imgData = canvas.toDataURL('image/png');
 
               const itemsPerPage = 4;
               const positionInPage = i % itemsPerPage;
               
-              const col = positionInPage % 2; // 0 or 1
-              const row = Math.floor(positionInPage / 2); // 0 or 1
+              const col = positionInPage % 2;
+              const row = Math.floor(positionInPage / 2);
 
               if (i > 0 && positionInPage === 0) {
                   pdf.addPage();
@@ -338,35 +144,29 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
               const x = margin + (col * cellWidth);
               const y = margin + (row * cellHeight);
               
-              // Draw border for cutting guide
               pdf.setDrawColor(200, 200, 200);
               pdf.rect(x, y, cellWidth, cellHeight);
 
-              // Logic to fit image inside cell without extra white space
               const padding = 5;
               const availableWidth = cellWidth - (padding * 2);
               const availableHeight = cellHeight - (padding * 2);
               
-              // Calculate scaling to fit width, maintaining aspect ratio
               const imgAspect = canvas.width / canvas.height;
               let drawW = availableWidth;
               let drawH = drawW / imgAspect;
 
-              // If height exceeds available height, scale down by height instead
               if (drawH > availableHeight) {
                   drawH = availableHeight;
                   drawW = drawH * imgAspect;
               }
               
-              // Center image in cell
               const xOffset = x + padding + (availableWidth - drawW) / 2;
-              const yOffset = y + padding + (availableHeight - drawH) / 2; // Center vertically
-              // OR align top: const yOffset = y + padding;
-
+              const yOffset = y + padding + (availableHeight - drawH) / 2;
+              
               pdf.addImage(imgData, 'PNG', xOffset, yOffset, drawW, drawH);
           }
 
-          pdf.save(`Bulk_Slip_Gaji_${printOrientation}_${new Date().getTime()}.pdf`);
+          pdf.save(`Bulk_Slip_NonFinal_${printOrientation}_${new Date().getTime()}.pdf`);
           showNotification('Download PDF massal berhasil.');
 
       } catch (error) {
@@ -374,10 +174,174 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
           showNotification('Gagal membuat PDF massal.', 'error');
       } finally {
           setIsGeneratingBulk(false);
-          setBulkPrintData([]); // Clear DOM
-          setSelectedIds(new Set()); // Reset selection
+          setBulkPrintData([]);
+          setSelectedIds(new Set());
       }
   };
+
+  const handleDownloadTemplate = () => {
+      const headers = [
+          'ID Karyawan*', 'Tahun*', 'Bulan*', 
+          'Penghasilan Bruto', 
+          'Kode Objek Pajak (Contoh: 21-100-07)', 
+          'Nama Objek Pajak (Optional)',
+          'Gross Up (YA/TIDAK)',
+          'Fasilitas (Tanpa Fasilitas/DTP/Fasilitas Lainnya)',
+          'No SKB/DTP'
+      ];
+      const example = [
+          'K005', new Date().getFullYear(), new Date().getMonth()+1, 
+          5000000, '21-100-07', 'Tenaga Ahli',
+          'TIDAK', 'Tanpa Fasilitas', ''
+      ];
+      const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+      ws['!cols'] = headers.map(h => ({ wch: h.length + 5 }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Template NonFinal");
+      XLSX.writeFile(wb, "template_import_pph21_nonfinal.xlsx");
+  };
+
+  const handleImportClick = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          try {
+              const data = event.target?.result;
+              const workbook = XLSX.read(data, { type: 'binary' });
+              const sheetName = workbook.SheetNames[0];
+              const sheet = workbook.Sheets[sheetName];
+              const jsonData: any[] = XLSX.utils.sheet_to_json(sheet);
+
+              if (jsonData.length === 0) {
+                  showNotification('File Excel kosong atau tidak memiliki data.', 'error');
+                  return;
+              }
+
+              const employeesToImport: Omit<EmployeeData, 'id'>[] = [];
+              const errors: string[] = [];
+
+              jsonData.forEach((row, index) => {
+                  const employeeId = row['ID Karyawan*'];
+                  const year = parseInt(row['Tahun*'], 10);
+                  const month = parseInt(row['Bulan*'], 10);
+                  const gross = Number(row['Penghasilan Bruto'] || 0);
+                  const taxObjectCode = row['Kode Objek Pajak (Contoh: 21-100-07)'];
+
+                  if (!employeeId || !year || !month || month < 1 || month > 12) {
+                      errors.push(`Baris ${index + 2}: ID Karyawan, Tahun, dan Bulan wajib diisi.`);
+                      return;
+                  }
+                  if (!taxObjectCode) {
+                      errors.push(`Baris ${index + 2}: Kode Objek Pajak wajib diisi.`);
+                      return;
+                  }
+
+                  const masterEmp = masterEmployees.find(e => e.employeeId === employeeId);
+                  if (!masterEmp) {
+                      errors.push(`Baris ${index + 2}: Karyawan dengan ID '${employeeId}' tidak ditemukan.`);
+                      return;
+                  }
+
+                  const employeeData: Omit<EmployeeData, 'id'> = {
+                      masterEmployeeId: masterEmp.id,
+                      calculationType: 'nonFinal',
+                      name: masterEmp.fullName,
+                      npwp: masterEmp.npwp,
+                      address: masterEmp.address,
+                      status: masterEmp.ptkpStatus,
+                      employeeStatus: masterEmp.employeeStatus,
+                      isForeigner: masterEmp.isForeigner,
+                      periodYear: year,
+                      periodMonth: month,
+                      baseSalary: gross,
+                      tunjanganPph: 0, tunjanganJabatan: 0, tunjanganTelekomunikasi: 0,
+                      tunjanganMakan: 0, tunjanganTransportasi: 0, overtimePay: 0,
+                      bonus: 0, facilityValue: 0, loan: 0, otherDeductions: 0,
+                      pensionDeduction: 0, jpDeduction: 0, bpjsDeduction: 0, zakatDeduction: 0,
+                      
+                      isGrossUp: String(row['Gross Up (YA/TIDAK)'] || 'TIDAK').toUpperCase() === 'YA',
+                      taxFacility: (row['Fasilitas (Tanpa Fasilitas/DTP/Fasilitas Lainnya)'] || 'Tanpa Fasilitas') as any,
+                      taxFacilityNumber: row['No SKB/DTP'] || '',
+                      taxObjectCode: taxObjectCode,
+                      taxObjectName: row['Nama Objek Pajak (Optional)'] || taxObjectCode,
+                      signerIdentity: 'NPWP',
+                      customFixedAllowances: [], customVariableAllowances: [], customDeductions: [],
+                  };
+                  employeesToImport.push(employeeData);
+              });
+
+              if (errors.length > 0) {
+                  showNotification(`Gagal import. ${errors.length} error ditemukan. Cek konsol.`, 'error');
+                  console.error("Import Errors:", errors);
+              } else if (employeesToImport.length > 0) {
+                  onImport(employeesToImport);
+              } else {
+                  showNotification('Tidak ada data valid.', 'error');
+              }
+          } catch (error) {
+              console.error(error);
+              showNotification('Gagal memproses file.', 'error');
+          } finally {
+              if (fileInputRef.current) fileInputRef.current.value = '';
+          }
+      };
+      reader.readAsBinaryString(file);
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setFilterYear('');
+    setFilterMonth('');
+    setFilterStatus('');
+  };
+
+  const handleDeleteClick = (employee: Employee) => {
+    const period = `${months[employee.periodMonth - 1]} ${employee.periodYear}`;
+    if (window.confirm(`Anda yakin ingin menghapus data PPh 21 Final/Tidak Final untuk ${employee.name} periode ${period}?`)) {
+        onDelete(employee.id);
+    }
+  };
+
+  const filteredAndSortedEmployees = React.useMemo(() => {
+    let processedEmployees = employees.filter(employee => 
+      (employee.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+       (employee.npwp && employee.npwp.includes(searchTerm))) &&
+      (filterYear === '' || employee.periodYear.toString() === filterYear) &&
+      (filterMonth === '' || employee.periodMonth.toString() === filterMonth) &&
+      (filterStatus === '' || employee.status === filterStatus)
+    );
+  
+    processedEmployees.sort((a, b) => {
+        const key = sortConfig.key;
+        const getSortableValue = (emp: Employee, sortKey: SortableKey) => {
+            switch (sortKey) {
+                case 'employeeId': return emp.masterEmployeeId; 
+                case 'period': return emp.periodYear * 100 + emp.periodMonth;
+                case 'name': return emp.name.toLowerCase();
+                case 'npwp': return emp.npwp;
+                case 'status': return emp.status;
+                case 'grossIncome': return emp.grossIncome;
+                case 'finalPPh21Monthly': return emp.finalPPh21Monthly;
+                default: return '';
+            }
+        };
+
+        const aValue = getSortableValue(a, key);
+        const bValue = getSortableValue(b, key);
+
+        if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+    });
+
+    return processedEmployees;
+}, [employees, searchTerm, filterYear, filterMonth, filterStatus, sortConfig]);
 
   const summary = React.useMemo(() => {
       return {
@@ -404,22 +368,18 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
             <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center flex-col">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
                 <p className="text-white font-bold text-lg">Membuat PDF Massal (4 slip per halaman)...</p>
-                <p className="text-gray-400 text-sm">Mohon tunggu, proses ini mungkin memakan waktu.</p>
             </div>
         )}
 
         {/* Hidden Container for Bulk HTML Rendering */}
-        {/* Adjusted style to be auto height and fit content */}
         <div className="absolute left-[-9999px] top-0" style={{ width: hiddenContainerWidth }} ref={hiddenPrintRef}>
             {bulkPrintData.map(emp => {
-                const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
-                const thp = emp.grossIncome - (emp.finalPPh21Monthly + emp.bpjsDeduction + emp.pensionDeduction + emp.jpDeduction + emp.loan + emp.otherDeductions + (emp.customDeductions?.reduce((s,i)=>s+i.value,0)||0));
-                
+                const thp = emp.grossIncome - emp.finalPPh21Monthly; // Simpler THP for non-final usually
                 return (
                     <div key={emp.id} className="bulk-slip-item bg-white p-4 mb-4 text-black font-sans text-[10px] border border-gray-300 w-full h-auto inline-block">
                         <div className="flex justify-between items-start border-b border-black pb-2 mb-2">
                             <div>
-                                <h2 className="font-bold text-lg uppercase">SLIP GAJI</h2>
+                                <h2 className="font-bold text-lg uppercase">BUKTI POTONG NON-FINAL</h2>
                                 <p>Periode: {months[emp.periodMonth-1]} {emp.periodYear}</p>
                             </div>
                             <div className="text-right">
@@ -430,32 +390,26 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                         <div className="grid grid-cols-2 gap-2 mb-2">
                             <div>
                                 <div className="flex justify-between"><span>Nama:</span> <span className="font-bold">{emp.name}</span></div>
-                                <div className="flex justify-between"><span>Jabatan:</span> <span>{master?.position}</span></div>
-                                <div className="flex justify-between"><span>ID:</span> <span>{master?.employeeId}</span></div>
+                                <div className="flex justify-between"><span>NPWP:</span> <span>{emp.npwp}</span></div>
                             </div>
                             <div>
+                                <div className="flex justify-between"><span>Objek Pajak:</span> <span>{emp.taxObjectCode}</span></div>
                                 <div className="flex justify-between"><span>Status:</span> <span>{emp.status}</span></div>
-                                <div className="flex justify-between"><span>NPWP:</span> <span>{emp.npwp}</span></div>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 mb-2 border-t border-black pt-2">
                             <div>
-                                <h4 className="font-bold border-b border-gray-300 mb-1">PENERIMAAN</h4>
-                                <div className="flex justify-between"><span>Gaji Pokok</span> <span>{formatCurrency(emp.baseSalary)}</span></div>
-                                <div className="flex justify-between"><span>Tunjangan</span> <span>{formatCurrency(emp.tunjanganJabatan + emp.tunjanganTelekomunikasi)}</span></div>
-                                <div className="flex justify-between"><span>Lembur/Lain</span> <span>{formatCurrency(emp.overtimePay + emp.tunjanganMakan + emp.tunjanganTransportasi)}</span></div>
-                                <div className="flex justify-between font-bold border-t border-gray-300 mt-1 pt-1"><span>Total Bruto</span> <span>{formatCurrency(emp.grossIncome)}</span></div>
+                                <h4 className="font-bold border-b border-gray-300 mb-1">PENGHASILAN</h4>
+                                <div className="flex justify-between font-bold mt-1 pt-1"><span>Bruto</span> <span>{formatCurrency(emp.grossIncome)}</span></div>
                             </div>
                             <div>
-                                <h4 className="font-bold border-b border-gray-300 mb-1">POTONGAN</h4>
-                                <div className="flex justify-between"><span>PPh 21</span> <span>{formatCurrency(emp.finalPPh21Monthly)}</span></div>
-                                <div className="flex justify-between"><span>BPJS/JHT/JP</span> <span>{formatCurrency(emp.bpjsDeduction + emp.pensionDeduction + emp.jpDeduction)}</span></div>
-                                <div className="flex justify-between"><span>Pinjaman/Lain</span> <span>{formatCurrency(emp.loan + emp.otherDeductions)}</span></div>
-                                <div className="flex justify-between font-bold border-t border-gray-300 mt-1 pt-1"><span>Total Pot.</span> <span>{formatCurrency(emp.finalPPh21Monthly + emp.bpjsDeduction + emp.pensionDeduction + emp.jpDeduction + emp.loan + emp.otherDeductions)}</span></div>
+                                <h4 className="font-bold border-b border-gray-300 mb-1">PEMOTONGAN</h4>
+                                <div className="flex justify-between"><span>Tarif Efektif</span> <span>{emp.grossIncome > 0 ? ((emp.finalPPh21Monthly/emp.grossIncome)*100).toFixed(2) : 0}%</span></div>
+                                <div className="flex justify-between font-bold border-t border-gray-300 mt-1 pt-1"><span>PPh 21</span> <span>{formatCurrency(emp.finalPPh21Monthly)}</span></div>
                             </div>
                         </div>
                         <div className="bg-gray-200 p-2 flex justify-between items-center font-bold text-lg mb-4">
-                            <span>TAKE HOME PAY</span>
+                            <span>NETO DITERIMA</span>
                             <span>{formatCurrency(thp)}</span>
                         </div>
                         <div className="text-center text-[8px] italic">
@@ -466,28 +420,27 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
             })}
         </div>
 
-        {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <div className="flex items-center space-x-3">
                     <UserGroupIcon />
-                    <h1 className="text-3xl font-bold text-gray-100">{title || 'Daftar PPh 21 Bulanan'}</h1>
+                    <h1 className="text-3xl font-bold text-gray-100">{title || 'Daftar PPh 21 Final / Tidak Final'}</h1>
                 </div>
-                <p className="text-gray-400 mt-1">Kelola data perhitungan pajak penghasilan bulanan karyawan.</p>
+                <p className="text-gray-400 mt-1">Kelola pajak untuk Bukan Pegawai (Tenaga Ahli, Peserta Kegiatan, dll).</p>
             </div>
             <div className="flex flex-wrap gap-2">
-                 <button onClick={handleDownloadPphTemplate} className="bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-500 transition-colors flex items-center justify-center space-x-2 text-sm">
+                 <button onClick={handleDownloadTemplate} className="bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-500 transition-colors flex items-center justify-center space-x-2 text-sm">
                     <DownloadIcon />
                     <span>Template</span>
                 </button>
-                <button onClick={handleImportPphClick} className="bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-sm">
+                <button onClick={handleImportClick} className="bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-sm">
                     <ImportIcon />
                     <span>Import Excel</span>
                 </button>
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept=".xlsx, .xls" />
-                <button onClick={() => navigateTo(addNewPage || 'pph21Monthly')} className="bg-primary-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-primary-900/50">
+                <button onClick={() => navigateTo(addNewPage || 'pph21NonFinal')} className="bg-primary-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-primary-900/50">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                    <span>Tambah Bulanan</span>
+                    <span>Tambah Data</span>
                 </button>
             </div>
         </div>
@@ -520,14 +473,13 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
             </div>
         )}
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                <p className="text-sm text-gray-400">Total Data</p>
+                <p className="text-sm text-gray-400">Total Transaksi</p>
                 <p className="text-2xl font-bold text-gray-100">{summary.totalPerhitungan}</p>
             </div>
             <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-                <p className="text-sm text-gray-400">Total Gaji Bruto</p>
+                <p className="text-sm text-gray-400">Total Penghasilan Bruto</p>
                 <p className="text-2xl font-bold text-blue-400">{formatCurrency(summary.totalGajiBruto)}</p>
             </div>
             <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
@@ -536,12 +488,8 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
             </div>
         </div>
 
-        {/* Filter Section */}
         <div className="bg-gray-800 rounded-lg border border-gray-700">
-            <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className="w-full flex justify-between items-center p-4 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 rounded-lg"
-            >
+            <button onClick={() => setIsFilterOpen(!isFilterOpen)} className="w-full flex justify-between items-center p-4 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 rounded-lg">
                 <div className="flex items-center space-x-3">
                     <FilterIcon />
                     <h3 className="text-lg font-semibold text-gray-200">Filter & Pencarian</h3>
@@ -553,17 +501,17 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="relative md:col-span-1">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
-                            <input type="text" placeholder="Cari Nama/NPWP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 placeholder-gray-400" />
+                            <input type="text" placeholder="Cari Nama/NPWP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-200" />
                         </div>
-                        <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
+                        <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
                             <option value="">Semua Tahun</option>
                             {uniqueYears.map(year => <option key={year} value={year}>{year}</option>)}
                         </select>
-                        <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
+                        <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
                             <option value="">Semua Bulan</option>
                             {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                         </select>
-                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
+                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
                             <option value="">Semua PTKP</option>
                             {Object.values(MaritalStatus).map(status => <option key={status} value={status}>{status}</option>)}
                         </select>
@@ -575,7 +523,6 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
             )}
         </div>
 
-        {/* Data Table */}
         <div className="overflow-x-auto bg-gray-800 rounded-lg border border-gray-700">
             <table className="min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-700/50">
@@ -590,7 +537,7 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => requestSort('name')}>
                             <div className="flex items-center space-x-1">
-                                <span>Nama Karyawan</span>
+                                <span>Nama Penerima</span>
                                 {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <SortAscIcon /> : <SortDescIcon />)}
                             </div>
                         </th>
@@ -629,11 +576,10 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-200">{employee.name}</div>
-                                    <div className="text-xs text-gray-400">{employee.npwp}</div>
+                                    <div className="text-xs text-gray-400 max-w-[200px] truncate" title={employee.taxObjectName}>{employee.taxObjectName}</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-300">{months[employee.periodMonth - 1]} {employee.periodYear}</div>
-                                    <div className="text-xs text-gray-500">Bulanan</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-300">
                                     {formatCurrency(employee.grossIncome)}
@@ -651,11 +597,7 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                             </tr>
                         ))
                     ) : (
-                        <tr>
-                            <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
-                                Tidak ada data yang ditemukan.
-                            </td>
-                        </tr>
+                        <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500">Tidak ada data.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -664,4 +606,4 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
   );
 };
 
-export default EmployeeList;
+export default EmployeeList2;

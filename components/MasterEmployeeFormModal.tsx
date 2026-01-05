@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { MasterEmployee, MaritalStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,7 +8,7 @@ import { validateTaxId } from '../services/taxValidationService';
 interface MasterEmployeeFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (employee: MasterEmployee) => void;
+    onSave: (employee: MasterEmployee) => Promise<void> | void;
     existingEmployee: MasterEmployee | null;
 }
 
@@ -317,6 +318,7 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
     const [formData, setFormData] = React.useState<Omit<MasterEmployee, 'id'>>(initialFormData);
     const [isValidating, setIsValidating] = React.useState<'npwp' | 'ktp' | null>(null);
     const [validationMessage, setValidationMessage] = React.useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [isSaving, setIsSaving] = React.useState(false);
     
     // Country Search State
     const [countrySearch, setCountrySearch] = React.useState('');
@@ -416,9 +418,14 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
     };
 
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ id: existingEmployee?.id || uuidv4(), ...formData });
+        setIsSaving(true);
+        try {
+            await onSave({ id: existingEmployee?.id || uuidv4(), ...formData });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -445,7 +452,7 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                             <InputField label="Jabatan" name="position" value={formData.position} onChange={handleChange} required />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InputField label="Tanggal Masuk" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} required />
+                            <InputField label="Tanggal Masuk (dd/mm/yyyy)" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} required />
                             <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} />
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -465,7 +472,7 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                                 </div>
                             </div>
                             <div>
-                                <label htmlFor="npwp" className="block text-sm font-medium text-gray-300 mb-1">No. NPWP</label>
+                                <label htmlFor="npwp" className="block text-sm font-medium text-gray-300 mb-1">No. NPWP (16 Digit)</label>
                                 <div className="flex items-center space-x-2">
                                     <input type="text" id="npwp" name="npwp" value={formData.npwp} onChange={handleChange} className="flex-grow w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200" />
                                     <button type="button" onClick={() => handleValidation('npwp')} disabled={isValidating === 'npwp'} className="px-3 py-2 text-sm font-semibold text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-gray-500 disabled:cursor-wait flex items-center min-w-[90px] justify-center">
@@ -552,11 +559,18 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                     </div>
 
                     <div className="flex justify-end p-6 bg-gray-900 rounded-b-lg space-x-3 flex-shrink-0">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-md hover:bg-gray-600">
+                        <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-md hover:bg-gray-600 disabled:opacity-50">
                             Batal
                         </button>
-                        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700">
-                            Simpan Karyawan
+                        <button type="submit" disabled={isSaving} className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 flex items-center gap-2 disabled:bg-gray-600">
+                            {isSaving ? (
+                                <>
+                                    <SpinnerIcon />
+                                    <span>Menyimpan...</span>
+                                </>
+                            ) : (
+                                <span>Simpan Karyawan</span>
+                            )}
                         </button>
                     </div>
                 </form>

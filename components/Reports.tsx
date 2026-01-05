@@ -11,6 +11,7 @@ interface ReportsProps {
   showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
+// Helper to calculate effective rate for display/xml if needed
 function getTerRate(status: MaritalStatus, monthlyGross: number): number {
     const category = TER_CATEGORY_MAP[status] || 'A';
     const ratesForCategory = TER_RATES[category];
@@ -23,223 +24,453 @@ function getTerRate(status: MaritalStatus, monthlyGross: number): number {
     return ratesForCategory[ratesForCategory.length - 1]?.rate || 0;
 }
 
-const DocumentDownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
-
 const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, showNotification }) => {
+  const [activeTab, setActiveTab] = React.useState<'monthly' | 'nonFinal' | 'annual'>('monthly');
   const [selectedYear, setSelectedYear] = React.useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth() + 1);
 
-  const handleExportXML = () => {
-    try {
-        const filteredEmployees = employees.filter(e => e.periodYear === selectedYear && e.periodMonth === selectedMonth);
-        if (filteredEmployees.length === 0) {
-            showNotification(`Tidak ada data PPh 21 untuk periode ${selectedMonth}/${selectedYear}.`, 'error');
-            return;
-        }
+  // --- XML GENERATION HELPERS ---
 
-        const companyTin = profile.companyNpwp.replace(/\D/g, '');
+  const escapeXML = (str: string | number | undefined | null): string => {
+      if (str === undefined || str === null) return '';
+      const s = String(str);
+      return s.replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&apos;');
+  };
 
-        const escapeXML = (str: string | number | undefined | null): string => {
-            if (str === undefined || str === null) return '';
-            const s = String(str);
-            return s.replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&apos;');
-        };
+  const formatDateForXML = (dateString?: string): string => {
+      if (!dateString) return new Date().toISOString().split('T')[0];
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return new Date().toISOString().split('T')[0];
+      return d.toISOString().split('T')[0];
+  };
 
-        const mmPayrollList = filteredEmployees.map(emp => {
-            const masterEmp = masterEmployees.find(m => m.id === emp.masterEmployeeId);
-            const counterpartOpt = emp.isForeigner ? 'Foreign' : 'Resident';
-            const counterpartPassport = masterEmp?.passportNumber;
-            const counterpartTin = masterEmp?.ktp?.replace(/\D/g, '') || '';
-            
-            let taxCertificate = 'N/A';
-            if (emp.taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
-                taxCertificate = 'DTP';
-            } else if (emp.taxFacility === 'Fasilitas Lainnya') {
-                taxCertificate = 'ETC';
-            } else if (emp.taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') {
-                taxCertificate = 'SKB';
-            }
-            
-            const terRate = getTerRate(emp.status, emp.grossIncome);
-            const rateValue = terRate * 100;
+  // --- EXCEL GENERATION HELPERS ---
 
-            const lastDay = new Date(emp.periodYear, emp.periodMonth, 0);
-            const withholdingDateStr = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+  const formatDateForExcel = (dateString?: string): string => {
+      if (!dateString) return '';
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return '';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+  };
 
-            const idPlaceOfBusiness = (profile.idTku || (companyTin + '000000')).replace(/\D/g, '');
+  const downloadFile = (content: string, filename: string, type: string) => {
+      const blob = new Blob([content], { type });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+  };
 
-            const passportField = counterpartPassport 
-                ? `<CounterpartPassport>${escapeXML(counterpartPassport)}</CounterpartPassport>` 
-                : `<CounterpartPassport xsi:nil="true"/>`;
+  const downloadExcel = (data: any[][], sheetName: string, filename: string) => {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      ws['!cols'] = data[0].map(() => ({ wch: 20 })); // Set default column width
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      XLSX.writeFile(wb, filename);
+  };
 
-            return `
-		<MmPayroll>
-			<TaxPeriodMonth>${escapeXML(emp.periodMonth)}</TaxPeriodMonth>
-			<TaxPeriodYear>${escapeXML(emp.periodYear)}</TaxPeriodYear>
-			<CounterpartOpt>${escapeXML(counterpartOpt)}</CounterpartOpt>
-			${passportField}
-			<CounterpartTin>${escapeXML(counterpartTin)}</CounterpartTin>
-			<StatusTaxExemption>${escapeXML(emp.status)}</StatusTaxExemption>
-			<Position>${escapeXML(masterEmp?.position || 'N/A')}</Position>
-			<TaxCertificate>${escapeXML(taxCertificate)}</TaxCertificate>
-			<TaxObjectCode>${escapeXML(emp.taxObjectCode || '21-100-01')}</TaxObjectCode>
-			<Gross>${escapeXML(Math.round(emp.grossIncome))}</Gross>
-			<Rate>${escapeXML(rateValue)}</Rate>
-			<IDPlaceOfBusinessActivity>${escapeXML(idPlaceOfBusiness)}</IDPlaceOfBusinessActivity>
-			<WithholdingDate>${escapeXML(withholdingDateStr)}</WithholdingDate>
-		</MmPayroll>`;
-        }).join('');
+  // --- 1. EXPORT MONTHLY (MmPayrollBulk) ---
+  const getMonthlyDataFiltered = () => {
+      // Ensure strict number comparison for Year and Month
+      return employees.filter(e => 
+          e.calculationType === 'monthly' && 
+          Number(e.periodYear) === Number(selectedYear) && 
+          Number(e.periodMonth) === Number(selectedMonth)
+      );
+  };
 
-        const xmlContent = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<MmPayrollBulk xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	<TIN>${escapeXML(companyTin)}</TIN>
-	<ListOfMmPayroll>${mmPayrollList}
-	</ListOfMmPayroll>
+  const handleExportMonthlyXML = () => {
+      const filtered = getMonthlyDataFiltered();
+      if (filtered.length === 0) {
+          showNotification(`Tidak ada data PPh 21 Bulanan untuk ${selectedMonth}/${selectedYear}`, 'error');
+          return;
+      }
+
+      const companyTin = (profile.companyNpwp || '').replace(/\D/g, '');
+      
+      const items = filtered.map(emp => {
+          const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
+          const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
+          const passport = master?.passportNumber || '';
+          
+          let cert = 'N/A';
+          if (emp.taxFacility === 'PPh Ditanggung Pemerintah (DTP)') cert = 'DTP';
+          else if (emp.taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') cert = 'SKB';
+
+          const rate = getTerRate(emp.status, emp.grossIncome) * 100;
+          const idPlace = (profile.idTku || (companyTin + '000000')).replace(/\D/g, '');
+          const withholdingDate = formatDateForXML(new Date(selectedYear, selectedMonth, 0).toISOString());
+
+          return `
+    <MmPayroll>
+      <TaxPeriodMonth>${escapeXML(emp.periodMonth)}</TaxPeriodMonth>
+      <TaxPeriodYear>${escapeXML(emp.periodYear)}</TaxPeriodYear>
+      <CounterpartOpt>${emp.isForeigner ? 'Foreign' : 'Resident'}</CounterpartOpt>
+      <CounterpartPassport>${escapeXML(passport)}</CounterpartPassport>
+      <CounterpartTin>${escapeXML(tin)}</CounterpartTin>
+      <StatusTaxExemption>${escapeXML(emp.status)}</StatusTaxExemption>
+      <Position>${escapeXML(master?.position || 'Pegawai')}</Position>
+      <TaxCertificate>${escapeXML(cert)}</TaxCertificate>
+      <TaxObjectCode>${escapeXML(emp.taxObjectCode || '21-100-01')}</TaxObjectCode>
+      <Gross>${Math.round(emp.grossIncome)}</Gross>
+      <Rate>${rate}</Rate>
+      <IDPlaceOfBusinessActivity>${escapeXML(idPlace)}</IDPlaceOfBusinessActivity>
+      <WithholdingDate>${escapeXML(withholdingDate)}</WithholdingDate>
+    </MmPayroll>`;
+      }).join('');
+
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<!-- Created with VerozTax -->
+<MmPayrollBulk xsi:noNamespaceSchemaLocation="schema.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <TIN>${escapeXML(companyTin)}</TIN>
+  <ListOfMmPayroll>${items}
+  </ListOfMmPayroll>
 </MmPayrollBulk>`;
-        
-        const blob = new Blob([xmlContent.trim()], { type: 'application/xml;charset=utf-8' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `PPh21_Bulk_${selectedYear}_${selectedMonth}.xml`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        showNotification('Berhasil Unduh');
 
-    } catch (error) {
-        showNotification('Gagal', 'error');
-        console.error(error);
-    }
+      downloadFile(xml, `PPh21_Bulanan_${selectedYear}_${selectedMonth}.xml`, 'application/xml');
+      showNotification('Export XML Bulanan Berhasil');
   };
 
+  const handleExportMonthlyExcel = () => {
+      const filtered = getMonthlyDataFiltered();
+      if (filtered.length === 0) {
+          showNotification(`Tidak ada data PPh 21 Bulanan untuk ${selectedMonth}/${selectedYear}`, 'error');
+          return;
+      }
 
-  const handleExportXLSX = () => {
-    try {
-        const filteredEmployees = employees.filter(e => e.periodYear === selectedYear && e.periodMonth === selectedMonth);
-        if (filteredEmployees.length === 0) {
-            showNotification(`Tidak ada data PPh 21 untuk periode ${selectedMonth}/${selectedYear}.`, 'error');
-            return;
-        }
+      const headers = [
+          'No', 'NITKU Pemotong', 'Masa Pajak', 'Tahun Pajak', 'Tgl Pemotongan (dd/MM/yyyy)', 
+          'NIK/NPWP16 (tanpa format/tanda baca)', 'Nama Penerima Penghasilan Sesuai NIK/NPWP16', 
+          'Alamat Penerima Penghasilan Sesuai NIK/NPWP16', 'Jabatan Penerima Penghasilan', 
+          'Email Penerima Penghasilan', 'Kode Objek Pajak', 'Kode PTKP', 'Penghasilan Bruto', 
+          'Fasilitas', 'Tarif Fasilitas Lainnya', 'Nomor Fasilitas', 'Menggunakan Gross Up? (Ya/Tidak)', 
+          'Referensi', 'Nomor Bukti Potong Diganti', 'Pengganti Ke-', 'Nomor Paspor', 'Kode Negara'
+      ];
 
-        const companyTinRaw = profile.companyNpwp.replace(/\D/g, '');
-        const idTku = profile.idTku || (companyTinRaw + '0000');
-        
-        const headers = [
-            'TIN',
-            'TaxPeriodMonth',
-            'TaxPeriodYear',
-            'CounterpartOpt',
-            'CounterpartPassport',
-            'CounterpartTin',
-            'StatusTaxExemption',
-            'Position',
-            'TaxCertificate',
-            'TaxObjectCode',
-            'Gross',
-            'Rate',
-            'IDPlaceOfBusinessActivity',
-            'WithholdingDate'
-        ];
+      const data = filtered.map((emp, index) => {
+          const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
+          const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
+          const withholdingDate = formatDateForExcel(new Date(selectedYear, selectedMonth, 0).toISOString());
+          
+          let fasilitas = emp.taxFacility;
+          if (fasilitas === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') fasilitas = 'Fasilitas Lainnya'; 
+          if (fasilitas === 'Tanpa Fasilitas') fasilitas = 'Tanpa Fasilitas'; 
 
-        const dataForSheet: any[][] = [headers];
+          return [
+              index + 1,
+              profile.nitku,
+              emp.periodMonth,
+              emp.periodYear,
+              withholdingDate,
+              tin,
+              emp.name,
+              emp.address,
+              master?.position || '',
+              master?.email || '',
+              emp.taxObjectCode || '21-100-01',
+              emp.status,
+              Math.round(emp.grossIncome),
+              fasilitas,
+              '', // Tarif Fasilitas Lainnya
+              emp.taxFacilityNumber || '',
+              emp.isGrossUp ? 'Ya' : 'Tidak',
+              '', // Referensi
+              '', // Nomor Bukti Potong Diganti
+              '', // Pengganti Ke-
+              master?.passportNumber || '',
+              master?.countryCode || (emp.isForeigner ? 'ZZ' : 'ID') // Fallback if no country code
+          ];
+      });
 
-        filteredEmployees.forEach(emp => {
-            const masterEmp = masterEmployees.find(m => m.id === emp.masterEmployeeId);
-            
-            let counterpartTin = (emp.npwp || '').replace(/\D/g, '');
-            if (!counterpartTin && masterEmp?.ktp) {
-                counterpartTin = masterEmp.ktp.replace(/\D/g, '');
-            }
-            
-            const lastDayOfMonth = new Date(emp.periodYear, emp.periodMonth, 0);
-            const formattedWithholdingDate = `${lastDayOfMonth.getDate().toString().padStart(2, '0')}/${(lastDayOfMonth.getMonth() + 1).toString().padStart(2, '0')}/${lastDayOfMonth.getFullYear()}`;
-
-            let taxCertificate = 'N/A';
-            if (emp.taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
-                taxCertificate = 'DTP';
-            } else if (emp.taxFacility === 'Fasilitas Lainnya') {
-                taxCertificate = 'ETC';
-            } else if (emp.taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') {
-                taxCertificate = 'SKB';
-            }
-
-            const employeeRow = [
-                companyTinRaw,
-                emp.periodMonth,
-                emp.periodYear,
-                emp.isForeigner ? 'Foreign' : 'Resident',
-                masterEmp?.passportNumber || '',
-                counterpartTin || '',
-                emp.status,
-                masterEmp?.position || 'N/A',
-                taxCertificate,
-                emp.taxObjectCode,
-                emp.grossIncome,
-                getTerRate(emp.status, emp.grossIncome) * 100,
-                idTku,
-                formattedWithholdingDate,
-            ];
-            dataForSheet.push(employeeRow);
-        });
-        
-        const ws = XLSX.utils.aoa_to_sheet(dataForSheet);
-
-        const integerFormat = '#,##0';
-        const decimalFormat = '#,##0.00';
-
-        // Data starts at row 2 (Excel), which is index 1
-        for (let R = 1; R < dataForSheet.length; ++R) { 
-            // Gross (Column K, index 10)
-            const cellK = XLSX.utils.encode_cell({r: R, c: 10});
-            if(ws[cellK]) {
-                ws[cellK].t = 'n';
-                ws[cellK].z = integerFormat;
-            }
-            
-            // Rate (Column L, index 11)
-            const cellL = XLSX.utils.encode_cell({r: R, c: 11});
-            if(ws[cellL]) {
-                ws[cellL].t = 'n';
-                ws[cellL].z = decimalFormat;
-            }
-        }
-
-        ws['!cols'] = [
-            { wch: 20 }, // A: TIN
-            { wch: 15 }, // B: TaxPeriodMonth
-            { wch: 15 }, // C: TaxPeriodYear
-            { wch: 15 }, // D: CounterpartOpt
-            { wch: 20 }, // E: CounterpartPassport
-            { wch: 20 }, // F: CounterpartTin
-            { wch: 20 }, // G: StatusTaxExemption
-            { wch: 20 }, // H: Position
-            { wch: 15 }, // I: TaxCertificate
-            { wch: 15 }, // J: TaxObjectCode
-            { wch: 15 }, // K: Gross
-            { wch: 10 }, // L: Rate
-            { wch: 25 }, // M: IDPlaceOfBusinessActivity
-            { wch: 15 }, // N: WithholdingDate
-        ];
-
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Laporan PPh 21");
-        XLSX.writeFile(wb, `laporan_pph21_${selectedYear}_${selectedMonth}.xlsx`);
-        showNotification('Berhasil Unduh');
-    } catch (error) {
-        showNotification('Gagal', 'error');
-        console.error(error);
-    }
+      downloadExcel([headers, ...data], 'PPh 21 Bulanan', `PPh21_Bulanan_${selectedYear}_${selectedMonth}.xlsx`);
+      showNotification('Export Excel Bulanan Berhasil');
   };
 
-  // Combine dynamic years with existing data years to ensure all are available
+  // --- 2. EXPORT NON-FINAL (Bp21Bulk) ---
+  const getNonFinalDataFiltered = () => {
+      return employees.filter(e => 
+          e.calculationType === 'nonFinal' && 
+          Number(e.periodYear) === Number(selectedYear) && 
+          Number(e.periodMonth) === Number(selectedMonth)
+      );
+  };
+
+  const handleExportNonFinalXML = () => {
+      const filtered = getNonFinalDataFiltered();
+      if (filtered.length === 0) {
+          showNotification(`Tidak ada data PPh 21 Final/Tidak Final untuk ${selectedMonth}/${selectedYear}`, 'error');
+          return;
+      }
+
+      const companyTin = (profile.companyNpwp || '').replace(/\D/g, '');
+
+      const items = filtered.map(emp => {
+          const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
+          const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
+          const idPlaceRecipient = '000000'; 
+          let cert = 'N/A';
+          let effectiveRate = 0;
+          if (emp.grossIncome > 0) {
+              effectiveRate = (emp.finalPPh21Monthly / emp.grossIncome) * 100;
+          }
+          let deemed = 100;
+          if (emp.taxObjectCode === '21-100-07') deemed = 50; 
+
+          const idPlace = (profile.idTku || (companyTin + '000000')).replace(/\D/g, '');
+          const withholdingDate = formatDateForXML(new Date(selectedYear, selectedMonth, 0).toISOString());
+
+          return `
+        <Bp21>
+            <TaxPeriodMonth>${escapeXML(emp.periodMonth)}</TaxPeriodMonth>
+            <TaxPeriodYear>${escapeXML(emp.periodYear)}</TaxPeriodYear>
+            <CounterpartTin>${escapeXML(tin)}</CounterpartTin>
+            <IDPlaceOfBusinessActivityOfIncomeRecipient>${idPlaceRecipient}</IDPlaceOfBusinessActivityOfIncomeRecipient>
+            <StatusTaxExemption>${escapeXML(emp.status)}</StatusTaxExemption>
+            <TaxCertificate>${escapeXML(cert)}</TaxCertificate>
+            <TaxObjectCode>${escapeXML(emp.taxObjectCode)}</TaxObjectCode>
+            <Gross>${Math.round(emp.grossIncome)}</Gross>
+            <Deemed>${deemed}</Deemed>
+            <Rate>${effectiveRate.toFixed(7)}</Rate>
+            <Document>Bukti Potong</Document>
+            <DocumentNumber>${escapeXML(emp.id.substring(0,8).toUpperCase())}</DocumentNumber>
+            <DocumentDate>${withholdingDate}</DocumentDate>
+            <IDPlaceOfBusinessActivity>${escapeXML(idPlace)}</IDPlaceOfBusinessActivity>
+            <WithholdingDate>${withholdingDate}</WithholdingDate>
+        </Bp21>`;
+      }).join('');
+
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<Bp21Bulk xsi:noNamespaceSchemaLocation="schema.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <TIN>${escapeXML(companyTin)}</TIN>
+    <ListOfBp21>${items}
+    </ListOfBp21>
+</Bp21Bulk>`;
+
+      downloadFile(xml, `PPh21_NonFinal_${selectedYear}_${selectedMonth}.xml`, 'application/xml');
+      showNotification('Export XML Non-Final Berhasil');
+  };
+
+  const handleExportNonFinalExcel = () => {
+      const filtered = getNonFinalDataFiltered();
+      if (filtered.length === 0) {
+          showNotification(`Tidak ada data PPh 21 Final/Tidak Final untuk ${selectedMonth}/${selectedYear}`, 'error');
+          return;
+      }
+
+      const headers = [
+          'No', 'NITKU Pemotong', 'Masa Pajak', 'Tahun Pajak', 'Tgl Pemotongan (dd/MM/yyyy)', 
+          'NIK/NPWP16 (tanpa format/tanda baca)', 'Nama Penerima Penghasilan Sesuai NIK/NPWP16', 
+          'Alamat Penerima Penghasilan Sesuai NIK/NPWP16', 'Email Penerima Penghasilan', 
+          'Kode Objek Pajak', 'Kode PTKP', 'Penghasilan Bruto', 
+          'Akumulasi Penghasilan Bruto Sebelumnya', 'Fasilitas', 'Tarif Fasilitas Lainnya', 
+          'Nomor Fasilitas', 'Jenis Dokumen', 'Tanggal Dokumen (dd/MM/yyyy)', 'Nomor Dokumen', 
+          'Menggunakan Gross Up? (Ya/Tidak)', 'Referensi', 'Nomor Bukti Potong Diganti', 'Pengganti Ke-', 'Nitku Penerima'
+      ];
+
+      const data = filtered.map((emp, index) => {
+          const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
+          const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
+          const withholdingDate = formatDateForExcel(new Date(selectedYear, selectedMonth, 0).toISOString());
+
+          return [
+              index + 1,
+              profile.nitku,
+              emp.periodMonth,
+              emp.periodYear,
+              withholdingDate,
+              tin,
+              emp.name,
+              emp.address,
+              master?.email || '',
+              emp.taxObjectCode,
+              emp.status,
+              Math.round(emp.grossIncome),
+              0, // Akumulasi Sebelumnya (Usually 0 unless specifically tracked)
+              emp.taxFacility,
+              '',
+              emp.taxFacilityNumber || '',
+              '', // Jenis Dokumen
+              '', // Tgl Dokumen
+              '', // No Dokumen
+              emp.isGrossUp ? 'Ya' : 'Tidak',
+              '',
+              '',
+              '',
+              '000000' // Nitku Penerima Default
+          ];
+      });
+
+      downloadExcel([headers, ...data], 'PPh 21 Final-TF', `PPh21_NonFinal_${selectedYear}_${selectedMonth}.xlsx`);
+      showNotification('Export Excel Non-Final Berhasil');
+  };
+
+  // --- 3. EXPORT ANNUAL A1 (A1Bulk) ---
+  const getAnnualDataFiltered = () => {
+      // Annual is by Year only
+      return employees.filter(e => 
+          e.calculationType === 'annual' && 
+          Number(e.periodYear) === Number(selectedYear)
+      );
+  };
+
+  const handleExportAnnualXML = () => {
+      const filtered = getAnnualDataFiltered();
+      if (filtered.length === 0) {
+          showNotification(`Tidak ada data PPh 21 Tahunan (A1) untuk Tahun ${selectedYear}`, 'error');
+          return;
+      }
+
+      const companyTin = (profile.companyNpwp || '').replace(/\D/g, '');
+
+      const items = filtered.map(emp => {
+          const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
+          const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
+          const passport = master?.passportNumber || '';
+          
+          let statusWithholding = 'FullYear';
+          if (emp.jenisPemotongan === 'Kurang dari setahun' || emp.jenisPemotongan === 'Disetahunkan') {
+              statusWithholding = 'PartialYear';
+          }
+
+          const salary = Math.round(emp.baseSalary); 
+          const taxAllowance = Math.round(emp.tunjanganPph);
+          const otherBenefit = Math.round(emp.tunjanganJabatan + emp.tunjanganTelekomunikasi + emp.tunjanganMakan + emp.tunjanganTransportasi + emp.overtimePay);
+          const honorarium = Math.round(emp.honorarium || 0);
+          const insurance = Math.round(emp.insurancePremi || 0);
+          const natura = Math.round(emp.facilityValue);
+          const bonus = Math.round(emp.bonus);
+          const deductions = Math.round(emp.totalDeductions); 
+          const zakat = Math.round(emp.zakatDeduction || 0);
+          const taxYearly = Math.round(emp.pph21Yearly);
+          
+          const idPlace = (profile.idTku || (companyTin + '000000')).replace(/\D/g, '');
+          const withholdingDate = formatDateForXML(emp.tanggalPemotongan);
+
+          return `
+    <A1>
+      <WorkForSecondEmployer>No</WorkForSecondEmployer>
+      <TaxPeriodMonthStart>${emp.taxPeriodStart || 1}</TaxPeriodMonthStart>
+      <TaxPeriodMonthEnd>${emp.taxPeriodEnd || 12}</TaxPeriodMonthEnd>
+      <TaxPeriodYear>${escapeXML(emp.periodYear)}</TaxPeriodYear>
+      <CounterpartOpt>${emp.isForeigner ? 'Foreign' : 'Resident'}</CounterpartOpt>
+      <CounterpartPassport>${escapeXML(passport)}</CounterpartPassport>
+      <CounterpartTin>${escapeXML(tin)}</CounterpartTin>
+      <TaxExemptOpt>${escapeXML(emp.status)}</TaxExemptOpt>
+      <StatusOfWithholding>${statusWithholding}</StatusOfWithholding>
+      <CounterpartPosition>${escapeXML(master?.position || 'Pegawai')}</CounterpartPosition>
+      <TaxObjectCode>${escapeXML(emp.taxObjectCode || '21-100-01')}</TaxObjectCode>
+      <NumberOfMonths>${(emp.taxPeriodEnd || 12) - (emp.taxPeriodStart || 1) + 1}</NumberOfMonths>
+      <SalaryPensionJhtTht>${salary}</SalaryPensionJhtTht>
+      <GrossUpOpt>${emp.isGrossUp ? 'Yes' : 'No'}</GrossUpOpt>
+      <IncomeTaxBenefit>${taxAllowance}</IncomeTaxBenefit>
+      <OtherBenefit>${otherBenefit}</OtherBenefit>
+      <Honorarium>${honorarium}</Honorarium>
+      <InsurancePaidByEmployer>${insurance}</InsurancePaidByEmployer>
+      <Natura>${natura}</Natura>
+      <TantiemBonusThr>${bonus}</TantiemBonusThr>
+      <PensionContributionJhtThtFee>${deductions}</PensionContributionJhtThtFee>
+      <Zakat>${zakat}</Zakat>
+      <PrevWhTaxSlip>${escapeXML(emp.previousTaxReceiptNumber || '')}</PrevWhTaxSlip>
+      <TaxCertificate>N/A</TaxCertificate>
+      <Article21IncomeTax>${taxYearly}</Article21IncomeTax>
+      <IDPlaceOfBusinessActivity>${escapeXML(idPlace)}</IDPlaceOfBusinessActivity>
+      <WithholdingDate>${escapeXML(withholdingDate)}</WithholdingDate>
+    </A1>`;
+      }).join('');
+
+      const xml = `<?xml version="1.0" encoding="utf-8"?>
+<!-- Created with VerozTax -->
+<A1Bulk xsi:noNamespaceSchemaLocation="schema.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <TIN>${escapeXML(companyTin)}</TIN>
+  <ListOfA1>${items}
+  </ListOfA1>
+</A1Bulk>`;
+
+      downloadFile(xml, `PPh21_TahunanA1_${selectedYear}.xml`, 'application/xml');
+      showNotification('Export XML Tahunan A1 Berhasil');
+  };
+
+  const handleExportAnnualExcel = () => {
+      const filtered = getAnnualDataFiltered();
+      if (filtered.length === 0) {
+          showNotification(`Tidak ada data PPh 21 Tahunan (A1) untuk Tahun ${selectedYear}`, 'error');
+          return;
+      }
+
+      const headers = [
+          'No', 'NITKU Pemotong', 'Metode Pemotongan', 'Masa Awal Pajak', 'Masa Akhir Pajak', 'Tahun Pajak', 
+          'Tgl Pemotongan (dd/MM/yyyy)', 'Kode Objek Pajak', 'Pegawai Asing ? (Y/N)', 
+          'Kode Negara (Jika Pegawai Asing)', 'Passport (Jika Pegawai Asing)', 
+          'NIK/NPWP16 (tanpa format/tanda baca)', 'Nama Penerima Penghasilan Sesuai NIK/NPWP16', 
+          'Alamat Penerima Penghasilan Sesuai NIK/NPWP16', 'Jenis Kelamin Penerima Penghasilan (F/M)', 
+          'Jabatan Penerima Penghasilan', 'Email', 'Kode PTKP', 'Gaji Atau Uang Pensiun Berkala', 
+          'Menggunakan Gross Up? (Y/N)', 'Tunjangan PPh', 'Tunjangan Lainnya, Uang Lembur Dan Sebagainya', 
+          'Honorarium Dan Imbalan Lain Sejenisnya', 'Premi Asuransi Yang Dibayarkan Pemberi Kerja', 
+          'Penerimaan Dalam Bentuk Natura Dan Kenikmatan Lainnya Yang Dikenakan Pemotongan PPh Pasal 21', 
+          'Tantiem, Bonus, Gratifikasi, Jasa Produksi Dan Thr', 
+          'Iuran Pensiun atau THT/JHT', 'Zakat/Sumbangan Keagamaan Wajib', 
+          'Penghasilan Neto Masa Sebelumnya', 'PPh Pasal 21 yang telah dipotong masa sebelumnya'
+      ];
+
+      const data = filtered.map((emp, index) => {
+          const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
+          const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
+          const withholdingDate = formatDateForExcel(emp.tanggalPemotongan);
+          const otherBenefit = Math.round(emp.tunjanganJabatan + emp.tunjanganTelekomunikasi + emp.tunjanganMakan + emp.tunjanganTransportasi + emp.overtimePay);
+          const pensionInput = Math.round(emp.pensionDeduction + emp.jpDeduction);
+
+          return [
+              index + 1,
+              profile.nitku,
+              emp.jenisPemotongan,
+              emp.taxPeriodStart || 1,
+              emp.taxPeriodEnd || 12,
+              emp.periodYear,
+              withholdingDate,
+              emp.taxObjectCode,
+              emp.isForeigner ? 'Y' : 'N',
+              master?.countryCode || '',
+              master?.passportNumber || '',
+              tin,
+              emp.name,
+              emp.address,
+              master?.gender === 'Perempuan' ? 'F' : 'M',
+              master?.position || 'Pegawai',
+              master?.email || '',
+              emp.status,
+              Math.round(emp.baseSalary),
+              emp.isGrossUp ? 'Y' : 'N',
+              Math.round(emp.tunjanganPph),
+              otherBenefit,
+              Math.round(emp.honorarium || 0),
+              Math.round(emp.insurancePremi || 0),
+              Math.round(emp.facilityValue),
+              Math.round(emp.bonus),
+              pensionInput,
+              Math.round(emp.zakatDeduction || 0),
+              Math.round(emp.netIncomePrevious || 0),
+              Math.round(emp.pph21PaidPreviously || 0)
+          ];
+      });
+
+      downloadExcel([headers, ...data], 'PPh 21 Tahunan A1', `PPh21_TahunanA1_${selectedYear}.xlsx`);
+      showNotification('Export Excel Tahunan A1 Berhasil');
+  };
+
+  // FIX: Force numeric conversion to deduplicate years correctly
   const availableYears = React.useMemo(() => {
-      const dataYears = Array.from(new Set<number>(employees.map(e => e.periodYear)));
+      const dataYears = employees.map(e => Number(e.periodYear));
       const dynamicYears = getAvailableTaxYears();
       const allYears = Array.from(new Set([...dataYears, ...dynamicYears])).sort((a,b) => b - a);
       return allYears;
@@ -248,71 +479,116 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   return (
-    <div className="space-y-6 animate-fade-in-up max-w-2xl mx-auto">
-        <div>
-            <div className="flex items-center space-x-3">
-                <DocumentDownloadIcon />
-                <h1 className="text-3xl font-bold text-gray-100">Laporan & Export</h1>
+    <div className="space-y-6 animate-fade-in-up max-w-4xl mx-auto">
+        <div className="flex items-center space-x-3 mb-6">
+            <DocumentDownloadIcon />
+            <div>
+                <h1 className="text-2xl font-bold text-gray-100">Laporan & Export CoreTax</h1>
+                <p className="text-gray-400 text-sm">Download file XML atau Excel siap upload untuk sistem CoreTax DJP.</p>
             </div>
-            <p className="text-gray-400 mt-1">Generate laporan PPh 21 bulanan dalam format Excel atau XML.</p>
         </div>
 
-        <div className="bg-gray-800 p-8 rounded-lg shadow-xl shadow-black/20">
-          <p className="text-gray-400 mb-6">
-            Pilih periode laporan yang ingin Anda generate, kemudian export ke format yang diinginkan.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            <div className="flex-1">
-              <label htmlFor="year-select" className="block text-sm font-medium text-gray-300 mb-1">Tahun Laporan</label>
-              <select 
-                  id="year-select" 
-                  value={selectedYear} 
-                  onChange={e => setSelectedYear(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800"
-              >
-                {availableYears.length > 0 ? availableYears.map(year => <option key={year} value={year}>{year}</option>) : <option>{new Date().getFullYear()}</option>}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label htmlFor="month-select" className="block text-sm font-medium text-gray-300 mb-1">Bulan Laporan</label>
-              <select 
-                  id="month-select" 
-                  value={selectedMonth} 
-                  onChange={e => setSelectedMonth(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800"
-              >
-                {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
-              </select>
-            </div>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-gray-800 p-1 rounded-lg border border-gray-700 mb-6">
+            <TabButton active={activeTab === 'monthly'} onClick={() => setActiveTab('monthly')} label="PPh 21 Bulanan" />
+            <TabButton active={activeTab === 'nonFinal'} onClick={() => setActiveTab('nonFinal')} label="PPh 21 Final/TF" />
+            <TabButton active={activeTab === 'annual'} onClick={() => setActiveTab('annual')} label="PPh 21 Tahunan A1" />
+        </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button 
-              onClick={handleExportXLSX} 
-              className="w-full bg-primary-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-            >
-              <ReportIcon />
-              <span>Export ke Excel (.xlsx)</span>
-            </button>
-            <button 
-              onClick={handleExportXML} 
-              className="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-            >
-              <ReportIcon />
-              <span>Export ke XML</span>
-            </button>
-          </div>
+        <div className="bg-gray-800 p-8 rounded-lg shadow-xl border border-gray-700">
+            {/* Filter Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Tahun Pajak</label>
+                    <select 
+                        value={selectedYear} 
+                        onChange={e => setSelectedYear(Number(e.target.value))}
+                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    >
+                        {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
+                    </select>
+                </div>
+                {activeTab !== 'annual' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">Masa Pajak (Bulan)</label>
+                        <select 
+                            value={selectedMonth} 
+                            onChange={e => setSelectedMonth(Number(e.target.value))}
+                            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        >
+                            {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                        </select>
+                    </div>
+                )}
+            </div>
+
+            {/* Action Buttons based on Tab */}
+            <div className="p-6 bg-gray-900/50 rounded-lg border border-gray-700/50">
+                {activeTab === 'monthly' && (
+                    <div className="text-center">
+                        <h3 className="text-lg font-bold text-white mb-2">Export PPh 21 Bulanan</h3>
+                        <p className="text-gray-400 text-sm mb-6">Unduh data perhitungan pajak masa dalam format XML atau Excel (skema <code>MmPayrollBulk</code>).</p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                            <button onClick={handleExportMonthlyXML} className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                                <CodeIcon /> Download XML CoreTax
+                            </button>
+                            <button onClick={handleExportMonthlyExcel} className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                                <ExcelIcon /> Download Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'nonFinal' && (
+                    <div className="text-center">
+                        <h3 className="text-lg font-bold text-white mb-2">Export PPh 21 Final / Tidak Final</h3>
+                        <p className="text-gray-400 text-sm mb-6">Unduh data pemotongan pajak Bukan Pegawai dalam format XML atau Excel (skema <code>Bp21Bulk</code>).</p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                            <button onClick={handleExportNonFinalXML} className="px-6 py-3 bg-accent-600 hover:bg-accent-700 text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                                <CodeIcon /> Download XML CoreTax
+                            </button>
+                            <button onClick={handleExportNonFinalExcel} className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                                <ExcelIcon /> Download Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'annual' && (
+                    <div className="text-center">
+                        <h3 className="text-lg font-bold text-white mb-2">Export PPh 21 Tahunan (1721-A1)</h3>
+                        <p className="text-gray-400 text-sm mb-6">Unduh Bukti Potong 1721-A1 untuk pelaporan tahunan dalam format XML atau Excel (skema <code>A1Bulk</code>).</p>
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+                            <button onClick={handleExportAnnualXML} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                                <CodeIcon /> Download XML CoreTax
+                            </button>
+                            <button onClick={handleExportAnnualExcel} className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                                <ExcelIcon /> Download Excel (.xlsx)
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     </div>
   );
 };
 
-const ReportIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
+const TabButton: React.FC<{ active: boolean; onClick: () => void; label: string }> = ({ active, onClick, label }) => (
+    <button
+        onClick={onClick}
+        className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
+            active 
+            ? 'bg-gray-700 text-white shadow-md' 
+            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+        }`}
+    >
+        {label}
+    </button>
 );
 
+const DocumentDownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
+const CodeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>;
+const ExcelIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
 
 export default Reports;

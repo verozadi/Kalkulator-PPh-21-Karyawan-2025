@@ -1,10 +1,16 @@
 
 import * as React from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { auth, db } from './services/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
 
 // Component Imports
 import Footer from './components/Footer';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
+import EmployeeList2 from './components/EmployeeList2';
+import EmployeeList3 from './components/EmployeeList3';
 import EmployeeForm from './components/EmployeeForm';
 import EmployeeForm2 from './components/EmployeeForm2';
 import EmployeeForm3 from './components/EmployeeForm3';
@@ -23,30 +29,36 @@ import ForgotPassword from './components/ForgotPassword';
 import LandingPage from './components/LandingPage';
 import EmployeeDetailModal from './components/EmployeeDetailModal';
 import MasterEmployeeDetailModal from './components/MasterEmployeeDetailModal';
+import LicenseActivation from './components/LicenseActivation';
 
 // Type Imports
 import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User } from './types';
 
-// Service Imports
+// Service Imports (Note: save functions now use Firestore)
 import { calculatePPh21 } from './services/taxCalculator';
 import * as authService from './services/authService';
-import { getEmployees, saveEmployee as saveEmployeeService, deleteEmployee as deleteEmployeeService, importEmployees as importEmployeesService } from './services/employeeService';
-import { getProfile, saveProfile as saveProfileService } from './services/profileService';
-import { getMasterEmployees, saveMasterEmployee as saveMasterEmployeeService, deleteMasterEmployee as deleteMasterEmployeeService, importMasterEmployees as importMasterEmployeesService } from './services/masterEmployeeService';
-import { getOvertimeRecords, saveOvertimeRecords as saveOvertimeRecordsService } from './services/overtimeService';
+import { saveEmployee as saveEmployeeService, deleteEmployee as deleteEmployeeService, importEmployees as importEmployeesService } from './services/employeeService';
+import { saveProfile as saveProfileService, defaultProfile } from './services/profileService';
+import { saveMasterEmployee as saveMasterEmployeeService, deleteMasterEmployee as deleteMasterEmployeeService, importMasterEmployees as importMasterEmployeesService } from './services/masterEmployeeService';
+import { saveOvertimeRecords as saveOvertimeRecordsService } from './services/overtimeService';
+
+const LICENSE_API_URL = "https://script.google.com/macros/s/AKfycbwC5xHIrnG39FMYU853IOAwrLGE4U25ZTZc_MbWXkhQHNgY27WIRXy48NmzXTkXhZeStQ/exec";
 
 const App: React.FC = () => {
-    // --- AUTHENTICATION STATE ---
-    const [currentUser, setCurrentUser] = React.useState<User | null>(authService.getCurrentUser());
+    // --- AUTH & LICENSE STATE ---
+    const [currentUser, setCurrentUser] = React.useState<User | null>(null);
+    const [authLoading, setAuthLoading] = React.useState(true);
+    const [isLicenseActivated, setIsLicenseActivated] = React.useState<boolean>(false);
     const [authPage, setAuthPage] = React.useState<Extract<Page, 'login' | 'register' | 'forgotPassword' | 'landing'>>('landing');
-    const [isLoading, setIsLoading] = React.useState(true);
 
-    // --- APP STATE (only initialized if logged in) ---
-    const [currentPage, setCurrentPage] = React.useState<Page>('dashboard');
+    // --- APP DATA STATE (Synced via Firestore) ---
     const [employees, setEmployees] = React.useState<Employee[]>([]);
     const [masterEmployees, setMasterEmployees] = React.useState<MasterEmployee[]>([]);
     const [overtimeRecords, setOvertimeRecords] = React.useState<OvertimeRecord[]>([]);
     const [profile, setProfile] = React.useState<Profile | null>(null);
+
+    // --- UI STATE ---
+    const [currentPage, setCurrentPage] = React.useState<Page>('dashboard');
     const [editingEmployee, setEditingEmployee] = React.useState<Employee | null>(null);
     const [isProfileModalOpen, setProfileModalOpen] = React.useState(false);
     const [isSidebarOpen, setSidebarOpen] = React.useState(true);
@@ -55,22 +67,145 @@ const App: React.FC = () => {
     const [editingMasterEmployee, setEditingMasterEmployee] = React.useState<MasterEmployee | null>(null);
     const [detailEmployee, setDetailEmployee] = React.useState<Employee | null>(null);
     const [detailMasterEmployee, setDetailMasterEmployee] = React.useState<MasterEmployee | null>(null);
-
-    // Profile Dropdown state
     const [isProfileDropdownOpen, setProfileDropdownOpen] = React.useState(false);
+    
     const profileDropdownRef = React.useRef<HTMLDivElement>(null);
+    const mainContentRef = React.useRef<HTMLElement>(null);
 
-    // --- EFFECTS ---
+    // --- AUTH LISTENER (Firebase) ---
     React.useEffect(() => {
-        if (currentUser) {
-            setProfile(getProfile(currentUser.id));
-            setEmployees(getEmployees(currentUser.id));
-            setMasterEmployees(getMasterEmployees(currentUser.id));
-            setOvertimeRecords(getOvertimeRecords(currentUser.id));
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                setCurrentUser(authService.mapFirebaseUser(user));
+            } else {
+                setCurrentUser(null);
+                setEmployees([]);
+                setMasterEmployees([]);
+                setOvertimeRecords([]);
+                setProfile(null);
+            }
+            setAuthLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // --- FIRESTORE SYNC LISTENERS ---
+    React.useEffect(() => {
+        if (!currentUser || !isLicenseActivated) return;
+
+        const userId = currentUser.id;
+
+        // 1. Employees Listener
+        const unsubEmployees = onSnapshot(collection(db, 'users', userId, 'employees'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as Employee);
+            setEmployees(data);
+        }, (error) => console.error("Sync Error Employees:", error));
+
+        // 2. Master Employees Listener
+        const unsubMasters = onSnapshot(collection(db, 'users', userId, 'master_employees'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as MasterEmployee);
+            setMasterEmployees(data);
+        }, (error) => console.error("Sync Error Master:", error));
+
+        // 3. Overtime Listener
+        const unsubOvertime = onSnapshot(collection(db, 'users', userId, 'overtime_records'), (snapshot) => {
+            const data = snapshot.docs.map(doc => doc.data() as OvertimeRecord);
+            setOvertimeRecords(data);
+        }, (error) => console.error("Sync Error Overtime:", error));
+
+        // 4. Profile Listener
+        const unsubProfile = onSnapshot(doc(db, 'users', userId, 'settings', 'profile'), (docSnap) => {
+            if (docSnap.exists()) {
+                setProfile(docSnap.data() as Profile);
+            } else {
+                setProfile(defaultProfile); // Use default if fresh account
+                saveProfileService(userId, defaultProfile); // Initialize in cloud
+            }
+        }, (error) => console.error("Sync Error Profile:", error));
+
+        return () => {
+            unsubEmployees();
+            unsubMasters();
+            unsubOvertime();
+            unsubProfile();
+        };
+    }, [currentUser, isLicenseActivated]);
+
+
+    // --- LICENSE VALIDATION LOGIC ---
+    const validateLicenseSession = React.useCallback(async (silent: boolean = true) => {
+        // If not logged in, we don't check license yet
+        if (!currentUser) return;
+
+        const storedKey = localStorage.getItem('veroz_license_key');
+        let deviceId = localStorage.getItem('veroz_device_id');
+
+        if (!deviceId) {
+            deviceId = uuidv4();
+            localStorage.setItem('veroz_device_id', deviceId);
         }
-        setIsLoading(false);
+
+        if (!storedKey) {
+            setIsLicenseActivated(false);
+            return;
+        }
+
+        try {
+            // Optimistic Check
+            if (silent && localStorage.getItem('veroz_license_active') === 'true') {
+                setIsLicenseActivated(true);
+            }
+
+            // Server Check
+            const params = new URLSearchParams({
+                key: storedKey,
+                deviceId: deviceId,
+                email: currentUser.email // Validate against email too
+            });
+
+            const response = await fetch(`${LICENSE_API_URL}?${params.toString()}`, {
+                method: 'GET',
+            });
+            const data = await response.json();
+
+            if (data.result === 'success') {
+                setIsLicenseActivated(true);
+                localStorage.setItem('veroz_license_active', 'true');
+            } else {
+                console.warn("License Check Failed:", data.message);
+                setIsLicenseActivated(false);
+                localStorage.removeItem('veroz_license_active');
+                if (!silent) {
+                    alert(`Sesi Lisensi Berakhir: ${data.message}`);
+                }
+            }
+        } catch (error) {
+            console.error("License Validation Network Error (Offline?):", error);
+            // Allow offline access if previously valid
+            if (localStorage.getItem('veroz_license_active') === 'true') {
+                setIsLicenseActivated(true);
+            }
+        }
     }, [currentUser]);
 
+    // Trigger license check when user logs in
+    React.useEffect(() => {
+        if (!authLoading && currentUser) {
+            validateLicenseSession(false);
+        }
+    }, [authLoading, currentUser, validateLicenseSession]);
+
+    // Interval license re-check
+    React.useEffect(() => {
+        const intervalId = setInterval(() => {
+            if(currentUser) validateLicenseSession(true);
+        }, 10 * 60 * 1000); 
+        return () => clearInterval(intervalId);
+    }, [validateLicenseSession, currentUser]);
+
+
+    // --- HANDLERS (UPDATED TO ASYNC/FIRESTORE) ---
+    
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
           if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
@@ -78,35 +213,31 @@ const App: React.FC = () => {
           }
         };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-          document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // --- HANDLERS ---
+    React.useEffect(() => {
+        if (mainContentRef.current) mainContentRef.current.scrollTop = 0;
+    }, [currentPage]);
+
     const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
         setNotification({ message, type });
     };
 
-    const handleLoginSuccess = (user: User) => {
-        setCurrentUser(user);
-    };
-
-    const handleLogout = () => {
-        authService.logout();
-        setCurrentUser(null);
+    // Note: Login is handled by Firebase Listener now
+    const handleLogout = async () => {
+        await authService.logout();
         setAuthPage('landing');
     };
 
-    const handleSaveProfile = (updatedProfile: Profile) => {
+    const handleSaveProfile = async (updatedProfile: Profile) => {
         if (!currentUser) return;
         try {
-            saveProfileService(currentUser.id, updatedProfile);
-            setProfile(updatedProfile);
+            await saveProfileService(currentUser.id, updatedProfile);
             setProfileModalOpen(false);
-            showNotification('Profil berhasil disimpan');
+            showNotification('Profil berhasil disinkronisasi ke cloud');
         } catch(e) {
-            showNotification('Gagal menyimpan profil', 'error');
+            showNotification('Gagal menyimpan profil ke cloud', 'error');
         }
     };
 
@@ -115,85 +246,57 @@ const App: React.FC = () => {
         setCurrentPage(page);
     };
     
-    const toggleSidebar = () => {
-        setSidebarOpen(prev => !prev);
-    };
+    const toggleSidebar = () => setSidebarOpen(prev => !prev);
 
     const handleEditEmployee = (employee: Employee) => {
         setEditingEmployee(employee);
-        if (employee.calculationType === 'annual') {
-            setCurrentPage('pph21Annual');
-        } else if (employee.calculationType === 'nonFinal') {
-            setCurrentPage('pph21NonFinal');
-        } else {
-            setCurrentPage('pph21Monthly');
-        }
+        if (employee.calculationType === 'annual') setCurrentPage('pph21Annual');
+        else if (employee.calculationType === 'nonFinal') setCurrentPage('pph21NonFinal');
+        else setCurrentPage('pph21Monthly');
     };
 
-    const handleSaveEmployee = (employeeData: EmployeeData) => {
+    const handleSaveEmployee = async (employeeData: EmployeeData) => {
         if (!currentUser) return;
         try {
             let employeeToSave: Employee;
-
-            // CRITICAL FIX: 
-            // For Annual (A1) calculation, the form (EmployeeForm3) contains complex logic 
-            // (e.g., Annualization/Disetahunkan, iterative Gross Up) that determines the final tax.
-            // The standard `calculatePPh21` service might calculate a basic projection that overwrites
-            // the correct "Disetahunkan" values with incorrect ones.
-            // So, for Annual type, we trust the incoming data from the form implicitly.
-            
             if (employeeData.calculationType === 'annual') {
-                // Ensure it has all required properties of Employee type
-                // The form should have provided all TaxCalculationResult fields
-                employeeToSave = { 
-                    ...employeeData 
-                } as Employee;
+                employeeToSave = { ...employeeData } as Employee;
             } else {
-                // For Monthly/Non-Final, we run the standard calculator to ensure consistency
                 const calculationResult = calculatePPh21(employeeData);
                 employeeToSave = { ...employeeData, ...calculationResult };
             }
 
-            saveEmployeeService(currentUser.id, employeeToSave);
-            setEmployees(getEmployees(currentUser.id));
+            await saveEmployeeService(currentUser.id, employeeToSave);
+            // State updates automatically via listener
             
-            // Redirect to appropriate list based on calculationType
-            if (employeeToSave.calculationType === 'annual') {
-                navigateTo('employeeListAnnual');
-            } else if (employeeToSave.calculationType === 'nonFinal') {
-                navigateTo('employeeListNonFinal');
-            } else {
-                navigateTo('employeeListMonthly');
-            }
+            if (employeeToSave.calculationType === 'annual') navigateTo('employeeListAnnual');
+            else if (employeeToSave.calculationType === 'nonFinal') navigateTo('employeeListNonFinal');
+            else navigateTo('employeeListMonthly');
             
-            showNotification('Tersimpan');
+            showNotification('Tersimpan di Cloud');
         } catch (error) {
-            showNotification('Gagal menyimpan data PPh 21', 'error');
+            showNotification('Gagal menyimpan data', 'error');
             console.error(error);
         }
     };
     
-    const handleDeleteEmployee = (employeeId: string) => {
+    const handleDeleteEmployee = async (employeeId: string) => {
         if (!currentUser) return;
         try {
-            deleteEmployeeService(currentUser.id, employeeId);
-            setEmployees(prevEmployees => prevEmployees.filter(e => e.id !== employeeId));
-            showNotification('Data PPh 21 berhasil dihapus');
+            await deleteEmployeeService(currentUser.id, employeeId);
+            showNotification('Data dihapus dari Cloud');
         } catch (error) {
-            showNotification('Gagal menghapus data PPh 21', 'error');
-            console.error(error);
+            showNotification('Gagal menghapus data', 'error');
         }
     };
 
-    const handleImportEmployees = (employeesToImport: Omit<EmployeeData, 'id'>[]) => {
+    const handleImportEmployees = async (employeesToImport: Omit<EmployeeData, 'id'>[]) => {
         if (!currentUser) return;
         try {
-            importEmployeesService(currentUser.id, employeesToImport);
-            setEmployees(getEmployees(currentUser.id));
-            showNotification(`${employeesToImport.length} data PPh 21 berhasil diimpor.`);
+            await importEmployeesService(currentUser.id, employeesToImport);
+            showNotification(`${employeesToImport.length} data berhasil diimpor ke Cloud.`);
         } catch (error) {
-            showNotification('Gagal mengimpor data PPh 21.', 'error');
-            console.error(error);
+            showNotification('Gagal mengimpor data.', 'error');
         }
     };
 
@@ -202,94 +305,98 @@ const App: React.FC = () => {
         setMasterEmployeeModalOpen(true);
     };
     
-    const handleOpenMasterDetailModal = (employee: MasterEmployee) => {
-        setDetailMasterEmployee(employee);
-    };
-
     const handleCloseMasterEmployeeModal = () => {
         setEditingMasterEmployee(null);
         setMasterEmployeeModalOpen(false);
     };
     
-    const handleSaveMasterEmployee = (masterEmployee: MasterEmployee) => {
+    const handleSaveMasterEmployee = async (masterEmployee: MasterEmployee) => {
         if (!currentUser) return;
         try {
-            saveMasterEmployeeService(currentUser.id, masterEmployee);
-            setMasterEmployees(getMasterEmployees(currentUser.id));
-            showNotification('Tersimpan');
+            await saveMasterEmployeeService(currentUser.id, masterEmployee);
+            showNotification('Karyawan Master Tersimpan');
             handleCloseMasterEmployeeModal();
         } catch (error) {
             showNotification('Gagal menyimpan karyawan', 'error');
-            console.error(error);
         }
     };
 
-    const handleDeleteMasterEmployee = (id: string) => {
+    const handleDeleteMasterEmployee = async (id: string) => {
         if (!currentUser) return;
         try {
-            deleteMasterEmployeeService(currentUser.id, id);
-            setMasterEmployees(prevMasterEmployees => prevMasterEmployees.filter(e => e.id !== id));
-            showNotification('Karyawan berhasil dihapus');
+            await deleteMasterEmployeeService(currentUser.id, id);
+            showNotification('Karyawan dihapus dari Cloud');
         } catch (error) {
             showNotification('Gagal menghapus karyawan', 'error');
-            console.error(error);
         }
     };
 
-    const handleImportMasterEmployees = (employeesToImport: Omit<MasterEmployee, 'id'>[]) => {
+    const handleImportMasterEmployees = async (employeesToImport: Omit<MasterEmployee, 'id'>[]) => {
         if (!currentUser) return;
         try {
-            importMasterEmployeesService(currentUser.id, employeesToImport);
-            setMasterEmployees(getMasterEmployees(currentUser.id));
-            showNotification(`${employeesToImport.length} karyawan berhasil diimpor.`);
+            await importMasterEmployeesService(currentUser.id, employeesToImport);
+            showNotification(`${employeesToImport.length} karyawan master berhasil diimpor.`);
         } catch (error) {
-            showNotification('Gagal mengimpor data karyawan.', 'error');
-            console.error(error);
+            showNotification('Gagal mengimpor data.', 'error');
         }
     };
 
-    const handleSaveOvertime = (records: OvertimeRecord[]) => {
+    const handleSaveOvertime = async (records: OvertimeRecord[]) => {
         if (!currentUser) return;
         try {
-            saveOvertimeRecordsService(currentUser.id, records);
-            setOvertimeRecords(getOvertimeRecords(currentUser.id));
-            showNotification('Tersimpan');
+            await saveOvertimeRecordsService(currentUser.id, records);
+            showNotification('Data lembur tersimpan di Cloud');
         } catch (error) {
-            showNotification('Gagal', 'error');
-            console.error(error);
+            showNotification('Gagal menyimpan lembur', 'error');
         }
     };
 
-    const handleOpenDetailModal = (employee: Employee) => {
-        setDetailEmployee(employee);
-    };
+    const handleOpenDetailModal = (employee: Employee) => setDetailEmployee(employee);
+    const handleOpenMasterDetailModal = (employee: MasterEmployee) => setDetailMasterEmployee(employee);
 
-    // --- RENDER LOGIC ---
-    if (isLoading) {
+
+    // --- RENDER ---
+    if (authLoading) {
         return (
             <div className="flex justify-center items-center h-screen bg-gray-900 text-white">
-                <p>Loading application...</p>
+                <div className="flex flex-col items-center">
+                    <svg className="animate-spin h-8 w-8 text-primary-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <p>Menghubungkan ke Cloud...</p>
+                </div>
             </div>
         );
     }
 
+    // 1. Authentication Barrier
     if (!currentUser) {
         return (
             <>
-                <LandingPage onNavigate={setAuthPage} />
-                {authPage === 'login' && <Login onLoginSuccess={handleLoginSuccess} onNavigate={setAuthPage} />}
-                {authPage === 'register' && <Register onRegisterSuccess={handleLoginSuccess} onNavigate={setAuthPage} />}
+                {authPage === 'landing' && <LandingPage onNavigate={setAuthPage} />}
+                {authPage === 'login' && <Login onLoginSuccess={() => {}} onNavigate={setAuthPage} />}
+                {authPage === 'register' && <Register onRegisterSuccess={() => {}} onNavigate={setAuthPage} />}
                 {authPage === 'forgotPassword' && <ForgotPassword onNavigate={setAuthPage} />}
             </>
         );
     }
 
+    // 2. License Check Barrier (Post-Auth)
+    if (!isLicenseActivated) {
+        return <LicenseActivation 
+            user={currentUser}
+            onActivationSuccess={() => {
+                setIsLicenseActivated(true);
+            }} 
+        />;
+    }
+
     const renderContent = () => {
+        // Fallback profile if loading or error
+        const activeProfile = profile || defaultProfile;
+
         const employeeFormProps = {
             onSave: handleSaveEmployee,
             existingEmployee: editingEmployee,
             onCancel: () => {
-                // If cancelling edit, try to return to previous relevant list
                 if (editingEmployee) {
                     if (editingEmployee.calculationType === 'annual') navigateTo('employeeListAnnual');
                     else if (editingEmployee.calculationType === 'nonFinal') navigateTo('employeeListNonFinal');
@@ -298,7 +405,7 @@ const App: React.FC = () => {
                     navigateTo('dashboard');
                 }
             },
-            profile: profile!,
+            profile: activeProfile,
             masterEmployees: masterEmployees,
             overtimeRecords: overtimeRecords,
             employees: employees,
@@ -329,9 +436,6 @@ const App: React.FC = () => {
                             showNotification={showNotification}
                             onOpenDetailModal={handleOpenMasterDetailModal}
                         />;
-            
-            // Replaced generic 'employeeList' with specific filtered lists
-            case 'employeeList': // Fallback if still used
             case 'employeeListMonthly':
                 return <EmployeeList 
                             employees={employees.filter(e => e.calculationType === 'monthly')} 
@@ -340,20 +444,19 @@ const App: React.FC = () => {
                             {...listProps} 
                         />;
             case 'employeeListNonFinal':
-                return <EmployeeList 
+                return <EmployeeList2 
                             employees={employees.filter(e => e.calculationType === 'nonFinal')} 
                             title="Daftar PPh 21 Final/Tidak Final"
                             addNewPage="pph21NonFinal"
                             {...listProps} 
                         />;
             case 'employeeListAnnual':
-                return <EmployeeList 
+                return <EmployeeList3 
                             employees={employees.filter(e => e.calculationType === 'annual')} 
                             title="Daftar PPh 21 Tahunan A1"
                             addNewPage="pph21Annual"
                             {...listProps} 
                         />;
-
             case 'pph21Monthly':
                 return <EmployeeForm {...employeeFormProps} fixedType="monthly" />;
             case 'pph21NonFinal':
@@ -365,7 +468,7 @@ const App: React.FC = () => {
             case 'taxRules':
                 return <TaxRules />;
             case 'reports':
-                return <Reports employees={employees} masterEmployees={masterEmployees} profile={profile!} showNotification={showNotification} />;
+                return <Reports employees={employees} masterEmployees={masterEmployees} profile={activeProfile} showNotification={showNotification} />;
             case 'overtime':
                 return <Overtime masterEmployees={masterEmployees} existingRecords={overtimeRecords} onSave={handleSaveOvertime} />;
             case 'settings':
@@ -375,21 +478,16 @@ const App: React.FC = () => {
         }
     };
 
-    if (!profile) {
-        return (
-            <div className="flex justify-center items-center h-screen bg-gray-900 text-white">
-                <p>Loading user data...</p>
-            </div>
-        );
-    }
+    // Ensure profile is loaded (or default) before rendering main app to prevent flickers
+    const activeProfile = profile || defaultProfile;
 
     return (
         <div className="flex flex-col h-screen bg-gray-900 font-sans text-gray-200">
             <header className="flex-shrink-0 bg-gray-800 border-b border-gray-700 flex items-center h-16 z-10">
                 <div className={`flex-shrink-0 h-full flex items-center border-r border-gray-700 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64 px-6' : 'w-20 px-4 justify-center'}`}>
                     <div className="flex items-center space-x-3">
-                        <img src={profile.logoUrl} alt="Logo" className="h-8 w-8 rounded-md object-cover bg-gray-700 flex-shrink-0"/>
-                        <span className={`text-xl font-bold text-gray-100 whitespace-nowrap transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>{profile.appName}</span>
+                        <img src={activeProfile.logoUrl} alt="Logo" className="h-8 w-8 rounded-md object-cover bg-gray-700 flex-shrink-0"/>
+                        <span className={`text-xl font-bold text-gray-100 whitespace-nowrap transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>{activeProfile.appName}</span>
                     </div>
                 </div>
                 <div className="flex-1 flex justify-between items-center px-4 sm:px-6">
@@ -407,10 +505,10 @@ const App: React.FC = () => {
                         </button>
                         <div className="relative" ref={profileDropdownRef}>
                             <button onClick={() => setProfileDropdownOpen(prev => !prev)} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700">
-                                <img className="h-9 w-9 rounded-full object-cover bg-gray-700" src={profile.logoUrl} alt="Company Logo" />
+                                <img className="h-9 w-9 rounded-full object-cover bg-gray-700" src={activeProfile.logoUrl} alt="Company Logo" />
                                 <div>
-                                    <div className="text-sm font-semibold text-gray-200 text-left">{profile.contactName}</div>
-                                    <div className="text-xs text-gray-400 text-left">{profile.companyName}</div>
+                                    <div className="text-sm font-semibold text-gray-200 text-left">{currentUser.name}</div>
+                                    <div className="text-xs text-gray-400 text-left truncate max-w-[150px]">{currentUser.email}</div>
                                 </div>
                             </button>
                             {isProfileDropdownOpen && (
@@ -419,7 +517,7 @@ const App: React.FC = () => {
                                     onClick={() => { setProfileModalOpen(true); setProfileDropdownOpen(false); }}
                                     className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
                                 >
-                                    Profil
+                                    Profil Perusahaan
                                 </button>
                                 <button
                                     onClick={() => { handleLogout(); setProfileDropdownOpen(false); }}
@@ -435,14 +533,19 @@ const App: React.FC = () => {
             </header>
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar currentPage={currentPage} navigateTo={navigateTo} isOpen={isSidebarOpen} />
-                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8">
+                <main ref={mainContentRef} className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8">
                     {renderContent()}
                     <Footer />
                 </main>
             </div>
-            {detailEmployee && <EmployeeDetailModal employee={detailEmployee} onClose={() => setDetailEmployee(null)} />}
+            {detailEmployee && <EmployeeDetailModal 
+                employee={detailEmployee} 
+                onClose={() => setDetailEmployee(null)} 
+                profile={activeProfile} 
+                masterEmployees={masterEmployees} 
+            />}
             {detailMasterEmployee && <MasterEmployeeDetailModal employee={detailMasterEmployee} onClose={() => setDetailMasterEmployee(null)} />}
-            {isProfileModalOpen && <ProfileModal isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} onSave={handleSaveProfile} profile={profile} />}
+            {isProfileModalOpen && <ProfileModal isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} onSave={handleSaveProfile} profile={activeProfile} />}
             {isMasterEmployeeModalOpen && <MasterEmployeeFormModal isOpen={isMasterEmployeeModalOpen} onClose={handleCloseMasterEmployeeModal} onSave={handleSaveMasterEmployee} existingEmployee={editingMasterEmployee} />}
             {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
         </div>

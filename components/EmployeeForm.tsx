@@ -6,7 +6,7 @@ import { getTerRate } from '../services/taxCalculator';
 import { getAvailableTaxYears } from '../constants';
 
 interface EmployeeFormProps {
-    onSave: (data: EmployeeData) => void;
+    onSave: (data: EmployeeData) => Promise<void> | void;
     existingEmployee: Employee | null;
     onCancel: () => void;
     profile: Profile;
@@ -98,7 +98,6 @@ const SearchableEmployeeSelect: React.FC<{
         const handleClickOutside = (event: MouseEvent) => {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
-                // Reset search term to current selection if closed without selecting
                 setSearchTerm(selectedEmployee?.fullName || '');
             }
         };
@@ -107,7 +106,9 @@ const SearchableEmployeeSelect: React.FC<{
     }, [selectedEmployee]);
 
     const filteredEmployees = React.useMemo(() => {
-        if (searchTerm.length < 2) return [];
+        // Logic: Show all if empty or < 2 chars (for scrolling), filter if >= 2 chars
+        if (searchTerm.length < 2) return masterEmployees;
+        
         return masterEmployees.filter(e => 
             e.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
             e.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
@@ -125,11 +126,11 @@ const SearchableEmployeeSelect: React.FC<{
                     setIsOpen(true);
                 }}
                 onFocus={() => setIsOpen(true)}
-                placeholder="Ketik min. 2 huruf nama..."
+                placeholder="Ketik min. 2 huruf atau pilih..."
                 className="w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors"
             />
-            {isOpen && searchTerm.length >= 2 && (
-                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto">
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
                     {filteredEmployees.length > 0 ? (
                         filteredEmployees.map(emp => (
                             <button
@@ -162,9 +163,12 @@ const FormSubHeader: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <h4 className="text-sm font-bold text-primary-400 mb-4 border-l-4 border-primary-500 pl-3 uppercase tracking-wider">{children}</h4>
 );
 
+const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+
 const EmployeeForm: React.FC<EmployeeFormProps> = ({ 
     onSave, existingEmployee, onCancel, profile, masterEmployees, overtimeRecords, employees, showNotification, fixedType 
 }) => {
+    
     const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>({
         masterEmployeeId: '',
         calculationType: fixedType || 'monthly',
@@ -205,6 +209,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         pph21PaidPreviously: 0,
         periodType: 'fullYear',
     });
+
+    const [isSaving, setIsSaving] = React.useState(false);
 
     React.useEffect(() => {
         if (existingEmployee) {
@@ -316,10 +322,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     const pph21Est = Math.floor(totalPenghasilanBruto * terRate);
     
     // Calculate Take Home Pay
-    // THP = Gross - (Actual Cash Deductions) - PPh 21
-    // Actual Cash Deductions = Tax Deductible (Minus Biaya Jabatan which is not cash) + Non-Tax Deductible
     const takeHomePay = React.useMemo(() => {
-        // Biaya jabatan is NOT a cash deduction, so we remove it from the deduction list for THP
         const totalCashDeductions = (totalTaxDeductions - biayaJabatanValue) + totalNonTaxDeductions;
         return Math.round(totalPenghasilanBruto - totalCashDeductions - pph21Est);
     }, [totalPenghasilanBruto, totalTaxDeductions, biayaJabatanValue, totalNonTaxDeductions, pph21Est]);
@@ -472,11 +475,20 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 taxObjectName: prevData.taxObjectName,
                 taxObjectCode: prevData.taxObjectCode,
                 signerIdentity: prevData.signerIdentity,
-                // Note: bonus and overtimePay are typically not copied as they vary significantly
             }));
             showNotification('Berhasil di Ambil', 'success');
         } else {
             showNotification(`Data untuk bulan ${MONTH_NAMES[prevMonth - 1]} ${prevYear} tidak ditemukan.`, 'error');
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            await onSave({ id: existingEmployee?.id || uuidv4(), ...formData });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -566,9 +578,10 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 </div>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); onSave({ id: existingEmployee?.id || uuidv4(), ...formData }); }} className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
                 
                 {/* Left Column: Earnings & Deductions */}
+                {/* ... (omitted repeated rendering code for brevity, logic handled in SearchableEmployeeSelect and component state) ... */}
                 <div className="lg:col-span-3 space-y-8">
                     <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-sm">
                         <FormSectionHeader>Rincian Penghasilan Bulanan Ini</FormSectionHeader>
@@ -660,6 +673,35 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                                         <FormInput name="bonus" value={formatNumberForDisplay(formData.bonus)} onChange={handleChange} />
                                     </div>
                                 </div>
+
+                                {formData.customVariableAllowances?.map((item, idx) => (
+                                    <div key={item.id} className="flex gap-4 mb-3 items-end">
+                                        <div className="flex-1">
+                                            <FormLabel>Nama Tunjangan Tidak Tetap</FormLabel>
+                                            <FormInput 
+                                                value={item.name} 
+                                                onChange={(e: any) => handleCustomAllowanceChange('variable', idx, 'name', e.target.value)} 
+                                                placeholder="Nama Tunjangan"
+                                            />
+                                        </div>
+                                        <div className="w-36">
+                                            <FormLabel>Jumlah</FormLabel>
+                                            <FormInput 
+                                                value={formatNumberForDisplay(item.value)} 
+                                                onChange={(e: any) => handleCustomAllowanceChange('variable', idx, 'value', e.target.value)} 
+                                                className="text-right"
+                                            />
+                                        </div>
+                                        <button type="button" onClick={() => {
+                                            const list = [...formData.customVariableAllowances];
+                                            list.splice(idx, 1);
+                                            setFormData(prev => ({ ...prev, customVariableAllowances: list }));
+                                        }} className="p-2 bg-red-950/20 text-red-500 hover:bg-red-900/40 border border-red-900/50 rounded mb-0.5 transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        </button>
+                                    </div>
+                                ))}
+
                                 <button type="button" onClick={() => handleAddAllowance('variable')} className="w-full mt-6 py-2 bg-primary-900/20 border border-primary-500/30 text-primary-400 text-xs font-bold rounded hover:bg-primary-900/40 transition-colors flex items-center justify-center gap-2">
                                     <span className="text-base">+</span> Tambah Tunjangan Tdk Tetap
                                 </button>
@@ -850,15 +892,24 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                         <button 
                             type="button" 
                             onClick={onCancel}
-                            className="px-8 py-3 bg-[#334155]/60 hover:bg-[#475569] text-gray-200 font-bold rounded-lg transition-all border border-[#475569]"
+                            disabled={isSaving}
+                            className="px-8 py-3 bg-[#334155]/60 hover:bg-[#475569] text-gray-200 font-bold rounded-lg transition-all border border-[#475569] disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Batal
                         </button>
                         <button 
                             type="submit"
-                            className="px-10 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg shadow-xl shadow-primary-900/30 transition-all transform active:scale-95"
+                            disabled={isSaving}
+                            className="px-10 py-3 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg shadow-xl shadow-primary-900/30 transition-all transform active:scale-95 flex items-center gap-2 disabled:bg-gray-600 disabled:cursor-not-allowed"
                         >
-                            Simpan & Hitung Pajak
+                            {isSaving ? (
+                                <>
+                                    <SpinnerIcon />
+                                    <span>Menyimpan...</span>
+                                </>
+                            ) : (
+                                <span>Simpan & Hitung Pajak</span>
+                            )}
                         </button>
                     </div>
                 </div>

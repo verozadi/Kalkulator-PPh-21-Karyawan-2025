@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import * as XLSX from 'xlsx';
 import { MasterEmployee, MaritalStatus } from '../types';
@@ -24,10 +25,7 @@ const ChevronDownIcon = ({ className }: { className?: string }) => <svg xmlns="h
 const ViewIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
 const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
-
-const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
-};
+const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>;
 
 const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees, onAddNew, onEdit, onDelete, onImport, showNotification, onOpenDetailModal }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -36,7 +34,8 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
     const [searchTerm, setSearchTerm] = React.useState('');
     const [filterEmployeeStatus, setFilterEmployeeStatus] = React.useState<'all' | 'Pegawai Tetap' | 'Bukan Pegawai'>('all');
     const [filterIsActive, setFilterIsActive] = React.useState<'all' | 'true' | 'false'>('all');
-    const [isFilterOpen, setIsFilterOpen] = React.useState(true);
+    // Set default to false (collapsed)
+    const [isFilterOpen, setIsFilterOpen] = React.useState(false);
     
     type SortableKey = keyof Pick<MasterEmployee, 'fullName' | 'position' | 'email' | 'employeeStatus'>;
     const [sortConfig, setSortConfig] = React.useState<{ key: SortableKey; direction: 'ascending' | 'descending' }>({ key: 'fullName', direction: 'ascending' });
@@ -269,7 +268,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                         onClick={onAddNew}
                         className="bg-accent-500 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-accent-600 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-accent-900/50"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-5-6a3 3 0 100-6 3 3 0 000 6zM13 18a6 6 0 00-6-6H5a6 6 0 00-6 6v1h14v-1z" /></svg>
+                        <UserPlusIcon />
                         <span>Tambah Karyawan Baru</span>
                     </button>
                 </div>
@@ -320,7 +319,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                         <tr>
                             <SortableHeader sortKey="fullName">Nama Lengkap / ID</SortableHeader>
                             <SortableHeader sortKey="position">Jabatan</SortableHeader>
-                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">Tunjangan Jabatan</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">No. NPWP</th>
                             <SortableHeader sortKey="email">Kontak</SortableHeader>
                             <SortableHeader sortKey="employeeStatus">Status</SortableHeader>
                             <th className="px-6 py-3 text-center text-xs font-bold text-gray-300 uppercase tracking-wider">Aksi</th>
@@ -337,7 +336,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                                     <div className="text-sm text-gray-400 font-mono">{employee.employeeId}</div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{employee.position}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatCurrency(employee.positionAllowance || 0)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-mono">{employee.npwp || '-'}</td>
                                  <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm text-gray-300">{employee.email}</div>
                                     <div className="text-sm text-gray-400">{employee.phone}</div>

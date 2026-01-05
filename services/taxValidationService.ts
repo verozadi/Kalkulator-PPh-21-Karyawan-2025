@@ -1,3 +1,4 @@
+
 // In a real-world application, this service would make API calls to DJP or other official sources.
 // For this simulation, we use a mock database to demonstrate the functionality.
 
@@ -14,21 +15,13 @@ interface ValidationResponse {
 const MOCK_TAX_DATABASE: { [key: string]: { name: string; address: string } } = {
     // St Syamsiah
     '7371026702680004': {
-        name: 'St Syamsiah (dari Dukcapil)',
-        address: 'Jl. Perintis Kemerdekaan No. 10, Makassar (dari Dukcapil)'
-    },
-    '918887776543000': {
-        name: 'St Syamsiah (dari DJP)',
-        address: 'Jl. Perintis Kemerdekaan No. 10, Makassar (dari DJP)'
+        name: 'St Syamsiah (dari Database)',
+        address: 'Dg Tata Tmn Artalia Blk A1/ No 4/5 RT 002 RW 002, Kel. Parang Tambung, Kec. Tamalate (Terverifikasi)'
     },
     // Aan Alfian Syahriansah
     '7371102307920006': {
-        name: 'Aan Alfian Syahriansah (dari Dukcapil)',
-        address: 'Jl. Sultan Alauddin No. 20, Makassar (dari Dukcapil)'
-    },
-     '927776665543001': {
-        name: 'Aan Alfian Syahriansah (dari DJP)',
-        address: 'Jl. Sultan Alauddin No. 20, Makassar (dari DJP)'
+        name: 'Aan Alfian Syahriansah (dari Database)',
+        address: 'Dg Tata I Blk IV Perum. Graha Sanjaya No. A.5 RT 002 RW 002, Kel. Parang Tambung, Kec. Tamalate (Terverifikasi)'
     }
 };
 

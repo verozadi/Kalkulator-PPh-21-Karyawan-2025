@@ -1,64 +1,46 @@
 
 import { MasterEmployee } from '../types';
-import { initialMasterEmployees } from './mockData';
+import { db } from './firebase';
+import { doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
-const getStorageKey = (userId: string) => `pph21_master_employees_${userId}`;
-
-export const initializeMasterEmployeesForUser = (userId: string): void => {
-    const storageKey = getStorageKey(userId);
-    if (!localStorage.getItem(storageKey)) {
-        localStorage.setItem(storageKey, JSON.stringify(initialMasterEmployees));
+export const saveMasterEmployee = async (userId: string, employee: MasterEmployee): Promise<void> => {
+    try {
+        if (!employee.id) employee.id = uuidv4();
+        const ref = doc(db, 'users', userId, 'master_employees', employee.id);
+        await setDoc(ref, employee);
+    } catch (error) {
+        console.error("Error saving master employee:", error);
+        throw error;
     }
 };
 
-const getStoredMasterEmployees = (userId: string): MasterEmployee[] => {
-    const storageKey = getStorageKey(userId);
+export const deleteMasterEmployee = async (userId: string, id: string): Promise<void> => {
     try {
-        const storedData = localStorage.getItem(storageKey);
-        if (storedData) {
-            return JSON.parse(storedData);
-        }
+        await deleteDoc(doc(db, 'users', userId, 'master_employees', id));
     } catch (error) {
-        console.error("Failed to parse master employees from localStorage", error);
+        console.error("Error deleting master employee:", error);
+        throw error;
     }
-    localStorage.setItem(storageKey, JSON.stringify(initialMasterEmployees));
-    return initialMasterEmployees;
+};
+
+export const importMasterEmployees = async (userId: string, newEmployees: Omit<MasterEmployee, 'id'>[]): Promise<void> => {
+    const batch = writeBatch(db);
+    
+    newEmployees.forEach(e => {
+        const id = uuidv4();
+        const ref = doc(db, 'users', userId, 'master_employees', id);
+        batch.set(ref, { ...e, id });
+    });
+
+    try {
+        await batch.commit();
+    } catch (error) {
+        console.error("Error importing master employees:", error);
+        throw error;
+    }
 };
 
 export const getMasterEmployees = (userId: string): MasterEmployee[] => {
-    const masterEmployees = getStoredMasterEmployees(userId);
-    return [...masterEmployees].sort((a, b) => a.fullName.localeCompare(b.fullName));
-};
-
-export const getMasterEmployeeById = (userId: string, id: string): MasterEmployee | undefined => {
-    const masterEmployees = getStoredMasterEmployees(userId);
-    return masterEmployees.find(e => e.id === id);
-};
-
-export const saveMasterEmployee = (userId: string, employee: MasterEmployee): void => {
-    let masterEmployees = getStoredMasterEmployees(userId);
-    if (!employee.id) {
-        employee.id = uuidv4();
-    }
-    const index = masterEmployees.findIndex(e => e.id === employee.id);
-    if (index > -1) {
-        masterEmployees[index] = employee;
-    } else {
-        masterEmployees.push(employee);
-    }
-    localStorage.setItem(getStorageKey(userId), JSON.stringify(masterEmployees));
-};
-
-export const deleteMasterEmployee = (userId: string, id: string): void => {
-    let masterEmployees = getStoredMasterEmployees(userId);
-    masterEmployees = masterEmployees.filter(e => e.id !== id);
-    localStorage.setItem(getStorageKey(userId), JSON.stringify(masterEmployees));
-};
-
-export const importMasterEmployees = (userId: string, newEmployees: Omit<MasterEmployee, 'id'>[]): void => {
-    let masterEmployees = getStoredMasterEmployees(userId);
-    const employeesToAdd = newEmployees.map(e => ({ ...e, id: uuidv4() }));
-    const updatedEmployees = [...masterEmployees, ...employeesToAdd];
-    localStorage.setItem(getStorageKey(userId), JSON.stringify(updatedEmployees));
+    return []; // Handled by App.tsx listener
 };

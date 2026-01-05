@@ -1,33 +1,27 @@
+
 import { OvertimeRecord } from '../types';
-import { initialOvertimeRecords } from './mockData';
+import { db } from './firebase';
+import { doc, setDoc, writeBatch, collection, getDocs, query } from 'firebase/firestore';
 
-const getStorageKey = (userId: string) => `pph21_overtime_records_${userId}`;
+export const saveOvertimeRecords = async (userId: string, records: OvertimeRecord[]): Promise<void> => {
+    const batch = writeBatch(db);
+    
+    // For simplicity in this specific "bulk save" feature of the Overtime component,
+    // we iterate and set each record. 
+    // Optimization: In a real app, only save changed/new records.
+    records.forEach(rec => {
+        const ref = doc(db, 'users', userId, 'overtime_records', rec.id);
+        batch.set(ref, rec);
+    });
 
-export const initializeOvertimeForUser = (userId: string): void => {
-    const storageKey = getStorageKey(userId);
-    if (!localStorage.getItem(storageKey)) {
-        localStorage.setItem(storageKey, JSON.stringify(initialOvertimeRecords));
-    }
-};
-
-const getStoredOvertimeRecords = (userId: string): OvertimeRecord[] => {
-    const storageKey = getStorageKey(userId);
     try {
-        const storedData = localStorage.getItem(storageKey);
-        if (storedData) {
-            return JSON.parse(storedData);
-        }
+        await batch.commit();
     } catch (error) {
-        console.error("Failed to parse overtime records from localStorage", error);
+        console.error("Error saving overtime records:", error);
+        throw error;
     }
-    localStorage.setItem(storageKey, JSON.stringify(initialOvertimeRecords));
-    return initialOvertimeRecords;
 };
 
 export const getOvertimeRecords = (userId: string): OvertimeRecord[] => {
-    return getStoredOvertimeRecords(userId);
-};
-
-export const saveOvertimeRecords = (userId: string, records: OvertimeRecord[]): void => {
-    localStorage.setItem(getStorageKey(userId), JSON.stringify(records));
+    return []; // Handled by App.tsx listener
 };

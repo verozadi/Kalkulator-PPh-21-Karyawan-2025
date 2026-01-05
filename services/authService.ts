@@ -1,94 +1,182 @@
+
+import { auth, googleProvider } from './firebase';
+import { 
+    signInWithPopup, 
+    signOut as firebaseSignOut, 
+    User as FirebaseUser, 
+    createUserWithEmailAndPassword, 
+    updateProfile, 
+    signInWithEmailAndPassword, 
+    updatePassword,
+    sendEmailVerification,
+    sendPasswordResetEmail,
+    reauthenticateWithCredential,
+    EmailAuthProvider,
+    updateEmail
+} from 'firebase/auth';
 import { User } from '../types';
-import { v4 as uuidv4 } from 'uuid';
-import { initializeProfileForUser } from './profileService';
-import { initializeMasterEmployeesForUser } from './masterEmployeeService';
-import { initializeEmployeesForUser } from './employeeService';
-import { initializeOvertimeForUser } from './overtimeService';
 
-const USERS_KEY = 'pph21_users';
-const SESSION_KEY = 'pph21_session_userId';
+const LICENSE_API_URL = "https://script.google.com/macros/s/AKfycbwC5xHIrnG39FMYU853IOAwrLGE4U25ZTZc_MbWXkhQHNgY27WIRXy48NmzXTkXhZeStQ/exec";
 
-// Simple password hashing simulation (DO NOT USE IN PRODUCTION)
-const hashPassword = (password: string): string => {
-    return `hashed_${password}`;
-};
-
-const verifyPassword = (password: string, hash: string): boolean => {
-    return `hashed_${password}` === hash;
-};
-
-
-const getUsers = (): User[] => {
-    try {
-        const storedUsers = localStorage.getItem(USERS_KEY);
-        return storedUsers ? JSON.parse(storedUsers) : [];
-    } catch (e) {
-        return [];
-    }
-};
-
-const saveUsers = (users: User[]): void => {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-};
-
-export const register = (name: string, email: string, password: string): { success: boolean; message: string; user?: User } => {
-    const users = getUsers();
-    const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    if (existingUser) {
-        return { success: false, message: 'Email sudah terdaftar.' };
-    }
-
-    const newUser: User = {
-        id: uuidv4(),
-        name,
-        email,
-        passwordHash: hashPassword(password),
+// Map Firebase User to App User Type
+export const mapFirebaseUser = (fbUser: FirebaseUser): User => {
+    return {
+        id: fbUser.uid,
+        name: fbUser.displayName || 'User',
+        email: fbUser.email || '',
+        passwordHash: '', // Not used with Google Auth
     };
-
-    users.push(newUser);
-    saveUsers(users);
-
-    // Initialize all data stores for the new user
-    initializeProfileForUser(newUser.id);
-    initializeMasterEmployeesForUser(newUser.id);
-    initializeEmployeesForUser(newUser.id);
-    initializeOvertimeForUser(newUser.id);
-
-    return { success: true, message: 'Pendaftaran berhasil!', user: newUser };
 };
 
+export const loginWithGoogle = async (): Promise<{ success: boolean; message: string; user?: User }> => {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = mapFirebaseUser(result.user);
+        return { success: true, message: 'Login berhasil!', user };
+    } catch (error: any) {
+        console.error("Firebase Login Error", error);
+        return { success: false, message: error.message || 'Gagal login dengan Google.' };
+    }
+};
 
-export const login = (email: string, password: string): { success: boolean; message: string; user?: User } => {
-    const users = getUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+export const loginWithEmail = async (email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
+    try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        
+        // Check Email Verification
+        if (!result.user.emailVerified) {
+            await firebaseSignOut(auth);
+            return { success: false, message: 'Email belum diverifikasi. Silakan cek inbox email Anda.' };
+        }
 
+        const user = mapFirebaseUser(result.user);
+        return { success: true, message: 'Login berhasil!', user };
+    } catch (error: any) {
+        console.error("Firebase Email Login Error", error);
+        let message = 'Gagal login.';
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            message = 'Email atau kata sandi salah.';
+        } else if (error.code === 'auth/invalid-email') {
+            message = 'Format email tidak valid.';
+        } else if (error.code === 'auth/too-many-requests') {
+            message = 'Terlalu banyak percobaan gagal. Coba lagi nanti.';
+        }
+        return { success: false, message: message !== 'Gagal login.' ? message : (error.message || message) };
+    }
+};
+
+export const register = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
+    try {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(result.user, { displayName: name });
+        
+        // Send Verification Email
+        await sendEmailVerification(result.user);
+        
+        // Force Logout so they can't access app without verifying
+        await firebaseSignOut(auth);
+
+        // Note: user is undefined here because we logged out
+        return { success: true, message: 'Akun berhasil dibuat! Silakan cek email Anda untuk verifikasi sebelum login.' };
+    } catch (error: any) {
+        console.error("Firebase Register Error", error);
+        let message = 'Gagal mendaftar.';
+        if (error.code === 'auth/email-already-in-use') message = 'Email sudah digunakan.';
+        if (error.code === 'auth/weak-password') message = 'Password terlalu lemah.';
+        if (error.code === 'auth/invalid-email') message = 'Email tidak valid.';
+        
+        return { success: false, message: message !== 'Gagal mendaftar.' ? message : (error.message || message) };
+    }
+};
+
+export const updateUserPassword = async (password: string): Promise<{ success: boolean; message: string }> => {
+    const user = auth.currentUser;
     if (!user) {
-        return { success: false, message: 'Email atau kata sandi salah.' };
+        return { success: false, message: 'Tidak ada sesi pengguna aktif.' };
     }
 
-    const isPasswordCorrect = verifyPassword(password, user.passwordHash);
-    if (!isPasswordCorrect) {
-        return { success: false, message: 'Email atau kata sandi salah.' };
+    try {
+        await updatePassword(user, password);
+        return { success: true, message: 'Kata sandi berhasil disimpan. Sekarang Anda bisa login menggunakan Email & Password atau Google.' };
+    } catch (error: any) {
+        console.error("Update Password Error", error);
+        let message = 'Gagal menyimpan kata sandi.';
+        if (error.code === 'auth/weak-password') {
+            message = 'Kata sandi terlalu lemah (minimal 6 karakter).';
+        } else if (error.code === 'auth/requires-recent-login') {
+            message = 'Demi keamanan, silakan logout dan login kembali untuk mengubah kata sandi.';
+        }
+        return { success: false, message };
     }
-
-    sessionStorage.setItem(SESSION_KEY, user.id);
-    return { success: true, message: 'Login berhasil!', user };
 };
 
-export const logout = (): void => {
-    sessionStorage.removeItem(SESSION_KEY);
+export const changeUserEmail = async (newEmail: string, password: string): Promise<{ success: boolean; message: string }> => {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+        return { success: false, message: 'Tidak ada sesi pengguna aktif.' };
+    }
+    const oldEmail = user.email;
+
+    try {
+        // 1. Re-authenticate User (Security Requirement)
+        const credential = EmailAuthProvider.credential(oldEmail, password);
+        await reauthenticateWithCredential(user, credential);
+
+        // 2. Update License Database (Crucial to prevent lockout)
+        const licenseKey = localStorage.getItem('veroz_license_key');
+        if (licenseKey) {
+            const params = new URLSearchParams({
+                action: 'update_email',
+                key: licenseKey,
+                old_email: oldEmail,
+                new_email: newEmail,
+                uid: user.uid
+            });
+            
+            // Call API silently but await it to ensure data consistency
+            await fetch(`${LICENSE_API_URL}?${params.toString()}`);
+        }
+
+        // 3. Update Firebase Email
+        await updateEmail(user, newEmail);
+
+        return { success: true, message: 'Email berhasil diperbarui.' };
+    } catch (error: any) {
+        console.error("Change Email Error", error);
+        let message = 'Gagal memperbarui email.';
+        
+        if (error.code === 'auth/wrong-password') {
+            message = 'Kata sandi saat ini salah.';
+        } else if (error.code === 'auth/email-already-in-use') {
+            message = 'Email baru sudah digunakan oleh akun lain.';
+        } else if (error.code === 'auth/invalid-email') {
+            message = 'Format email baru tidak valid.';
+        } else if (error.code === 'auth/requires-recent-login') {
+            message = 'Sesi kadaluarsa. Silakan logout dan login kembali.';
+        }
+
+        return { success: false, message };
+    }
+};
+
+export const sendPasswordReset = async (email: string): Promise<{ success: boolean; message: string }> => {
+    try {
+        await sendPasswordResetEmail(auth, email);
+        return { success: true, message: 'Link reset kata sandi telah dikirim ke email Anda, Jangan Lupa cek di SPAM jika tidak muncul di Kotak Masuk.' };
+    } catch (error: any) {
+        console.error("Reset Password Error", error);
+        let message = 'Gagal mengirim link reset.';
+        if (error.code === 'auth/user-not-found') message = 'Email tidak terdaftar.';
+        if (error.code === 'auth/invalid-email') message = 'Format email tidak valid.';
+        return { success: false, message };
+    }
+};
+
+export const logout = async (): Promise<void> => {
+    await firebaseSignOut(auth);
 };
 
 export const getCurrentUser = (): User | null => {
-    try {
-        const userId = sessionStorage.getItem(SESSION_KEY);
-        if (!userId) {
-            return null;
-        }
-        const users = getUsers();
-        return users.find(u => u.id === userId) || null;
-    } catch (e) {
-        return null;
-    }
+    const fbUser = auth.currentUser;
+    return fbUser ? mapFirebaseUser(fbUser) : null;
 };

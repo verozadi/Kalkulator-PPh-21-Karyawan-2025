@@ -84,6 +84,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, pr
                                 {/* App Name Input Removed */}
                                 <InputField label="Nama Perusahaan" name="companyName" value={formData.companyName} onChange={handleChange} placeholder="cth: PT Maju Jaya" />
                                 <InputField label="NPWP Perusahaan" name="companyNpwp" value={formData.companyNpwp} onChange={handleChange} placeholder="00.000.000.0-000.000" />
+                                <div className="md:col-span-2">
+                                    <InputField label="Alamat Perusahaan" name="companyAddress" value={formData.companyAddress || ''} onChange={handleChange} placeholder="Alamat lengkap perusahaan" />
+                                </div>
                                 <InputField label="ID TKU" name="idTku" value={formData.idTku || ''} onChange={handleChange} placeholder="ID Tempat Kegiatan Usaha" />
                                 <InputField label="NITKU" name="nitku" value={formData.nitku || ''} onChange={handleChange} placeholder="16 digit NITKU" />
                             </div>
@@ -93,6 +96,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, pr
                             <h3 className="text-md font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-4">Penanggung Jawab</h3>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                                 <InputField label="Nama Penanggung Jawab" name="contactName" value={formData.contactName} onChange={handleChange} placeholder="Nama lengkap" />
+                                <InputField label="Jabatan Penanggung Jawab" name="contactPosition" value={formData.contactPosition || ''} onChange={handleChange} placeholder="Misal: Direktur" />
                                 <InputField label="NPWP Penanggung Jawab" name="contactNpwp" value={formData.contactNpwp} onChange={handleChange} placeholder="00.000.000.0-000.000" />
                                 <InputField label="NIK Penanggung Jawab" name="contactNik" value={formData.contactNik} onChange={handleChange} placeholder="16 digit NIK" />
                             </div>
