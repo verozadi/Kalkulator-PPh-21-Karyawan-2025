@@ -1,4 +1,5 @@
 
+
 import React, { useRef } from 'react';
 import { Employee } from '../types';
 
@@ -154,6 +155,7 @@ const EmployeeDetailModal: React.FC<{ employee: Employee | null; onClose: () => 
                                     <div className="space-y-1">
                                         <DetailRow label="Biaya Jabatan" value={Math.min(employee.grossIncome * 0.05, 500000)} isCurrency />
                                         <DetailRow label="JHT - Karyawan" value={employee.pensionDeduction} isCurrency />
+                                        <DetailRow label="JP - Karyawan" value={employee.jpDeduction || 0} isCurrency />
                                         <DetailRow label="BPJS Kesehatan" value={employee.bpjsDeduction} isCurrency />
                                         <DetailRow label="Pinjaman/Kasbon" value={employee.loan} isCurrency />
                                         <DetailRow label="Potongan Lain" value={employee.otherDeductions} isCurrency />

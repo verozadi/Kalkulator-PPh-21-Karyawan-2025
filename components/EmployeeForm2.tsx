@@ -11,16 +11,48 @@ interface EmployeeFormProps {
     onCancel: () => void;
     profile: Profile;
     masterEmployees: MasterEmployee[];
-    overtimeRecords: OvertimeRecord[];
-    employees: Employee[];
+    overtimeRecords?: OvertimeRecord[]; // Optional here as not strictly used for auto-populating in non-final usually, but keeping prop signature
+    employees?: Employee[];
     showNotification: (message: string, type: 'success' | 'error') => void;
     fixedType?: CalculationType;
 }
 
-const MONTHLY_TAX_OBJECTS = [
-    { code: '21-100-01', name: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap' },
-    { code: '21-100-02', name: 'Penghasilan yang Diterima atau Diperoleh Pensiun Secara Teratur' },
-    { code: '21-100-03', name: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap yang Menerima Fasilitas di Daerah Tertentu' },
+const NON_FINAL_TAX_OBJECTS = [
+    { code: '21-100-04', name: 'Imbalan kepada Distributor Perusahaan Pemasaran Berjenjang atau Penjualan Langsung dan Kegiatan Sejenis Lainnya' },
+    { code: '21-100-05', name: 'Imbalan kepada Agen Asuransi' },
+    { code: '21-100-06', name: 'Imbalan kepada Petugas Penjaja Barang Dagangan' },
+    { code: '21-100-07', name: 'Imbalan kepada Tenaga Ahli (Pengacara, Akuntan, Arsitek, Dokter, Konsultan, Notaris, Pejabat Pembuat Akte Tanah, Penilai, Aktuaris)' },
+    { code: '21-100-10', name: 'Honorarium atau Imbalan kepada Anggota Dewan Komisaris atau Dewan Pengawas yang Menerima Imbalan secara Tidak Teratur' },
+    { code: '21-100-11', name: 'Penghasilan atau Imbalan yang Diterima atau Diperoleh Mantan Pegawai (Jasa Produksi, Tantiem, Gratifikasi, Bonus, dan Imbalan Lain yang Bersifat Tidak Teratur)' },
+    { code: '21-100-12', name: 'Uang Manfaat Pensiun atau Penghasilan Sejenisnya yang Diambil Sebagian oleh Peserta Program Pensiun yang Masih Berstatus sebagai Pegawai' },
+    { code: '21-100-14', name: 'Imbalan kepada Peserta Rapat, Konferensi, Sidang, Pertemuan, Kunjungan Kerja, Seminar, Lokakarya, atau Pertunjukan, atau Kegiatan Tertentu Lainnya' },
+    { code: '21-100-15', name: 'Imbalan kepada Peserta atau Anggota dalam Suatu Kepanitiaan sebagai Penyelenggara Kegiatan Tertentu' },
+    { code: '21-100-16', name: 'Imbalan kepada Peserta Pendidikan, Pelatihan, dan Magang' },
+    { code: '21-100-17', name: 'Imbalan kepada Peserta Kegiatan Lainnya' },
+    { code: '21-100-18', name: 'Imbalan kepada Penasihat, Pengajar, Pelatih, Penceramah, Penyuluh, dan Moderator' },
+    { code: '21-100-19', name: 'Imbalan kepada Pengarang, Peneliti, Penerjemah' },
+    { code: '21-100-20', name: 'Imbalan kepada Pemberi Jasa dalam Segala Bidang' },
+    { code: '21-100-21', name: 'Imbalan kepada Agen Iklan' },
+    { code: '21-100-22', name: 'Imbalan kepada Pengawas atau Pengelola Proyek' },
+    { code: '21-100-23', name: 'Imbalan kepada Pembawa Pesanan atau yang Menemukan Langganan atau yang Menjadi Perantara' },
+    { code: '21-100-24', name: 'Upah Pegawai Tidak Tetap yang Dibayarkan secara Harian, Mingguan, Satuan dan Borongan dengan Penghasilan Bruto sampai dengan Rp2.500.000 Sehari' },
+    { code: '21-100-25', name: 'Penghasilan berupa Uang Pesangon, Uang Manfaat Pensiun, Tunjangan Hari Tua, atau Jaminan Hari Tua yang Terutang atau Dibayarkan pada Tahun Ketiga dan Tahun-Tahun Berikutnya' },
+    { code: '21-100-27', name: 'Upah Pegawai Tidak Tetap yang Dibayarkan secara Bulanan yang Mendapat Fasilitas di Daerah Tertentu' },
+    { code: '21-100-29', name: 'Upah Pegawai Tidak Tetap yang Dibayarkan secara Harian, Mingguan, Satuan dan Borongan dengan Penghasilan Bruto sampai dengan Rp2.500.000 Sehari yang Mendapat Fasilitas di Daerah Tertentu' },
+    { code: '21-100-30', name: 'Upah Pegawai Tidak Tetap yang Dibayarkan secara Harian, Mingguan, Satuan dan Borongan dengan Penghasilan Bruto lebih dari Rp2.500.000 Sehari' },
+    { code: '21-100-31', name: 'Upah Pegawai Tidak Tetap yang Dibayarkan secara Harian, Mingguan, Satuan dan Borongan dengan Penghasilan Bruto lebih dari Rp2.500.000 Sehari yang Mendapat Fasilitas di Daerah Tertentu' },
+    { code: '21-100-32', name: 'Penghasilan yang diterima atau Diperoleh oleh Pegawai tetap yang menerima fasilitas di daerah tertentu' },
+    { code: '21-100-33', name: 'Imbalan kepada Pemain Musik, Pembawa Acara, Penyanyi, Pelawak, Bintang Film, Bintang Sinetron, Bintang Iklan, Sutradara, Kru Film, Foto Model, Peragawan/Peragawati, Pemain Drama, Penari, Pemahat, Pelukis, Pembuat/Pencipta Konten pada Media yang Dibagikan secara Daring (Influencer, Selebgram, Blogger, Vlogger, dan Sejenis Lainnya), dan Seniman Lainnya' },
+    { code: '21-100-34', name: 'Imbalan yang Diterima oleh Olahragawan' },
+    { code: '21-100-35', name: 'Upah Pegawai Tidak Tetap yang Dibayarkan secara Bulanan' },
+    { code: '21-100-36', name: 'Imbalan kepada Peserta Perlombaan dalam Segala Bidang, antara lain Perlombaan Olah Raga, Seni, Ketangkasan, Ilmu Pengetahuan, Teknologi, dan Perlombaan Lainnya' },
+    { code: '21-100-37', name: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap di Daerah Tertentu yang Tidak Memenuhi Persyaratan Fasilitas' },
+    { code: '21-100-38', name: 'Penyesuaian nilai kompensasi dari Masa Pajak sebelumnya' },
+    { code: '21-401-01', name: 'Uang Pesangon yang Dibayarkan Sekaligus' },
+    { code: '21-401-02', name: 'Uang Manfaat Pensiun, Tunjangan Hari Tua, atau Jaminan Hari Tua yang Dibayarkan Sekaligus' },
+    { code: '21-402-02', name: 'Honor atau Imbalan Lain yang Dibebankan kepada APBN atau APBD yang Diterima oleh PNS Golongan III, Anggota TNI dan Anggota POLRI Golongan Pangkat Perwira Pertama, dan pensiunannya' },
+    { code: '21-402-03', name: 'Honor atau Imbalan Lain yang Dibebankan kepada APBN atau APBD yang Diterima oleh Pejabat Negara, PNS Golongan IV, Anggota TNI dan Anggota POLRI Golongan Pangkat Perwira Menengah dan Perwira Tinggi, dan Pensiunannya' },
+    { code: '21-402-04', name: 'Honor atau Imbalan Lain yang Dibebankan kepada APBN atau APBD yang Diterima oleh PNS Golongan I dan Golongan II, Anggota TNI dan Anggota POLRI Golongan Pangkat Tamtama dan Bintara, dan Pensiunannya' },
 ];
 
 const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -35,7 +67,7 @@ const parseFormattedNumber = (str: string): number => {
     return parseInt(str.replace(/[^0-9-]/g, ''), 10) || 0;
 };
 
-// --- Custom Internal Components for Precise UI Styling ---
+// --- Custom Internal Components for Precise UI Styling (Copied from EmployeeForm) ---
 
 const FormLabel: React.FC<{ children: React.ReactNode, required?: boolean, info?: string }> = ({ children, required, info }) => (
     <label className="block text-[13px] font-semibold text-gray-400 mb-1.5 flex items-center">
@@ -75,6 +107,88 @@ const FormSelect = ({ value, onChange, name, children, className = "" }: any) =>
     </select>
 );
 
+const SearchableTaxObjectSelect: React.FC<{
+    options: { code: string, name: string }[],
+    value: string,
+    onChange: (name: string, code: string) => void
+}> = ({ options, value, onChange }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const wrapperRef = React.useRef<HTMLDivElement>(null);
+
+    // Initialize/Update search term based on value prop, but only if not currently editing/open
+    React.useEffect(() => {
+        if (!isOpen) {
+             setSearchTerm(value);
+        }
+    }, [value, isOpen]);
+
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+                // On close without selection, revert to actual value
+                setSearchTerm(value);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [value]);
+
+    const filteredOptions = React.useMemo(() => {
+        if (!searchTerm) return options;
+        const lowerTerm = searchTerm.toLowerCase();
+        return options.filter(o => 
+            o.name.toLowerCase().includes(lowerTerm) || 
+            o.code.toLowerCase().includes(lowerTerm)
+        );
+    }, [options, searchTerm]);
+
+    const handleSelect = (option: { code: string, name: string }) => {
+        onChange(option.name, option.code);
+        setSearchTerm(option.name);
+        setIsOpen(false);
+    };
+
+    return (
+        <div className="relative" ref={wrapperRef}>
+            <FormLabel>Nama Objek Pajak</FormLabel>
+            <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setIsOpen(true);
+                }}
+                onFocus={() => setIsOpen(true)}
+                placeholder="Ketik nama atau kode objek pajak..."
+                className="w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors"
+            />
+            {isOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                    {filteredOptions.length > 0 ? (
+                        filteredOptions.map((option) => (
+                            <button
+                                key={option.code}
+                                type="button"
+                                onClick={() => handleSelect(option)}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-700/50 last:border-0"
+                            >
+                                <div className="flex justify-between items-center mb-1">
+                                     <span className="font-bold text-xs text-primary-400 bg-primary-900/30 px-1.5 py-0.5 rounded">{option.code}</span>
+                                </div>
+                                <div className="text-sm leading-snug">{option.name}</div>
+                            </button>
+                        ))
+                    ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500 italic">Tidak ada objek pajak ditemukan.</div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SearchableEmployeeSelect: React.FC<{ 
     masterEmployees: MasterEmployee[], 
     value: string, 
@@ -98,7 +212,6 @@ const SearchableEmployeeSelect: React.FC<{
         const handleClickOutside = (event: MouseEvent) => {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
-                // Reset search term to current selection if closed without selecting
                 setSearchTerm(selectedEmployee?.fullName || '');
             }
         };
@@ -116,7 +229,7 @@ const SearchableEmployeeSelect: React.FC<{
 
     return (
         <div className="relative" ref={wrapperRef}>
-            <FormLabel required>Nama Karyawan</FormLabel>
+            <FormLabel required>Nama Penerima Penghasilan</FormLabel>
             <input
                 type="text"
                 value={searchTerm}
@@ -162,20 +275,20 @@ const FormSubHeader: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <h4 className="text-sm font-bold text-primary-400 mb-4 border-l-4 border-primary-500 pl-3 uppercase tracking-wider">{children}</h4>
 );
 
-const EmployeeForm: React.FC<EmployeeFormProps> = ({ 
-    onSave, existingEmployee, onCancel, profile, masterEmployees, overtimeRecords, employees, showNotification, fixedType 
+const EmployeeForm2: React.FC<EmployeeFormProps> = ({ 
+    onSave, existingEmployee, onCancel, profile, masterEmployees, showNotification, fixedType, employees = [] 
 }) => {
     const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>({
         masterEmployeeId: '',
-        calculationType: fixedType || 'monthly',
+        calculationType: fixedType || 'nonFinal',
         name: '',
         npwp: '',
         address: '',
         status: MaritalStatus.TK0,
-        employeeStatus: 'Pegawai Tetap',
+        employeeStatus: 'Bukan Pegawai',
         isForeigner: false,
         periodYear: new Date().getFullYear(),
-        periodMonth: new Date().getMonth() + 1 > 11 ? 11 : new Date().getMonth() + 1,
+        periodMonth: new Date().getMonth() + 1,
         baseSalary: 0,
         tunjanganPph: 0,
         tunjanganJabatan: 0,
@@ -199,8 +312,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         isGrossUp: false,
         taxFacility: 'Tanpa Fasilitas',
         taxFacilityNumber: '',
-        taxObjectName: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap',
-        taxObjectCode: '21-100-01',
+        taxObjectName: 'Upah Pegawai Tidak Tetap yang Dibayarkan secara Bulanan',
+        taxObjectCode: '21-100-35',
         signerIdentity: 'NPWP',
         pph21PaidPreviously: 0,
         periodType: 'fullYear',
@@ -213,30 +326,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         }
     }, [existingEmployee]);
 
-    // Automatic Overtime Population Effect
-    React.useEffect(() => {
-        if (!formData.masterEmployeeId) return;
-
-        const records = overtimeRecords.filter(r =>
-            r.masterEmployeeId === formData.masterEmployeeId &&
-            r.year === Number(formData.periodYear) &&
-            r.month === Number(formData.periodMonth)
-        );
-
-        const totalOvertimeFromRecords = records.reduce((sum, r) => sum + r.totalPay, 0);
-
-        if (totalOvertimeFromRecords >= 0) {
-             setFormData(prev => {
-                 if (prev.overtimePay !== totalOvertimeFromRecords) {
-                     return { ...prev, overtimePay: totalOvertimeFromRecords };
-                 }
-                 return prev;
-             });
-        }
-    }, [formData.masterEmployeeId, formData.periodYear, formData.periodMonth, overtimeRecords]);
-
-
-    // Gross Up Calculation Effect
+    // Gross Up Calculation Effect (reused logic)
     React.useEffect(() => {
         const {
             baseSalary, tunjanganJabatan, tunjanganTelekomunikasi,
@@ -245,7 +335,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             status, isGrossUp
         } = formData;
 
-        // 1. Hitung Gross TANPA Tunjangan PPh
         const customFixedTotal = (customFixedAllowances || []).reduce((sum, item) => sum + item.value, 0);
         const customVariableTotal = (customVariableAllowances || []).reduce((sum, item) => sum + item.value, 0);
 
@@ -254,14 +343,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             bonus + facilityValue + customFixedTotal + customVariableTotal;
 
         if (!isGrossUp) {
-            // Jika Gross Up MATI, pastikan tunjanganPph = 0
             if (formData.tunjanganPph !== 0) {
                 setFormData(prev => ({ ...prev, tunjanganPph: 0 }));
             }
             return;
         }
 
-        // 2. Jika Gross Up HIDUP, lakukan iterasi untuk menemukan Tunjangan PPh yang stabil
         let currentTaxAllowance = 0;
         let finalTax = 0;
 
@@ -301,12 +388,12 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
     const biayaJabatanValue = React.useMemo(() => Math.min(totalPenghasilanBruto * 0.05, 500000), [totalPenghasilanBruto]);
     
-    // Tax Deductible: Biaya Jabatan, JHT, JP, Zakat
+    // Tax Deductible
     const totalTaxDeductions = React.useMemo(() => 
         biayaJabatanValue + formData.pensionDeduction + formData.jpDeduction + (formData.zakatDeduction || 0), 
     [biayaJabatanValue, formData.pensionDeduction, formData.jpDeduction, formData.zakatDeduction]);
     
-    // Non-Tax Deductible: BPJS Kes (1%), Loan, Kasbon (otherDeductions), Custom Deductions
+    // Non-Tax Deductible
     const totalNonTaxDeductions = React.useMemo(() => {
         const customDeductionsTotal = (formData.customDeductions || []).reduce((sum, i) => sum + i.value, 0);
         return formData.bpjsDeduction + formData.loan + formData.otherDeductions + customDeductionsTotal;
@@ -316,10 +403,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     const pph21Est = Math.floor(totalPenghasilanBruto * terRate);
     
     // Calculate Take Home Pay
-    // THP = Gross - (Actual Cash Deductions) - PPh 21
-    // Actual Cash Deductions = Tax Deductible (Minus Biaya Jabatan which is not cash) + Non-Tax Deductible
     const takeHomePay = React.useMemo(() => {
-        // Biaya jabatan is NOT a cash deduction, so we remove it from the deduction list for THP
         const totalCashDeductions = (totalTaxDeductions - biayaJabatanValue) + totalNonTaxDeductions;
         return Math.round(totalPenghasilanBruto - totalCashDeductions - pph21Est);
     }, [totalPenghasilanBruto, totalTaxDeductions, biayaJabatanValue, totalNonTaxDeductions, pph21Est]);
@@ -337,7 +421,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 status: master.ptkpStatus,
                 employeeStatus: master.employeeStatus,
                 baseSalary: master.baseSalary,
-                tunjanganJabatan: master.positionAllowance || 0, // Auto-fill Tunjangan Jabatan
+                tunjanganJabatan: master.positionAllowance || 0,
                 isForeigner: master.isForeigner
             }));
         }
@@ -365,67 +449,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         } else {
             showNotification('Data Master Karyawan tidak ditemukan.', 'error');
         }
-    };
-
-    const handleChange = (e: any) => {
-        const { name, value } = e.target;
-        const numericFields = ['baseSalary', 'tunjanganJabatan', 'tunjanganTelekomunikasi', 'tunjanganMakan', 'tunjanganTransportasi', 'overtimePay', 'bonus', 'facilityValue', 'loan', 'otherDeductions', 'pensionDeduction', 'jpDeduction', 'bpjsDeduction', 'zakatDeduction'];
-        
-        if (numericFields.includes(name)) {
-            setFormData(prev => ({ ...prev, [name]: parseFormattedNumber(value) }));
-        } else if (name === 'isGrossUp') {
-            setFormData(prev => ({ ...prev, [name]: value === 'true' }));
-        } else if (name === 'taxObjectName') {
-             const selectedObj = MONTHLY_TAX_OBJECTS.find(obj => obj.name === value);
-             setFormData(prev => ({ 
-                 ...prev, 
-                 [name]: value,
-                 taxObjectCode: selectedObj ? selectedObj.code : prev.taxObjectCode
-             }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
-    };
-
-    const handleAutoCalculate = (type: 'jht' | 'jp' | 'bpjs') => {
-        const baseForBpjs = formData.baseSalary + formData.tunjanganJabatan + formData.tunjanganTelekomunikasi + (formData.customFixedAllowances || []).reduce((s, i) => s + i.value, 0);
-        let val = 0;
-        if (type === 'jht') val = baseForBpjs * 0.02;
-        else if (type === 'jp') val = baseForBpjs * 0.01;
-        else if (type === 'bpjs') val = baseForBpjs * 0.01;
-        
-        const field = type === 'jht' ? 'pensionDeduction' : type === 'jp' ? 'jpDeduction' : 'bpjsDeduction';
-        setFormData(prev => ({ ...prev, [field]: Math.round(val) }));
-    };
-
-    const handleAddAllowance = (type: 'fixed' | 'variable') => {
-        const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
-        setFormData(prev => ({
-            ...prev,
-            [key]: [...(prev[key as any] || []), { id: uuidv4(), name: '', value: 0 }]
-        }));
-    };
-
-    const handleCustomAllowanceChange = (type: 'fixed' | 'variable', index: number, field: 'name' | 'value', value: string) => {
-        const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
-        const list = [...(formData[key as any] || [])];
-        if (field === 'name') list[index].name = value;
-        else list[index].value = parseFormattedNumber(value);
-        setFormData(prev => ({ ...prev, [key]: list }));
-    };
-
-    const handleAddDeduction = () => {
-        setFormData(prev => ({
-            ...prev,
-            customDeductions: [...(prev.customDeductions || []), { id: uuidv4(), name: '', value: 0 }]
-        }));
-    };
-
-    const handleCustomDeductionChange = (index: number, field: 'name' | 'value', value: string) => {
-        const list = [...(formData.customDeductions || [])];
-        if (field === 'name') list[index].name = value;
-        else list[index].value = parseFormattedNumber(value);
-        setFormData(prev => ({ ...prev, customDeductions: list }));
     };
 
     const handleFetchPreviousData = () => {
@@ -472,7 +495,6 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 taxObjectName: prevData.taxObjectName,
                 taxObjectCode: prevData.taxObjectCode,
                 signerIdentity: prevData.signerIdentity,
-                // Note: bonus and overtimePay are typically not copied as they vary significantly
             }));
             showNotification('Berhasil di Ambil', 'success');
         } else {
@@ -480,13 +502,67 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         }
     };
 
+    const handleChange = (e: any) => {
+        const { name, value } = e.target;
+        const numericFields = ['baseSalary', 'tunjanganJabatan', 'tunjanganTelekomunikasi', 'tunjanganMakan', 'tunjanganTransportasi', 'overtimePay', 'bonus', 'facilityValue', 'loan', 'otherDeductions', 'pensionDeduction', 'jpDeduction', 'bpjsDeduction', 'zakatDeduction'];
+        
+        if (numericFields.includes(name)) {
+            setFormData(prev => ({ ...prev, [name]: parseFormattedNumber(value) }));
+        } else if (name === 'isGrossUp') {
+            setFormData(prev => ({ ...prev, [name]: value === 'true' }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleAutoCalculate = (type: 'jht' | 'jp' | 'bpjs') => {
+        const baseForBpjs = formData.baseSalary + formData.tunjanganJabatan + formData.tunjanganTelekomunikasi + (formData.customFixedAllowances || []).reduce((s, i) => s + i.value, 0);
+        let val = 0;
+        if (type === 'jht') val = baseForBpjs * 0.02;
+        else if (type === 'jp') val = baseForBpjs * 0.01;
+        else if (type === 'bpjs') val = baseForBpjs * 0.01;
+        
+        const field = type === 'jht' ? 'pensionDeduction' : type === 'jp' ? 'jpDeduction' : 'bpjsDeduction';
+        setFormData(prev => ({ ...prev, [field]: Math.round(val) }));
+    };
+
+    const handleAddAllowance = (type: 'fixed' | 'variable') => {
+        const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
+        setFormData(prev => ({
+            ...prev,
+            [key]: [...(prev[key as any] || []), { id: uuidv4(), name: '', value: 0 }]
+        }));
+    };
+
+    const handleCustomAllowanceChange = (type: 'fixed' | 'variable', index: number, field: 'name' | 'value', value: string) => {
+        const key = type === 'fixed' ? 'customFixedAllowances' : 'customVariableAllowances';
+        const list = [...(formData[key as any] || [])];
+        if (field === 'name') list[index].name = value;
+        else list[index].value = parseFormattedNumber(value);
+        setFormData(prev => ({ ...prev, [key]: list }));
+    };
+
+    const handleAddDeduction = () => {
+        setFormData(prev => ({
+            ...prev,
+            customDeductions: [...(prev.customDeductions || []), { id: uuidv4(), name: '', value: 0 }]
+        }));
+    };
+
+    const handleCustomDeductionChange = (index: number, field: 'name' | 'value', value: string) => {
+        const list = [...(formData.customDeductions || [])];
+        if (field === 'name') list[index].name = value;
+        else list[index].value = parseFormattedNumber(value);
+        setFormData(prev => ({ ...prev, customDeductions: list }));
+    };
+
     return (
         <div className="max-w-[1400px] mx-auto pb-10 animate-fade-in-up">
             {/* Page Header */}
             <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-100">Hitung PPh 21 Bulanan</h1>
-                    <p className="text-sm text-gray-400">Perhitungan untuk masa pajak Januari s.d. November (TER).</p>
+                    <h1 className="text-2xl font-bold text-gray-100">Hitung PPh 21 Final / Tidak Final</h1>
+                    <p className="text-sm text-gray-400">Khusus untuk penerima penghasilan Non-Pegawai Tetap.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <button 
@@ -514,7 +590,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                     <div>
                         <FormLabel required>Masa Pajak</FormLabel>
                         <FormSelect name="periodMonth" value={formData.periodMonth} onChange={handleChange}>
-                            {MONTH_NAMES.slice(0, 11).map((m, i) => (
+                            {MONTH_NAMES.map((m, i) => (
                                 <option key={m} value={i + 1}>{m}</option>
                             ))}
                         </FormSelect>
@@ -571,13 +647,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 {/* Left Column: Earnings & Deductions */}
                 <div className="lg:col-span-3 space-y-8">
                     <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-sm">
-                        <FormSectionHeader>Rincian Penghasilan Bulanan Ini</FormSectionHeader>
+                        <FormSectionHeader>Rincian Penghasilan</FormSectionHeader>
                         
                         {/* Penghasilan Pokok */}
                         <div className="mb-10">
-                            <FormSubHeader>Penghasilan Pokok</FormSubHeader>
+                            <FormSubHeader>Penghasilan Pokok / Imbalan</FormSubHeader>
                             <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
-                                <FormLabel>Gaji Pokok</FormLabel>
+                                <FormLabel>Gaji Pokok / Imbalan Utama</FormLabel>
                                 <FormInput name="baseSalary" value={formatNumberForDisplay(formData.baseSalary)} onChange={handleChange} />
                             </div>
                         </div>
@@ -648,7 +724,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                                         <FormInput name="tunjanganTransportasi" value={formatNumberForDisplay(formData.tunjanganTransportasi)} onChange={handleChange} />
                                     </div>
                                     <div>
-                                        <FormLabel info="Otomatis terisi dari Tab Lembur jika ada, bisa diubah manual">Lembur</FormLabel>
+                                        <FormLabel>Lembur / Extra Time</FormLabel>
                                         <FormInput name="overtimePay" value={formatNumberForDisplay(formData.overtimePay)} onChange={handleChange} />
                                     </div>
                                     <div>
@@ -668,22 +744,22 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
                         {/* Pengurangan Pajak */}
                         <div className="mb-10">
-                            <FormSubHeader>Komponen Pengurangan Penghasilan (Tax Deductible)</FormSubHeader>
+                            <FormSubHeader>Komponen Pengurangan Penghasilan</FormSubHeader>
                             <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                                     <div>
-                                        <FormLabel info="Otomatis max 500rb/bulan">Biaya Jabatan (5%)</FormLabel>
+                                        <FormLabel info="Otomatis max 500rb/bulan jika berlaku">Biaya Jabatan (5%)</FormLabel>
                                         <FormInput value={formatNumberForDisplay(biayaJabatanValue)} readOnly />
                                     </div>
                                     <div>
-                                        <FormLabel>JHT - Karyawan (2%)</FormLabel>
+                                        <FormLabel>JHT - Karyawan</FormLabel>
                                         <div className="flex">
                                             <FormInput name="pensionDeduction" value={formatNumberForDisplay(formData.pensionDeduction)} onChange={handleChange} className="rounded-r-none border-r-0" />
                                             <button type="button" onClick={() => handleAutoCalculate('jht')} className="bg-primary-600 hover:bg-primary-700 text-white px-3 py-2 rounded-r text-[10px] font-bold uppercase transition-colors">Auto</button>
                                         </div>
                                     </div>
                                     <div>
-                                        <FormLabel>JP - Karyawan (1%)</FormLabel>
+                                        <FormLabel>JP - Karyawan</FormLabel>
                                         <div className="flex">
                                             <FormInput name="jpDeduction" value={formatNumberForDisplay(formData.jpDeduction)} onChange={handleChange} className="rounded-r-none border-r-0" />
                                             <button type="button" onClick={() => handleAutoCalculate('jp')} className="bg-primary-600 hover:bg-primary-700 text-white px-3 py-2 rounded-r text-[10px] font-bold uppercase transition-colors">Auto</button>
@@ -754,8 +830,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
                         {/* Left Bottom Neto Box */}
                         <div className="mt-8 bg-[#0f172a] border border-[#334155] rounded-lg p-5">
-                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Penghasilan Neto (Dasar Pajak)</p>
-                            <p className="text-3xl font-bold text-gray-100">{formatNumberForDisplay(totalPenghasilanBruto - totalTaxDeductions)}</p>
+                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Penghasilan Bruto (Dasar Pajak Non-Final)</p>
+                            <p className="text-3xl font-bold text-gray-100">{formatNumberForDisplay(totalPenghasilanBruto)}</p>
                         </div>
                     </div>
                 </div>
@@ -763,7 +839,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 {/* Right Column: Tax Summary */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-lg">
-                        <FormSectionHeader>Perhitungan PPh 21 Bulanan (TER)</FormSectionHeader>
+                        <FormSectionHeader>Perhitungan Pajak Non-Final</FormSectionHeader>
                         
                         <div className="space-y-6">
                             <div>
@@ -787,16 +863,22 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                                 </div>
                             )}
 
-                            <div>
-                                <FormLabel>Nama Objek Pajak</FormLabel>
-                                <FormSelect name="taxObjectName" value={formData.taxObjectName} onChange={handleChange}>
-                                    {MONTHLY_TAX_OBJECTS.map(o => <option key={o.code} value={o.name}>{o.name}</option>)}
-                                </FormSelect>
-                            </div>
+                            <SearchableTaxObjectSelect 
+                                options={NON_FINAL_TAX_OBJECTS} 
+                                value={formData.taxObjectName} 
+                                onChange={(name, code) => {
+                                    setFormData(prev => ({ 
+                                        ...prev, 
+                                        taxObjectName: name,
+                                        taxObjectCode: code
+                                    }));
+                                }}
+                            />
+
                             <div>
                                 <FormLabel>Kode Objek Pajak</FormLabel>
                                 <div className="bg-[#1e293b] border border-[#475569] rounded px-3 py-2 text-gray-500 text-sm cursor-not-allowed">
-                                    {formData.taxObjectCode || '21-100-01'}
+                                    {formData.taxObjectCode || '21-100-35'}
                                 </div>
                             </div>
                             
@@ -807,19 +889,19 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                             </div>
 
                             <div>
-                                <FormLabel info="Tarif berdasarkan Kategori PTKP dan Range Penghasilan Bruto (PMK 168/2023)">Tarif TER</FormLabel>
+                                <FormLabel info="Tarif TER diterapkan pada Penghasilan Bruto untuk Bukan Pegawai (sesuai PP 58/2023)">Tarif TER</FormLabel>
                                 <div className="bg-[#334155]/40 border border-[#475569] rounded px-3 py-2 text-gray-100 text-sm font-bold">{`${(terRate * 100).toFixed(2)}%`}</div>
                             </div>
 
                             {/* Large PPh Display */}
                             <div className="bg-[#0f172a] border border-[#334155] rounded-lg p-6">
-                                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">PPh Pasal 21 Bulan Ini</p>
+                                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">PPh Pasal 21 Terutang</p>
                                 <p className="text-5xl font-black text-gray-100">{formatNumberForDisplay(pph21Est)}</p>
                             </div>
 
                             {/* Take Home Pay Box */}
                             <div className="bg-[#c2410c] border border-[#ea580c] rounded-lg p-6 shadow-lg">
-                                <p className="text-orange-200 text-[10px] font-bold uppercase tracking-wider mb-1">Take Home Pay</p>
+                                <p className="text-orange-200 text-[10px] font-bold uppercase tracking-wider mb-1">Neto Diterima (Take Home Pay)</p>
                                 <p className="text-4xl font-black text-white">{formatNumberForDisplay(takeHomePay)}</p>
                             </div>
 
@@ -867,4 +949,4 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     );
 };
 
-export default EmployeeForm;
+export default EmployeeForm2;

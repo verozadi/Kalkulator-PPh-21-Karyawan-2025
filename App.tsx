@@ -6,6 +6,8 @@ import Footer from './components/Footer';
 import Dashboard from './components/Dashboard';
 import EmployeeList from './components/EmployeeList';
 import EmployeeForm from './components/EmployeeForm';
+import EmployeeForm2 from './components/EmployeeForm2';
+import EmployeeForm3 from './components/EmployeeForm3';
 import TaxRules from './components/TaxRules';
 import Reports from './components/Reports';
 import Sidebar from './components/Sidebar';
@@ -54,15 +56,11 @@ const App: React.FC = () => {
     const [detailEmployee, setDetailEmployee] = React.useState<Employee | null>(null);
     const [detailMasterEmployee, setDetailMasterEmployee] = React.useState<MasterEmployee | null>(null);
 
-
     // Profile Dropdown state
     const [isProfileDropdownOpen, setProfileDropdownOpen] = React.useState(false);
     const profileDropdownRef = React.useRef<HTMLDivElement>(null);
 
-
     // --- EFFECTS ---
-
-    // Effect to load user-specific data upon login
     React.useEffect(() => {
         if (currentUser) {
             setProfile(getProfile(currentUser.id));
@@ -73,7 +71,6 @@ const App: React.FC = () => {
         setIsLoading(false);
     }, [currentUser]);
 
-    // Effect for profile dropdown
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
           if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
@@ -98,7 +95,7 @@ const App: React.FC = () => {
     const handleLogout = () => {
         authService.logout();
         setCurrentUser(null);
-        setAuthPage('landing'); // Redirect to landing page on logout
+        setAuthPage('landing');
     };
 
     const handleSaveProfile = (updatedProfile: Profile) => {
@@ -122,20 +119,53 @@ const App: React.FC = () => {
         setSidebarOpen(prev => !prev);
     };
 
-    // PPh 21 Calculation Handlers
     const handleEditEmployee = (employee: Employee) => {
         setEditingEmployee(employee);
-        setCurrentPage('employeeInput');
+        if (employee.calculationType === 'annual') {
+            setCurrentPage('pph21Annual');
+        } else if (employee.calculationType === 'nonFinal') {
+            setCurrentPage('pph21NonFinal');
+        } else {
+            setCurrentPage('pph21Monthly');
+        }
     };
 
     const handleSaveEmployee = (employeeData: EmployeeData) => {
         if (!currentUser) return;
         try {
-            const calculationResult = calculatePPh21(employeeData);
-            const employeeToSave: Employee = { ...employeeData, ...calculationResult };
+            let employeeToSave: Employee;
+
+            // CRITICAL FIX: 
+            // For Annual (A1) calculation, the form (EmployeeForm3) contains complex logic 
+            // (e.g., Annualization/Disetahunkan, iterative Gross Up) that determines the final tax.
+            // The standard `calculatePPh21` service might calculate a basic projection that overwrites
+            // the correct "Disetahunkan" values with incorrect ones.
+            // So, for Annual type, we trust the incoming data from the form implicitly.
+            
+            if (employeeData.calculationType === 'annual') {
+                // Ensure it has all required properties of Employee type
+                // The form should have provided all TaxCalculationResult fields
+                employeeToSave = { 
+                    ...employeeData 
+                } as Employee;
+            } else {
+                // For Monthly/Non-Final, we run the standard calculator to ensure consistency
+                const calculationResult = calculatePPh21(employeeData);
+                employeeToSave = { ...employeeData, ...calculationResult };
+            }
+
             saveEmployeeService(currentUser.id, employeeToSave);
             setEmployees(getEmployees(currentUser.id));
-            navigateTo('employeeList');
+            
+            // Redirect to appropriate list based on calculationType
+            if (employeeToSave.calculationType === 'annual') {
+                navigateTo('employeeListAnnual');
+            } else if (employeeToSave.calculationType === 'nonFinal') {
+                navigateTo('employeeListNonFinal');
+            } else {
+                navigateTo('employeeListMonthly');
+            }
+            
             showNotification('Tersimpan');
         } catch (error) {
             showNotification('Gagal menyimpan data PPh 21', 'error');
@@ -155,11 +185,11 @@ const App: React.FC = () => {
         }
     };
 
-     const handleImportEmployees = (employeesToImport: Omit<EmployeeData, 'id'>[]) => {
+    const handleImportEmployees = (employeesToImport: Omit<EmployeeData, 'id'>[]) => {
         if (!currentUser) return;
         try {
             importEmployeesService(currentUser.id, employeesToImport);
-            setEmployees(getEmployees(currentUser.id)); // Refresh state
+            setEmployees(getEmployees(currentUser.id));
             showNotification(`${employeesToImport.length} data PPh 21 berhasil diimpor.`);
         } catch (error) {
             showNotification('Gagal mengimpor data PPh 21.', 'error');
@@ -167,7 +197,6 @@ const App: React.FC = () => {
         }
     };
 
-    // Master Employee Handlers
     const handleOpenMasterEmployeeModal = (employee: MasterEmployee | null) => {
         setEditingMasterEmployee(employee);
         setMasterEmployeeModalOpen(true);
@@ -211,7 +240,7 @@ const App: React.FC = () => {
         if (!currentUser) return;
         try {
             importMasterEmployeesService(currentUser.id, employeesToImport);
-            setMasterEmployees(getMasterEmployees(currentUser.id)); // Refresh state
+            setMasterEmployees(getMasterEmployees(currentUser.id));
             showNotification(`${employeesToImport.length} karyawan berhasil diimpor.`);
         } catch (error) {
             showNotification('Gagal mengimpor data karyawan.', 'error');
@@ -219,7 +248,6 @@ const App: React.FC = () => {
         }
     };
 
-    // Overtime Handlers
     const handleSaveOvertime = (records: OvertimeRecord[]) => {
         if (!currentUser) return;
         try {
@@ -232,13 +260,11 @@ const App: React.FC = () => {
         }
     };
 
-    // Detail Modal Handler
     const handleOpenDetailModal = (employee: Employee) => {
         setDetailEmployee(employee);
     };
 
     // --- RENDER LOGIC ---
-
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-screen bg-gray-900 text-white">
@@ -247,7 +273,6 @@ const App: React.FC = () => {
         );
     }
 
-    // Render Auth pages (Landing Page is always the base)
     if (!currentUser) {
         return (
             <>
@@ -259,8 +284,38 @@ const App: React.FC = () => {
         );
     }
 
-    // Render App if logged in
     const renderContent = () => {
+        const employeeFormProps = {
+            onSave: handleSaveEmployee,
+            existingEmployee: editingEmployee,
+            onCancel: () => {
+                // If cancelling edit, try to return to previous relevant list
+                if (editingEmployee) {
+                    if (editingEmployee.calculationType === 'annual') navigateTo('employeeListAnnual');
+                    else if (editingEmployee.calculationType === 'nonFinal') navigateTo('employeeListNonFinal');
+                    else navigateTo('employeeListMonthly');
+                } else {
+                    navigateTo('dashboard');
+                }
+            },
+            profile: profile!,
+            masterEmployees: masterEmployees,
+            overtimeRecords: overtimeRecords,
+            employees: employees,
+            showNotification: showNotification,
+        };
+
+        const listProps = {
+            masterEmployees: masterEmployees,
+            overtimeRecords: overtimeRecords,
+            onEdit: handleEditEmployee,
+            onDelete: handleDeleteEmployee,
+            navigateTo: navigateTo,
+            onOpenDetailModal: handleOpenDetailModal,
+            onImport: handleImportEmployees,
+            showNotification: showNotification,
+        };
+
         switch (currentPage) {
             case 'dashboard':
                 return <Dashboard employees={employees} masterEmployees={masterEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee} />;
@@ -274,29 +329,39 @@ const App: React.FC = () => {
                             showNotification={showNotification}
                             onOpenDetailModal={handleOpenMasterDetailModal}
                         />;
-            case 'employeeList':
+            
+            // Replaced generic 'employeeList' with specific filtered lists
+            case 'employeeList': // Fallback if still used
+            case 'employeeListMonthly':
                 return <EmployeeList 
-                            employees={employees} 
-                            masterEmployees={masterEmployees} 
-                            overtimeRecords={overtimeRecords}
-                            onEdit={handleEditEmployee} 
-                            onDelete={handleDeleteEmployee} 
-                            navigateTo={navigateTo} 
-                            onOpenDetailModal={handleOpenDetailModal}
-                            onImport={handleImportEmployees}
-                            showNotification={showNotification}
+                            employees={employees.filter(e => e.calculationType === 'monthly')} 
+                            title="Daftar PPh 21 Bulanan"
+                            addNewPage="pph21Monthly"
+                            {...listProps} 
                         />;
-            case 'employeeInput':
-                return <EmployeeForm 
-                            onSave={handleSaveEmployee} 
-                            existingEmployee={editingEmployee} 
-                            onCancel={() => navigateTo('employeeList')} 
-                            profile={profile!} 
-                            masterEmployees={masterEmployees} 
-                            overtimeRecords={overtimeRecords} 
-                            employees={employees}
-                            showNotification={showNotification}
+            case 'employeeListNonFinal':
+                return <EmployeeList 
+                            employees={employees.filter(e => e.calculationType === 'nonFinal')} 
+                            title="Daftar PPh 21 Final/Tidak Final"
+                            addNewPage="pph21NonFinal"
+                            {...listProps} 
                         />;
+            case 'employeeListAnnual':
+                return <EmployeeList 
+                            employees={employees.filter(e => e.calculationType === 'annual')} 
+                            title="Daftar PPh 21 Tahunan A1"
+                            addNewPage="pph21Annual"
+                            {...listProps} 
+                        />;
+
+            case 'pph21Monthly':
+                return <EmployeeForm {...employeeFormProps} fixedType="monthly" />;
+            case 'pph21NonFinal':
+                return <EmployeeForm2 {...employeeFormProps} fixedType="nonFinal" />;
+            case 'pph21Annual':
+                return <EmployeeForm3 {...employeeFormProps} fixedType="annual" />;
+            case 'employeeInput': 
+                 return <EmployeeForm {...employeeFormProps} fixedType="monthly" />;
             case 'taxRules':
                 return <TaxRules />;
             case 'reports':
@@ -320,29 +385,22 @@ const App: React.FC = () => {
 
     return (
         <div className="flex flex-col h-screen bg-gray-900 font-sans text-gray-200">
-            {/* Unified Header */}
             <header className="flex-shrink-0 bg-gray-800 border-b border-gray-700 flex items-center h-16 z-10">
-                {/* Logo and App name */}
                 <div className={`flex-shrink-0 h-full flex items-center border-r border-gray-700 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64 px-6' : 'w-20 px-4 justify-center'}`}>
                     <div className="flex items-center space-x-3">
                         <img src={profile.logoUrl} alt="Logo" className="h-8 w-8 rounded-md object-cover bg-gray-700 flex-shrink-0"/>
                         <span className={`text-xl font-bold text-gray-100 whitespace-nowrap transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>{profile.appName}</span>
                     </div>
                 </div>
-
-                {/* Main Header Content */}
                 <div className="flex-1 flex justify-between items-center px-4 sm:px-6">
-                    {/* Left side: Hamburger */}
                      <div>
                         <button onClick={toggleSidebar} className="p-2 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
                             <span className="sr-only">Toggle sidebar</span>
                             <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
                         </button>
                     </div>
-
-                    {/* Right side: Notifications and Profile */}
                     <div className="flex items-center space-x-4">
                         <button className="p-2 rounded-full hover:bg-gray-700" title="Notifikasi">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
@@ -375,7 +433,6 @@ const App: React.FC = () => {
                     </div>
                 </div>
             </header>
-
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar currentPage={currentPage} navigateTo={navigateTo} isOpen={isSidebarOpen} />
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -383,42 +440,11 @@ const App: React.FC = () => {
                     <Footer />
                 </main>
             </div>
-
-            {detailEmployee && (
-                <EmployeeDetailModal
-                    employee={detailEmployee}
-                    onClose={() => setDetailEmployee(null)}
-                />
-            )}
-            {detailMasterEmployee && (
-                <MasterEmployeeDetailModal
-                    employee={detailMasterEmployee}
-                    onClose={() => setDetailMasterEmployee(null)}
-                />
-            )}
-            {isProfileModalOpen && (
-                <ProfileModal
-                    isOpen={isProfileModalOpen}
-                    onClose={() => setProfileModalOpen(false)}
-                    onSave={handleSaveProfile}
-                    profile={profile}
-                />
-            )}
-             {isMasterEmployeeModalOpen && (
-                <MasterEmployeeFormModal
-                    isOpen={isMasterEmployeeModalOpen}
-                    onClose={handleCloseMasterEmployeeModal}
-                    onSave={handleSaveMasterEmployee}
-                    existingEmployee={editingMasterEmployee}
-                />
-            )}
-            {notification && (
-                <Notification
-                    message={notification.message}
-                    type={notification.type}
-                    onClose={() => setNotification(null)}
-                />
-            )}
+            {detailEmployee && <EmployeeDetailModal employee={detailEmployee} onClose={() => setDetailEmployee(null)} />}
+            {detailMasterEmployee && <MasterEmployeeDetailModal employee={detailMasterEmployee} onClose={() => setDetailMasterEmployee(null)} />}
+            {isProfileModalOpen && <ProfileModal isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} onSave={handleSaveProfile} profile={profile} />}
+            {isMasterEmployeeModalOpen && <MasterEmployeeFormModal isOpen={isMasterEmployeeModalOpen} onClose={handleCloseMasterEmployeeModal} onSave={handleSaveMasterEmployee} existingEmployee={editingMasterEmployee} />}
+            {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
         </div>
     );
 };

@@ -2,7 +2,7 @@
 import { EmployeeData, TaxCalculationResult, MaritalStatus } from '../types';
 import { PTKP_RATES, PASAL_17_RATES, TER_RATES, TER_CATEGORY_MAP, DTP_INCOME_LIMIT, NPWP_SURCHARGE_RATE } from '../constants';
 
-function getTerRate(status: MaritalStatus, monthlyGross: number): number {
+export function getTerRate(status: MaritalStatus, monthlyGross: number): number {
     const category = TER_CATEGORY_MAP[status] || 'A';
     const ratesForCategory = TER_RATES[category];
 
@@ -16,7 +16,7 @@ function getTerRate(status: MaritalStatus, monthlyGross: number): number {
 }
 
 
-function calculatePasal17(pkp: number): number {
+export function calculatePasal17(pkp: number): number {
     if (pkp <= 0) return 0;
 
     let tax = 0;
@@ -36,123 +36,112 @@ function calculatePasal17(pkp: number): number {
 
 export const calculatePPh21 = (employee: EmployeeData): TaxCalculationResult => {
     const {
-        baseSalary, overtimePay = 0, bonus, facilityValue,
-        bpjsDeduction, pensionDeduction, otherDeductions, loan,
-        status, npwp, periodMonth, calculationType,
-        // New fields with defaults for backward compatibility
+        baseSalary, overtimePay = 0, bonus = 0, facilityValue = 0,
+        bpjsDeduction = 0, pensionDeduction = 0, jpDeduction = 0,
+        status, npwp, calculationType,
         tunjanganPph = 0, tunjanganJabatan = 0, tunjanganTelekomunikasi = 0, tunjanganMakan = 0, tunjanganTransportasi = 0,
+        customFixedAllowances = [], customVariableAllowances = [],
+        honorarium = 0, insurancePremi = 0, zakatDeduction = 0, pph21PaidPreviously = 0,
         taxFacility = 'Tanpa Fasilitas',
-        // Annual specific fields
-        taxPaidAccumulated = 0,
-        netIncomeAccumulated = 0
+        manualPph21Dtp
     } = employee;
 
-    const grossIncome = baseSalary + overtimePay + bonus + facilityValue +
-                        tunjanganPph + tunjanganJabatan + tunjanganTelekomunikasi + tunjanganMakan + tunjanganTransportasi;
-
-    // --- Standard Deductions ---
-    const biayaJabatanMonthly = Math.min(grossIncome * 0.05, 500000);
-    const taxDeductibleContributions = bpjsDeduction + pensionDeduction;
-    const totalDeductions = biayaJabatanMonthly + taxDeductibleContributions + otherDeductions + loan;
-    const netIncomeForTaxMonthly = grossIncome - biayaJabatanMonthly - taxDeductibleContributions;
+    const ptkp = PTKP_RATES[status] || PTKP_RATES[MaritalStatus.TK0];
     
-    // Default values
+    let grossIncome = 0;
+    let totalTaxDeductions = 0;
+    let netIncomeForTax = 0;
+    let pkpYearly = 0;
+    let pph21Yearly = 0;
     let pph21Monthly = 0;
     let finalPPh21Monthly = 0;
     let dtpIncentive = 0;
-    let pkpYearly = 0;
-    let pph21Yearly = 0;
     let taxUnderOverPayment = 0;
 
-    const ptkp = PTKP_RATES[status] || PTKP_RATES[MaritalStatus.TK0];
-
-    // --- Logic based on Calculation Type ---
+    // Calculate Gross Income
+    const customFixedTotal = (customFixedAllowances || []).reduce((acc, curr) => acc + curr.value, 0);
+    const customVarTotal = (customVariableAllowances || []).reduce((acc, curr) => acc + curr.value, 0);
+    
+    grossIncome = baseSalary + tunjanganPph + tunjanganJabatan + tunjanganTelekomunikasi + 
+                  tunjanganMakan + tunjanganTransportasi + overtimePay + bonus + facilityValue + 
+                  customFixedTotal + customVarTotal;
 
     if (calculationType === 'annual') {
-        // --- Annual A1 Calculation (Masa Pajak Terakhir) ---
-        // Formula: (Total Net Income Year - PTKP) * Tarif Pasal 17 - Tax Paid Previously
+        const biayaJabatanYearly = Math.min(grossIncome * 0.05, 6000000);
+        const iuranWajibTotal = pensionDeduction + jpDeduction + (zakatDeduction || 0);
+        
+        totalTaxDeductions = biayaJabatanYearly + iuranWajibTotal;
+        netIncomeForTax = grossIncome - totalTaxDeductions;
 
-        // 1. Calculate Total Net Income for the Year
-        // If we are in Dec, we add current month net income to accumulated previous net income.
-        const totalNetIncomeYearly = netIncomeAccumulated + netIncomeForTaxMonthly;
-        
-        // 2. Calculate PKP (Setahun)
-        pkpYearly = Math.max(0, totalNetIncomeYearly - ptkp);
-        
-        // 3. Calculate PPh 21 Setahun (Pasal 17)
+        const rawPkp = netIncomeForTax - ptkp;
+        pkpYearly = Math.max(0, Math.floor(rawPkp / 1000) * 1000);
         pph21Yearly = calculatePasal17(pkpYearly);
 
-        // 4. Surcharge check
         const hasNpwp = npwp && npwp.trim() !== '' && !/^\d{16}$/.test(npwp.replace(/\D/g, ''));
         if (!hasNpwp) {
             pph21Yearly *= NPWP_SURCHARGE_RATE;
         }
 
-        // 5. Calculate Kurang/Lebih Bayar (This month's tax to pay)
-        // Total Tax Yearly - Tax Paid Jan-Nov
-        taxUnderOverPayment = pph21Yearly - taxPaidAccumulated;
-        
-        // For display consistency in the list, we map this to finalPPh21Monthly
-        pph21Monthly = taxUnderOverPayment; // Raw value
-        finalPPh21Monthly = taxUnderOverPayment; // Value to pay
+        if (taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
+             // Use manual override if present, otherwise calculate automatically
+             if (manualPph21Dtp !== undefined && manualPph21Dtp !== null) {
+                 dtpIncentive = manualPph21Dtp;
+             } else {
+                 const avgMonthlyIncome = grossIncome / 12; 
+                 if (avgMonthlyIncome <= DTP_INCOME_LIMIT) {
+                     dtpIncentive = pph21Yearly;
+                 }
+             }
+        }
+
+        taxUnderOverPayment = pph21Yearly - pph21PaidPreviously - dtpIncentive;
+        pph21Monthly = pph21Yearly; 
+        finalPPh21Monthly = taxUnderOverPayment;
 
     } else if (calculationType === 'nonFinal') {
-        // --- Non-Permanent / Non-Final Calculation ---
         const terRate = getTerRate(status, grossIncome);
         pph21Monthly = grossIncome * terRate;
         finalPPh21Monthly = pph21Monthly;
+        netIncomeForTax = grossIncome; 
 
     } else {
-        // --- Monthly (Bulanan) Calculation (Default) ---
-        // PPh 21 TER calculation is based on the original GROSS INCOME.
+        // Monthly TER Logic
+        const biayaJabatanMonthly = Math.min(grossIncome * 0.05, 500000);
+        // Only JHT, JP, and Zakat reduce the tax base. BPJS Kes and Loans do NOT.
+        const taxDeductibleContributions = pensionDeduction + jpDeduction + (zakatDeduction || 0);
+        
+        totalTaxDeductions = biayaJabatanMonthly + taxDeductibleContributions;
+        netIncomeForTax = grossIncome - totalTaxDeductions;
+
         const terRate = getTerRate(status, grossIncome);
-        const pph21MonthlyTER = grossIncome * terRate;
+        pph21Monthly = Math.floor(grossIncome * terRate);
 
-        // Recalculate for yearly tax projection (just for reference in monthly view, not A1)
-        const grossIncomeYearly = grossIncome * 12;
-        const biayaJabatanYearly = Math.min(grossIncomeYearly * 0.05, 6000000);
-        const taxDeductionsYearly = taxDeductibleContributions * 12;
-        const netIncomeForTaxYearly = grossIncomeYearly - biayaJabatanYearly - taxDeductionsYearly;
-        
-        pkpYearly = Math.max(0, netIncomeForTaxYearly - ptkp);
-        
-        pph21Yearly = calculatePasal17(pkpYearly);
-
-        // Surcharge if using NIK or NPWP is blank
         const hasNpwp = npwp && npwp.trim() !== '' && !/^\d{16}$/.test(npwp.replace(/\D/g, ''));
         if (!hasNpwp) {
-            pph21Yearly *= NPWP_SURCHARGE_RATE;
+            pph21Monthly = Math.floor(pph21Monthly * NPWP_SURCHARGE_RATE);
         }
 
-        const pph21MonthlyPasal17 = pph21Yearly / 12;
-
-        // If it's December but user selected "Monthly" tab (which is weird but possible), fallback to TER
-        // But realistically, December should use Annual logic. 
-        // We stick to TER for Jan-Nov, and Pasal 17 projection for Dec if needed.
-        // However, user logic is "Bulanan" = Jan-Nov default.
-        pph21Monthly = periodMonth < 12 ? pph21MonthlyTER : pph21MonthlyPasal17;
-
-        // Check DTP
-        if (taxFacility === 'PPh Ditanggung Pemerintah (DTP)' && grossIncome <= DTP_INCOME_LIMIT) {
-            dtpIncentive = pph21Monthly;
+        if (taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
+            if (manualPph21Dtp !== undefined && manualPph21Dtp !== null) {
+                dtpIncentive = manualPph21Dtp;
+            } else if (grossIncome <= DTP_INCOME_LIMIT) {
+                dtpIncentive = pph21Monthly;
+            }
         }
 
         finalPPh21Monthly = pph21Monthly - dtpIncentive;
     }
 
-    // Apply SKB exemption
     if (taxFacility === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') {
         finalPPh21Monthly = 0;
-        taxUnderOverPayment = 0; // For annual if applicable
-        // dtpIncentive remains calculated for record if needed, or maybe should be 0 too? 
-        // Usually SKB overrides everything.
+        taxUnderOverPayment = 0;
         dtpIncentive = 0; 
     }
     
     return {
         grossIncome,
-        totalDeductions,
-        netIncomeForTax: netIncomeForTaxMonthly,
+        totalDeductions: totalTaxDeductions,
+        netIncomeForTax,
         ptkp,
         pkpYearly,
         pph21Yearly,

@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { MasterEmployee, OvertimeRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { getAvailableTaxYears } from '../constants';
 
 interface OvertimeProps {
   masterEmployees: MasterEmployee[];
@@ -26,17 +27,17 @@ const parseFormattedNumber = (str: string): number => {
 };
 
 const calculateDepnakerOvertimePay = (
-    baseSalary: number,
+    calculationBase: number, // Base Salary + (optional) Allowance
     dayType: 'workday' | 'holiday',
     workSystem: '5-day' | '6-day',
     hours: number,
     minutes: number
 ): number => {
-    if (baseSalary <= 0 || (hours <= 0 && minutes <= 0)) {
+    if (calculationBase <= 0 || (hours <= 0 && minutes <= 0)) {
         return 0;
     }
 
-    const hourlyRate = baseSalary / 173;
+    const hourlyRate = calculationBase / 173;
     const totalDuration = hours + (minutes / 60);
 
     let overtimePay = 0;
@@ -207,6 +208,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
         endTime: r.endTime || '18:00',
         activity: r.activity || '',
         isManualPay: r.isManualPay || false,
+        includePositionAllowance: r.includePositionAllowance || false,
     }));
     setCurrentPeriodRecords(normalizedRecords);
     
@@ -217,25 +219,33 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     }
   }, [selectedYear, selectedMonth, existingRecords]);
   
-  React.useEffect(() => {
-    setCurrentPeriodRecords(prevRecords =>
-        prevRecords.map(rec => {
-            // If manual pay, skip recalculation unless needed (manual pay shouldn't be overridden by system change)
-            if (rec.isManualPay) return { ...rec, workSystem };
+  // Recalculate Logic
+  const recalculateAll = React.useCallback((records: OvertimeRecord[], currentWorkSystem: '5-day' | '6-day') => {
+      return records.map(rec => {
+            if (rec.isManualPay) return { ...rec, workSystem: currentWorkSystem };
 
             const employee = masterEmployees.find(emp => emp.id === rec.masterEmployeeId);
             if (!employee) return rec;
             
+            const calculationBase = employee.baseSalary + (rec.includePositionAllowance ? (employee.positionAllowance || 0) : 0);
+
             const newTotalPay = calculateDepnakerOvertimePay(
-                employee.baseSalary, rec.dayType, workSystem, rec.overtimeHours, rec.overtimeMinutes
+                calculationBase, rec.dayType, currentWorkSystem, rec.overtimeHours, rec.overtimeMinutes
             );
-            return { ...rec, totalPay: newTotalPay, workSystem };
-        })
-    );
-  }, [workSystem, masterEmployees]);
+            return { ...rec, totalPay: newTotalPay, workSystem: currentWorkSystem };
+        });
+  }, [masterEmployees]);
+
+  React.useEffect(() => {
+    setCurrentPeriodRecords(prev => recalculateAll(prev, workSystem));
+  }, [workSystem, recalculateAll]);
 
   const handleAddOvertimeEntry = (masterEmployeeId: string) => {
     const defaultDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+    // Find if user already has records to inherit setting
+    const existingRec = currentPeriodRecords.find(r => r.masterEmployeeId === masterEmployeeId);
+    const inheritIncludeAllowance = existingRec ? existingRec.includePositionAllowance : false;
+
     const newRecord: OvertimeRecord = {
       id: uuidv4(),
       masterEmployeeId,
@@ -252,12 +262,14 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
       endTime: '18:00',
       activity: '',
       isManualPay: false,
+      includePositionAllowance: inheritIncludeAllowance,
     };
     
     // Initial calculate based on default 1 hour
     const employee = masterEmployees.find(emp => emp.id === masterEmployeeId);
     if(employee) {
-        newRecord.totalPay = calculateDepnakerOvertimePay(employee.baseSalary, newRecord.dayType, workSystem, 1, 0);
+        const base = employee.baseSalary + (inheritIncludeAllowance ? (employee.positionAllowance || 0) : 0);
+        newRecord.totalPay = calculateDepnakerOvertimePay(base, newRecord.dayType, workSystem, 1, 0);
     }
 
     setCurrentPeriodRecords(prev => [...prev, newRecord]);
@@ -273,6 +285,20 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
 
   const handleDeleteOvertimeEntry = (recordId: string) => {
     setCurrentPeriodRecords(prev => prev.filter(r => r.id !== recordId));
+  };
+
+  const handleToggleIncludeAllowance = (masterEmployeeId: string, newValue: boolean) => {
+      setCurrentPeriodRecords(prev => {
+          // Update the setting for ALL records of this employee
+          const updatedRecords = prev.map(rec => {
+              if (rec.masterEmployeeId === masterEmployeeId) {
+                  return { ...rec, includePositionAllowance: newValue };
+              }
+              return rec;
+          });
+          // Trigger recalculation with new settings
+          return recalculateAll(updatedRecords, workSystem);
+      });
   };
 
   const calculateDurationFromTimes = (start: string, end: string) => {
@@ -323,8 +349,9 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
 
                 // Recalculate Pay only if NOT manual
                 if (!updatedRecord.isManualPay) {
+                    const calculationBase = employee.baseSalary + (updatedRecord.includePositionAllowance ? (employee.positionAllowance || 0) : 0);
                     const newTotalPay = calculateDepnakerOvertimePay(
-                        employee.baseSalary, updatedRecord.dayType, workSystem, updatedRecord.overtimeHours, updatedRecord.overtimeMinutes
+                        calculationBase, updatedRecord.dayType, workSystem, updatedRecord.overtimeHours, updatedRecord.overtimeMinutes
                     );
                     updatedRecord.totalPay = newTotalPay;
                 }
@@ -342,8 +369,9 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
         if (rec.id === recordId) {
              const employee = masterEmployees.find(emp => emp.id === rec.masterEmployeeId);
              if (!employee) return rec;
+             const calculationBase = employee.baseSalary + (rec.includePositionAllowance ? (employee.positionAllowance || 0) : 0);
              const newTotalPay = calculateDepnakerOvertimePay(
-                employee.baseSalary, rec.dayType, workSystem, rec.overtimeHours, rec.overtimeMinutes
+                calculationBase, rec.dayType, workSystem, rec.overtimeHours, rec.overtimeMinutes
              );
              return { ...rec, totalPay: newTotalPay, isManualPay: false };
         }
@@ -368,7 +396,6 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
       return activeMasterEmployees; 
   }, [activeMasterEmployees]);
 
-  const years = [2026, 2025, 2024];
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   return (
@@ -394,9 +421,14 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
 
       <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Tahun</label><select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">{years.map(year => <option key={year} value={year}>{year}</option>)}</select></div>
-          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Bulan</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select></div>
-          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Sistem Jam Kerja</label><select value={workSystem} onChange={(e) => setWorkSystem(e.target.value as '5-day' | '6-day')} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"><option value="5-day">5 Hari Kerja (40 Jam/Minggu)</option><option value="6-day">6 Hari Kerja (40 Jam/Minggu)</option></select></div>
+          <div>
+              <label className="text-sm font-medium text-gray-400 mb-2 block">Tahun</label>
+              <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
+                  {getAvailableTaxYears().map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+          </div>
+          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Bulan</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">{months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}</select></div>
+          <div><label className="text-sm font-medium text-gray-400 mb-2 block">Sistem Jam Kerja</label><select value={workSystem} onChange={(e) => setWorkSystem(e.target.value as '5-day' | '6-day')} className="w-full px-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800"><option value="5-day">5 Hari Kerja (40 Jam/Minggu)</option><option value="6-day">6 Hari Kerja (40 Jam/Minggu)</option></select></div>
         </div>
       </div>
 
@@ -417,22 +449,45 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
             {employeesWithOvertime.length > 0 ? employeesWithOvertime.map((employee) => {
               const employeeRecords = currentPeriodRecords.filter(r => r.masterEmployeeId === employee.id);
               const employeeTotalPay = employeeRecords.reduce((sum, r) => sum + r.totalPay, 0);
+              // Use first record to determine the toggle state for the group
+              const isIncluded = employeeRecords[0]?.includePositionAllowance || false;
+
               return (
                 <React.Fragment key={employee.id}>
                   {/* Summary Row per Employee */}
                   <tr className="border-t border-b border-gray-700 bg-gray-700/30">
-                    <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                    <td className="px-4 py-3" colSpan={2}>
+                        <div className="flex items-center gap-3">
                            <button onClick={() => handleRemoveEmployeeOvertime(employee.id)} className="p-1 text-red-500 hover:text-red-400 hover:bg-red-800/50 rounded-full" title="Hapus Semua Lembur Karyawan Ini">
                                 <TrashIcon />
                            </button>
                            <div>
                                 <div className="text-sm font-medium text-gray-200">{employee.fullName}</div>
-                                <div className="text-xs text-gray-400">Gaji: {formatCurrency(employee.baseSalary)}</div>
+                                <div className="text-xs text-gray-400">
+                                    Gaji: {formatCurrency(employee.baseSalary)} 
+                                    {employee.positionAllowance > 0 && ` + Tunj: ${formatCurrency(employee.positionAllowance)}`}
+                                </div>
                            </div>
                         </div>
                     </td>
-                    <td colSpan={5} className="px-4 py-3 text-center">
+                    <td colSpan={2} className="px-4 py-3">
+                        {/* Toggle Position Allowance */}
+                        {employee.positionAllowance > 0 && (
+                            <div className="flex items-center justify-center">
+                                <label className="inline-flex items-center cursor-pointer group">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer"
+                                        checked={isIncluded}
+                                        onChange={(e) => handleToggleIncludeAllowance(employee.id, e.target.checked)}
+                                    />
+                                    <div className="relative w-9 h-5 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                                    <span className="ms-3 text-xs font-medium text-gray-400 group-hover:text-gray-200 transition-colors">Hitung dari Gaji + Tunjangan</span>
+                                </label>
+                            </div>
+                        )}
+                    </td>
+                    <td colSpan={2} className="px-4 py-3 text-center">
                          <button onClick={() => handleAddOvertimeEntry(employee.id)} className="text-sm font-semibold text-green-400 hover:text-green-300 flex items-center justify-center gap-1 mx-auto bg-green-900/30 px-3 py-1 rounded-md border border-green-800"><PlusCircleIcon /> Tambah Baris Lembur</button>
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-lg text-accent-400">{formatCurrency(employeeTotalPay)}</td>
@@ -446,7 +501,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
                            <input type="date" value={record.overtimeDate} onChange={(e) => handleInputChange(record.id, 'overtimeDate', e.target.value)} className="w-full px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-xs" />
                       </td>
                       <td className="px-2 py-2">
-                          <select value={record.dayType} onChange={(e) => handleInputChange(record.id, 'dayType', e.target.value)} className="w-full px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-xs focus:ring-primary-500 focus:border-primary-500">
+                          <select value={record.dayType} onChange={(e) => handleInputChange(record.id, 'dayType', e.target.value)} className="w-full px-2 py-1 border border-gray-600 rounded-md bg-gray-900 text-gray-200 text-xs focus:ring-primary-500 focus:border-primary-500 [&>option]:bg-gray-800">
                               <option value="workday">Hari Kerja</option>
                               <option value="holiday">Hari Libur</option>
                           </select>

@@ -1,5 +1,4 @@
 
-
 import * as React from 'react';
 import { Profile } from '../types';
 
@@ -80,9 +79,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onSave, pr
                         </div>
                         
                         <div>
-                            <h3 className="text-md font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-4">Profil Aplikasi & Perusahaan</h3>
+                            <h3 className="text-md font-semibold text-gray-200 border-b border-gray-700 pb-2 mb-4">Profil Perusahaan</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                <InputField label="Nama Aplikasi" name="appName" value={formData.appName} onChange={handleChange} placeholder="cth: VerozTax" />
+                                {/* App Name Input Removed */}
                                 <InputField label="Nama Perusahaan" name="companyName" value={formData.companyName} onChange={handleChange} placeholder="cth: PT Maju Jaya" />
                                 <InputField label="NPWP Perusahaan" name="companyNpwp" value={formData.companyNpwp} onChange={handleChange} placeholder="00.000.000.0-000.000" />
                                 <InputField label="ID TKU" name="idTku" value={formData.idTku || ''} onChange={handleChange} placeholder="ID Tempat Kegiatan Usaha" />

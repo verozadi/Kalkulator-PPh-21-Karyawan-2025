@@ -14,6 +14,7 @@ interface MasterEmployeeFormModalProps {
 const initialFormData: Omit<MasterEmployee, 'id'> = {
     employeeId: '',
     fullName: '',
+    gender: 'Laki-Laki',
     position: '',
     email: '',
     phone: '',
@@ -24,11 +25,265 @@ const initialFormData: Omit<MasterEmployee, 'id'> = {
     npwp: '',
     employeeStatus: 'Pegawai Tetap',
     isForeigner: false,
+    countryCode: '',
     ptkpStatus: MaritalStatus.TK0,
     baseSalary: 0,
+    positionAllowance: 0,
     passportNumber: '',
     isActive: true,
 };
+
+// List of Countries
+const COUNTRIES = [
+    { code: 'AFG', name: 'Afghanistan' },
+    { code: 'AGO', name: 'Angola' },
+    { code: 'ALB', name: 'Albania' },
+    { code: 'AND', name: 'Andorra' },
+    { code: 'ARE', name: 'United Arab Emirates' },
+    { code: 'ARG', name: 'Argentina' },
+    { code: 'ARM', name: 'Armenia' },
+    { code: 'ATG', name: 'Antigua dan Barbuda' },
+    { code: 'AUS', name: 'Australia' },
+    { code: 'AUT', name: 'Austria' },
+    { code: 'AZE', name: 'Azerbaijan' },
+    { code: 'BDI', name: 'Burundi' },
+    { code: 'BEL', name: 'Belgium' },
+    { code: 'BEN', name: 'Benin' },
+    { code: 'BFA', name: 'Burkina Faso' },
+    { code: 'BGD', name: 'Bangladesh' },
+    { code: 'BGR', name: 'Bulgaria' },
+    { code: 'BHR', name: 'Bahrain' },
+    { code: 'BHS', name: 'Bahamas' },
+    { code: 'BIH', name: 'Bosnia dan Herzegovina' },
+    { code: 'BLR', name: 'Belarus' },
+    { code: 'BLZ', name: 'Belize' },
+    { code: 'BOL', name: 'Bolivia' },
+    { code: 'BRA', name: 'Brazil' },
+    { code: 'BRB', name: 'Barbados' },
+    { code: 'BRN', name: 'Brunei Darussalam' },
+    { code: 'BTN', name: 'Bhutan' },
+    { code: 'BWA', name: 'Bostwana' },
+    { code: 'CAF', name: 'Central African Republic' },
+    { code: 'CAN', name: 'Canada' },
+    { code: 'CHE', name: 'Switzerland' },
+    { code: 'CHL', name: 'Chile' },
+    { code: 'CHN', name: 'China' },
+    { code: 'CIV', name: 'Pantai Gading' },
+    { code: 'CMR', name: 'Cameroon' },
+    { code: 'COD', name: 'Congo - the Democratic Republic of the' },
+    { code: 'COG', name: 'Congo' },
+    { code: 'COL', name: 'Colombia' },
+    { code: 'COM', name: 'Comoros' },
+    { code: 'CPV', name: 'Cabo Verde' },
+    { code: 'CRI', name: 'Costa Rica' },
+    { code: 'CUB', name: 'Cuba' },
+    { code: 'CYP', name: 'Cyprus' },
+    { code: 'CZE', name: 'Republik Ceko' },
+    { code: 'DEU', name: 'Germany' },
+    { code: 'DJI', name: 'Djibouti' },
+    { code: 'DMA', name: 'Dominica' },
+    { code: 'DNK', name: 'Denmark' },
+    { code: 'DOM', name: 'Dominican Republic' },
+    { code: 'DSA', name: 'Aljazair' },
+    { code: 'ECU', name: 'Ekuador' },
+    { code: 'EGY', name: 'Egypt' },
+    { code: 'ERI', name: 'Eritrea' },
+    { code: 'ESP', name: 'Spain' },
+    { code: 'EST', name: 'Estonia' },
+    { code: 'ETH', name: 'Ethiopia' },
+    { code: 'FIN', name: 'Finlandia' },
+    { code: 'FJI', name: 'Fiji' },
+    { code: 'FRA', name: 'France' },
+    { code: 'FSM', name: 'Micronesia' },
+    { code: 'GAB', name: 'Gabon' },
+    { code: 'GBR', name: 'United Kingdom' },
+    { code: 'GEO', name: 'Georgia' },
+    { code: 'GHA', name: 'Ghana' },
+    { code: 'GIN', name: 'Guinea' },
+    { code: 'GMB', name: 'Gambia' },
+    { code: 'GNB', name: 'Guinea-Bissau' },
+    { code: 'GNQ', name: 'Equatorial Guinea' },
+    { code: 'GRC', name: 'Greece' },
+    { code: 'GRD', name: 'Grenada' },
+    { code: 'GTM', name: 'Guatemala' },
+    { code: 'GUY', name: 'Guyana' },
+    { code: 'HKG', name: 'Hong Kong' },
+    { code: 'HND', name: 'Honduras' },
+    { code: 'HRV', name: 'Croatia' },
+    { code: 'HTI', name: 'Haiti' },
+    { code: 'HUN', name: 'Hungary' },
+    { code: 'IND', name: 'India' },
+    { code: 'IRL', name: 'Irlandia' },
+    { code: 'IRN', name: 'Iran' },
+    { code: 'IRQ', name: 'Iraq' },
+    { code: 'ISL', name: 'Iceland' },
+    { code: 'ISR', name: 'Israel' },
+    { code: 'ITA', name: 'Italy' },
+    { code: 'JAM', name: 'Jamaica' },
+    { code: 'JOR', name: 'Jordan' },
+    { code: 'JPN', name: 'Japan' },
+    { code: 'KAZ', name: 'Kazakhstan' },
+    { code: 'KEN', name: 'Kenya' },
+    { code: 'KGZ', name: 'Kyrgyzstan' },
+    { code: 'KHM', name: 'Cambodia' },
+    { code: 'KIR', name: 'Kiribati' },
+    { code: 'KNA', name: 'Saint Kitts dan Nevis' },
+    { code: 'KOR', name: 'Korea, Republic of' },
+    { code: 'KWT', name: 'Kuwait' },
+    { code: 'LAO', name: 'Laos' },
+    { code: 'LBN', name: 'Lebanon' },
+    { code: 'LBR', name: 'Liberia' },
+    { code: 'LBY', name: 'Libya' },
+    { code: 'LCA', name: 'Saint Lucia' },
+    { code: 'LIE', name: 'Liechtenstein' },
+    { code: 'LKA', name: 'Sri Lanka' },
+    { code: 'LSO', name: 'Lesotho' },
+    { code: 'LTU', name: 'Lituania' },
+    { code: 'LUX', name: 'Luxembourg' },
+    { code: 'LVA', name: 'Latvia' },
+    { code: 'MAR', name: 'Morocco' },
+    { code: 'MCO', name: 'Monaco' },
+    { code: 'MDA', name: 'Moldova, Republic of' },
+    { code: 'MDG', name: 'Madagascar' },
+    { code: 'MDV', name: 'Maldives' },
+    { code: 'MEX', name: 'Mexico' },
+    { code: 'MHL', name: 'Marshall Islands' },
+    { code: 'MKD', name: 'Macedonia' },
+    { code: 'MLI', name: 'Mali' },
+    { code: 'MLT', name: 'Malta' },
+    { code: 'MMR', name: 'Myanmar' },
+    { code: 'MNE', name: 'Montenegro' },
+    { code: 'MNG', name: 'Mongolia' },
+    { code: 'MOZ', name: 'Mozambique' },
+    { code: 'MRT', name: 'Mauritania' },
+    { code: 'MUS', name: 'Mauritius' },
+    { code: 'MWI', name: 'Malawi' },
+    { code: 'MYS', name: 'Malaysia' },
+    { code: 'NAM', name: 'Namibia' },
+    { code: 'NER', name: 'Niger' },
+    { code: 'NGA', name: 'Nigeria' },
+    { code: 'NIC', name: 'Nicaragua' },
+    { code: 'NLD', name: 'Netherlands' },
+    { code: 'NOR', name: 'Norway' },
+    { code: 'NPL', name: 'Nepal' },
+    { code: 'NRU', name: 'Nauru' },
+    { code: 'NZL', name: 'New Zealand' },
+    { code: 'OMN', name: 'Oman' },
+    { code: 'PAK', name: 'Pakistan' },
+    { code: 'PAN', name: 'Panama' },
+    { code: 'PER', name: 'Peru' },
+    { code: 'PHL', name: 'Philippines' },
+    { code: 'PLW', name: 'Palau' },
+    { code: 'PNG', name: 'Papua New Guinea' },
+    { code: 'POL', name: 'Poland' },
+    { code: 'PRK', name: 'North Korea' },
+    { code: 'PRT', name: 'Portugal' },
+    { code: 'PRY', name: 'Paraguay' },
+    { code: 'QAT', name: 'Qatar' },
+    { code: 'ROU', name: 'Romania' },
+    { code: 'RUS', name: 'Russian Federation' },
+    { code: 'RWA', name: 'Rwanda' },
+    { code: 'SAU', name: 'Saudi Arabia' },
+    { code: 'SDN', name: 'Sudan' },
+    { code: 'SEN', name: 'Senegal' },
+    { code: 'SGP', name: 'Singapore' },
+    { code: 'SLB', name: 'Solomon Islands' },
+    { code: 'SLE', name: 'Sierra Leone' },
+    { code: 'SLV', name: 'El Salvador' },
+    { code: 'SMR', name: 'San Marino' },
+    { code: 'SOM', name: 'Somalia' },
+    { code: 'SRB', name: 'Serbia' },
+    { code: 'STP', name: 'Sao Tome dan Principe' },
+    { code: 'SUR', name: 'Suriname' },
+    { code: 'SVK', name: 'Slovakia' },
+    { code: 'SVN', name: 'Slovenia' },
+    { code: 'SWE', name: 'Sweden' },
+    { code: 'SWZ', name: 'Swaziland' },
+    { code: 'SYC', name: 'Seychelles' },
+    { code: 'SYR', name: 'Syria' },
+    { code: 'TCD', name: 'Chad' },
+    { code: 'TGO', name: 'Togo' },
+    { code: 'THA', name: 'Thailand' },
+    { code: 'TJK', name: 'Tajikistan' },
+    { code: 'TKM', name: 'Turkmenistan' },
+    { code: 'TLS', name: 'Timor Leste' },
+    { code: 'TON', name: 'Tonga' },
+    { code: 'TTO', name: 'Trinidad dan Tobago' },
+    { code: 'TUN', name: 'Tunisia' },
+    { code: 'TUR', name: 'Turkey' },
+    { code: 'TUV', name: 'Tuvalu' },
+    { code: 'TWN', name: 'Taiwan' },
+    { code: 'TZA', name: 'Tanzania' },
+    { code: 'UGA', name: 'Uganda' },
+    { code: 'UKR', name: 'Ukraine' },
+    { code: 'URY', name: 'Uruguay' },
+    { code: 'USA', name: 'United States' },
+    { code: 'UZB', name: 'Uzbekistan' },
+    { code: 'VAT', name: 'Vatican' },
+    { code: 'VCT', name: 'Saint Vincent dan Grenadines' },
+    { code: 'VEN', name: 'Venezuela' },
+    { code: 'VNM', name: 'Viet Nam' },
+    { code: 'VUT', name: 'Vanuatu' },
+    { code: 'WSM', name: 'Samoa' },
+    { code: 'YEM', name: 'Yemen' },
+    { code: 'ZAF', name: 'South Africa' },
+    { code: 'ZMB', name: 'Zambia' },
+    { code: 'ZWE', name: 'Zimbabwe' },
+    { code: 'VGB', name: 'Virgin Islands, British' },
+    { code: 'VIR', name: 'Virgin Islands, US' },
+    { code: 'UMI', name: 'United States Minor Outlying Islands' },
+    { code: 'TKL', name: 'Tokelau' },
+    { code: 'SPM', name: 'Saint Pierre and Miquelon' },
+    { code: 'SJM', name: 'Svalbard and Jan Mayen' },
+    { code: 'SHN', name: 'Saint Helena, Ascension and Tristan da Cunha' },
+    { code: 'SGS', name: 'South Georgia and the South Sandwich Islands' },
+    { code: 'REU', name: 'Réunion' },
+    { code: 'PYF', name: 'French Polynesia' },
+    { code: 'PSE', name: 'Palestine, State of' },
+    { code: 'ABW', name: 'Aruba' },
+    { code: 'AIA', name: 'Anguilla' },
+    { code: 'ALA', name: 'Aland Islands' },
+    { code: 'ASM', name: 'American Samoa' },
+    { code: 'ATA', name: 'Antarctica' },
+    { code: 'ATF', name: 'French Southern Territories' },
+    { code: 'BES', name: 'Bonaire, Sint Eustatius and Saba' },
+    { code: 'BLM', name: 'Saint Barthélemy' },
+    { code: 'BMU', name: 'Bermuda' },
+    { code: 'BVT', name: 'Bouvet Island' },
+    { code: 'CCK', name: 'Cocos (Keeling) Islands' },
+    { code: 'COK', name: 'Cook Islands' },
+    { code: 'CUW', name: 'Curacao' },
+    { code: 'CXR', name: 'Christmas Island' },
+    { code: 'CYM', name: 'Cayman Islands' },
+    { code: 'DZA', name: 'Algeria' },
+    { code: 'ESH', name: 'Western Sahara' },
+    { code: 'FLK', name: 'Falkland Islands (Malvinas)' },
+    { code: 'FRO', name: 'Faroe Islands' },
+    { code: 'GGY', name: 'Guernsey' },
+    { code: 'GIB', name: 'Gibraltar' },
+    { code: 'GRL', name: 'Greenland' },
+    { code: 'GUF', name: 'French Guiana' },
+    { code: 'GUM', name: 'Guam' },
+    { code: 'HMD', name: 'Heard Island and McDonald Islands' },
+    { code: 'IMN', name: 'Isle of Man' },
+    { code: 'IOT', name: 'British Indian Ocean Territory' },
+    { code: 'JEY', name: 'Jersey' },
+    { code: 'MAC', name: 'Macao' },
+    { code: 'MAF', name: 'Saint Martin' },
+    { code: 'MNP', name: 'Northern Mariana Islands' },
+    { code: 'MSR', name: 'Montserrat' },
+    { code: 'MTQ', name: 'Martinique' },
+    { code: 'MYT', name: 'Mayotte' },
+    { code: 'NCL', name: 'New Caledonia' },
+    { code: 'NFK', name: 'Norfolk Island' },
+    { code: 'NIU', name: 'Niue' },
+    { code: 'PCN', name: 'Pitcairn' },
+    { code: 'PRI', name: 'Puerto Rico' },
+    { code: 'SSD', name: 'South Sudan' },
+    { code: 'SXM', name: 'Sint Maarten (Dutch part)' },
+    { code: 'TCA', name: 'Turks and Caicos Islands' },
+    { code: 'WLF', name: 'Wallis and Futuna' },
+];
 
 const formatNumberForDisplay = (num: number): string => {
     if (typeof num !== 'number' || isNaN(num)) return '0';
@@ -47,7 +302,7 @@ const InputField: React.FC<{ label: string; name: keyof MasterEmployee; value: s
     <div>
         <label htmlFor={name} className="block text-sm font-medium text-gray-300 mb-1">{label}{required && <span className="text-red-400">*</span>}</label>
         {children ? (
-             <select id={name} name={name} value={value as string} onChange={onChange} required={required} className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">
+             <select id={name} name={name} value={value as string} onChange={onChange} required={required} className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
                 {children}
             </select>
         ) : (
@@ -62,13 +317,25 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
     const [formData, setFormData] = React.useState<Omit<MasterEmployee, 'id'>>(initialFormData);
     const [isValidating, setIsValidating] = React.useState<'npwp' | 'ktp' | null>(null);
     const [validationMessage, setValidationMessage] = React.useState<{ type: 'success' | 'error', text: string } | null>(null);
+    
+    // Country Search State
+    const [countrySearch, setCountrySearch] = React.useState('');
+    const [isCountryDropdownOpen, setIsCountryDropdownOpen] = React.useState(false);
 
 
     React.useEffect(() => {
         if (existingEmployee) {
             setFormData(existingEmployee);
+            // Initialize search if country code exists
+            const country = COUNTRIES.find(c => c.code === existingEmployee.countryCode);
+            if (country) {
+                setCountrySearch(`${country.name} (${country.code})`);
+            } else {
+                setCountrySearch('');
+            }
         } else {
             setFormData(initialFormData);
+            setCountrySearch('');
         }
         setValidationMessage(null);
         setIsValidating(null);
@@ -80,13 +347,24 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
         let processedValue: any = value;
         if(name === 'isForeigner' || name === 'isPph21Applicable' || name === 'isActive') {
             processedValue = value === 'true';
-        } else if (name === 'baseSalary') {
+        } else if (name === 'baseSalary' || name === 'positionAllowance') {
             processedValue = parseFormattedNumber(value);
         } else if (type === 'checkbox') {
              processedValue = (e.target as HTMLInputElement).checked;
         }
 
-        setFormData(prev => ({ ...prev, [name]: processedValue }));
+        // Logic to reset Foreigner fields if status changes to No
+        if (name === 'isForeigner' && processedValue === false) {
+            setFormData(prev => ({ 
+                ...prev, 
+                [name]: processedValue,
+                countryCode: '',
+                passportNumber: '' 
+            }));
+            setCountrySearch('');
+        } else {
+            setFormData(prev => ({ ...prev, [name]: processedValue }));
+        }
     };
 
     const handleValidation = async (type: 'npwp' | 'ktp') => {
@@ -117,6 +395,26 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
         setIsValidating(null);
     };
 
+    // Filter Countries based on search term (start searching after 2 chars)
+    const filteredCountries = React.useMemo(() => {
+        if (countrySearch.length < 2) return COUNTRIES;
+        return COUNTRIES.filter(c => 
+            c.name.toLowerCase().includes(countrySearch.toLowerCase()) || 
+            c.code.toLowerCase().includes(countrySearch.toLowerCase())
+        );
+    }, [countrySearch]);
+
+    const handleCountrySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setCountrySearch(e.target.value);
+        setIsCountryDropdownOpen(true);
+    };
+
+    const selectCountry = (country: { code: string, name: string }) => {
+        setFormData(prev => ({ ...prev, countryCode: country.code }));
+        setCountrySearch(`${country.name} (${country.code})`);
+        setIsCountryDropdownOpen(false);
+    };
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -140,14 +438,20 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                             <InputField label="ID Karyawan" name="employeeId" value={formData.employeeId} onChange={handleChange} required />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <InputField label="Jenis Kelamin" name="gender" value={formData.gender} onChange={handleChange} required>
+                                <option value="Laki-Laki">Laki-Laki</option>
+                                <option value="Perempuan">Perempuan</option>
+                            </InputField>
                             <InputField label="Jabatan" name="position" value={formData.position} onChange={handleChange} required />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <InputField label="Tanggal Masuk" name="hireDate" type="date" value={formData.hireDate} onChange={handleChange} required />
+                            <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} />
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <InputField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} />
                             <InputField label="No. Handphone" name="phone" value={formData.phone} onChange={handleChange} />
+                            <InputField label="Alamat" name="address" value={formData.address} onChange={handleChange} />
                         </div>
-                        <InputField label="Alamat" name="address" value={formData.address} onChange={handleChange} />
                         <hr className="border-gray-700 my-4" />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
@@ -175,8 +479,7 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                                 </div>
                             )}
                         </div>
-                         <InputField label="Nomor Paspor (jika WNA)" name="passportNumber" value={formData.passportNumber} onChange={handleChange} />
-
+                        
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                              <InputField label="Status PTKP" name="ptkpStatus" value={formData.ptkpStatus} onChange={handleChange} required>
                                 {Object.values(MaritalStatus).map(s => <option key={s} value={s}>{s}</option>)}
@@ -193,15 +496,58 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                                 <option value="true">Ya</option>
                                 <option value="false">Tidak</option>
                             </InputField>
-                            <InputField label="Status Karyawan" name="isActive" value={String(formData.isActive)} onChange={handleChange} required>
+                        </div>
+
+                        {/* Conditional Rendering for Foreigner Fields */}
+                        {formData.isForeigner && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-900/50 rounded-md border border-gray-700 animate-fade-in">
+                                <div className="relative">
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Kode Negara</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
+                                        value={countrySearch}
+                                        onChange={handleCountrySearchChange}
+                                        onFocus={() => setIsCountryDropdownOpen(true)}
+                                        onBlur={() => setTimeout(() => setIsCountryDropdownOpen(false), 200)}
+                                        placeholder="Ketik nama negara..."
+                                    />
+                                    {isCountryDropdownOpen && (
+                                        <ul className="absolute z-10 w-full bg-gray-700 border border-gray-600 rounded-md mt-1 max-h-48 overflow-y-auto shadow-lg">
+                                            {filteredCountries.length > 0 ? (
+                                                filteredCountries.map((c) => (
+                                                    <li
+                                                        key={c.code}
+                                                        className="px-3 py-2 text-sm text-gray-200 hover:bg-gray-600 cursor-pointer"
+                                                        onMouseDown={() => selectCountry(c)}
+                                                    >
+                                                        {c.name} ({c.code})
+                                                    </li>
+                                                ))
+                                            ) : (
+                                                <li className="px-3 py-2 text-sm text-gray-400">Tidak ditemukan.</li>
+                                            )}
+                                        </ul>
+                                    )}
+                                </div>
+                                <InputField label="Nomor Paspor" name="passportNumber" value={formData.passportNumber} onChange={handleChange} />
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <InputField label="Status Karyawan" name="isActive" value={String(formData.isActive)} onChange={handleChange} required>
                                 <option value="true">Aktif</option>
                                 <option value="false">Tidak Aktif</option>
                             </InputField>
+                             <div>
+                                <label htmlFor="baseSalary" className="block text-sm font-medium text-gray-300 mb-1">Gaji Pokok (Bulanan)<span className="text-red-400">*</span></label>
+                                <input type="text" id="baseSalary" name="baseSalary" value={formatNumberForDisplay(formData.baseSalary)} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200" />
+                             </div>
+                             <div>
+                                <label htmlFor="positionAllowance" className="block text-sm font-medium text-gray-300 mb-1">Tunjangan Jabatan (Bulanan)</label>
+                                <input type="text" id="positionAllowance" name="positionAllowance" value={formatNumberForDisplay(formData.positionAllowance)} onChange={handleChange} className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200" />
+                             </div>
                         </div>
-                         <div>
-                            <label htmlFor="baseSalary" className="block text-sm font-medium text-gray-300 mb-1">Gaji Pokok (Bulanan)<span className="text-red-400">*</span></label>
-                            <input type="text" id="baseSalary" name="baseSalary" value={formatNumberForDisplay(formData.baseSalary)} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200" />
-                         </div>
 
                     </div>
 

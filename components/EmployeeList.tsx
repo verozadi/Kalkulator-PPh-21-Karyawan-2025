@@ -1,7 +1,7 @@
-
 import * as React from 'react';
 import * as XLSX from 'xlsx';
 import { Employee, Page, MasterEmployee, MaritalStatus, OvertimeRecord, EmployeeData } from '../types';
+import { getAvailableTaxYears } from '../constants';
 
 interface EmployeeListProps {
   employees: Employee[];
@@ -13,6 +13,8 @@ interface EmployeeListProps {
   onOpenDetailModal: (employee: Employee) => void;
   onImport: (employees: Omit<EmployeeData, 'id'>[]) => void;
   showNotification: (message: string, type?: 'success' | 'error') => void;
+  title?: string;
+  addNewPage?: Page;
 }
 
 const formatCurrency = (value: number) => {
@@ -30,12 +32,12 @@ const ImportIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 const ChevronDownIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 ${className || ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>;
 const SortAscIcon = () => <svg className="h-4 w-4 ml-1 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg>;
-const SortDescIcon = () => <svg className="h-4 w-4 ml-1 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l4-4m-4 4V4" /></svg>;
+const SortDescIcon = () => <svg className="h-4 w-4 ml-1 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m-4 4V4" /></svg>;
 
 
-type SortableKey = 'employeeId' | 'name' | 'npwp' | 'period' | 'status' | 'grossIncome' | 'finalPPh21Monthly';
+type SortableKey = 'employeeId' | 'name' | 'npwp' | 'period' | 'status' | 'grossIncome' | 'finalPPh21Monthly' | 'netIncomeForTax' | 'pph21Terutang' | 'taxUnderOverPayment';
 
-const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees, overtimeRecords, onEdit, onDelete, navigateTo, onOpenDetailModal, onImport, showNotification }) => {
+const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees, overtimeRecords, onEdit, onDelete, navigateTo, onOpenDetailModal, onImport, showNotification, title, addNewPage }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterYear, setFilterYear] = React.useState('');
   const [filterMonth, setFilterMonth] = React.useState('');
@@ -45,6 +47,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees,
   const [sortConfig, setSortConfig] = React.useState<{ key: SortableKey; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
   
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const isAnnual = title?.toLowerCase().includes('tahunan') || false;
   
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -59,7 +62,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees,
         'ID Karyawan (dari Data Master)*', 'Tahun Pajak*', 'Bulan Pajak (1-12)*',
         'Tunjangan PPh', 'Tunjangan Jabatan', 'Tunjangan Telekomunikasi',
         'Tunjangan Makan', 'Tunjangan Transportasi', 'Bonus/THR', 'Natura/Kenikmatan',
-        'Pot. Pinjaman/Kasbon', 'Potongan Lain', 'JHT - Karyawan', 'BPJS Kesehatan',
+        'Pot. Pinjaman/Kasbon', 'Potongan Lain', 'JHT - Karyawan', 'JP - Karyawan', 'BPJS Kesehatan',
         'Gross Up (YA/TIDAK)', 'Fasilitas Pajak (Tanpa Fasilitas/DTP/Fasilitas Lainnya)',
         'Nama Objek Pajak', 'Penandatangan (NPWP/NIK)'
     ];
@@ -67,7 +70,7 @@ const EmployeeList: React.FC<EmployeeListProps> = ({ employees, masterEmployees,
         'K001', new Date().getFullYear(), new Date().getMonth() + 1,
         0, 500000, 300000,
         400000, 400000, 1000000, 0,
-        0, 0, 100000, 50000,
+        0, 0, 100000, 50000, 50000,
         'TIDAK', 'Tanpa Fasilitas',
         'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap', 'NPWP'
     ];
@@ -165,6 +168,7 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                     loan: Number(row['Pot. Pinjaman/Kasbon'] || 0),
                     otherDeductions: Number(row['Potongan Lain'] || 0),
                     pensionDeduction: Number(row['JHT - Karyawan'] || 0),
+                    jpDeduction: Number(row['JP - Karyawan'] || 0),
                     bpjsDeduction: Number(row['BPJS Kesehatan'] || 0),
                     isGrossUp: String(row['Gross Up (YA/TIDAK)'] || 'TIDAK').toUpperCase() === 'YA',
                     taxFacility: taxFacility as EmployeeData['taxFacility'],
@@ -174,6 +178,7 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                     // FIX: Add missing properties to conform to EmployeeData type
                     customFixedAllowances: [],
                     customVariableAllowances: [],
+                    customDeductions: [],
                 };
                 employeesToImport.push(employeeData);
             });
@@ -240,6 +245,9 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                     return (emp[sortKey] || '').toLowerCase();
                 case 'grossIncome':
                 case 'finalPPh21Monthly':
+                case 'netIncomeForTax':
+                case 'pph21Terutang':
+                case 'taxUnderOverPayment':
                     return emp[sortKey] || 0;
                 default:
                     return '';
@@ -266,102 +274,66 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
       return {
           totalPerhitungan: filteredAndSortedEmployees.length,
           totalGajiBruto: filteredAndSortedEmployees.reduce((sum, e) => sum + e.grossIncome, 0),
-          totalPph21: filteredAndSortedEmployees.reduce((sum, e) => sum + e.finalPPh21Monthly, 0)
+          totalPph21: filteredAndSortedEmployees.reduce((sum, e) => sum + (isAnnual ? (e.taxUnderOverPayment || 0) : e.finalPPh21Monthly), 0)
       }
-  }, [filteredAndSortedEmployees]);
+  }, [filteredAndSortedEmployees, isAnnual]);
 
   const uniqueYears = React.useMemo(() => {
-      const startYear = 2024;
-      const currentYear = new Date().getFullYear();
-      const years = [];
-      for (let year = currentYear; year >= startYear; year--) {
-          years.push(year);
-      }
-      return years;
-  }, []);
-// FIX: The `SortableHeader` component's props type was incorrect. 
-// It has been updated to correctly accept `children` and an optional `className`.
-  const SortableHeader: React.FC<{ sortKey: SortableKey; children: React.ReactNode; className?: string }> = ({ sortKey, children, className = '' }) => (
-    <th className={`px-5 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider ${className}`}>
-        <button onClick={() => requestSort(sortKey)} className="flex items-center space-x-1 hover:text-white transition-colors group">
-            <span className="group-hover:text-white">{children}</span>
-            {sortConfig.key === sortKey 
-                ? (sortConfig.direction === 'ascending' ? <SortAscIcon /> : <SortDescIcon />)
-                : <div className="w-4 h-4 opacity-0 group-hover:opacity-50"><SortAscIcon/></div>
-            }
-        </button>
-    </th>
-);
+      const dataYears = Array.from(new Set<number>(employees.map(e => e.periodYear)));
+      const dynamicYears = getAvailableTaxYears();
+      const allYears = Array.from(new Set([...dataYears, ...dynamicYears])).sort((a,b) => b - a);
+      return allYears;
+  }, [employees]);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-        {/* Header */}
+        {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
                 <div className="flex items-center space-x-3">
                     <UserGroupIcon />
-                    <h1 className="text-3xl font-bold text-gray-100">Daftar PPh 21 Karyawan</h1>
+                    <h1 className="text-3xl font-bold text-gray-100">{title || 'Daftar Perhitungan PPh 21'}</h1>
                 </div>
-                <p className="text-gray-400 mt-1">Kelola data karyawan dan perhitungan PPh 21</p>
+                <p className="text-gray-400 mt-1">Kelola data perhitungan pajak penghasilan karyawan.</p>
             </div>
-            <div className="flex items-center flex-wrap gap-2">
-                 <button
-                    onClick={handleDownloadPphTemplate}
-                    className="bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-500 transition-colors flex items-center justify-center space-x-2"
-                >
+            <div className="flex flex-wrap gap-2">
+                 <button onClick={handleDownloadPphTemplate} className="bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-500 transition-colors flex items-center justify-center space-x-2 text-sm">
                     <DownloadIcon />
-                    <span>Template PPh 21</span>
+                    <span>Template Import</span>
                 </button>
-                 <button
-                    onClick={handleImportPphClick}
-                    className="bg-primary-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-                >
+                <button onClick={handleImportPphClick} className="bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-sm">
                     <ImportIcon />
-                    <span>Import PPh 21</span>
+                    <span>Import Excel</span>
                 </button>
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept=".xlsx, .xls" />
-                <button
-                    onClick={() => navigateTo('employeeInput')}
-                    className="bg-accent-500 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-accent-600 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-accent-900/50"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                    <span>Hitung PPh 21 Baru</span>
+                <button onClick={() => navigateTo(addNewPage || 'employeeInput')} className="bg-primary-600 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-primary-900/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    <span>Tambah Perhitungan</span>
                 </button>
             </div>
         </div>
-        
+
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-gray-800 p-5 rounded-lg border border-gray-700 flex items-center justify-between">
-                <div>
-                    <p className="text-sm text-gray-400 font-medium">Total Perhitungan PPh 21</p>
-                    <p className="text-3xl font-bold text-white">{summary.totalPerhitungan}</p>
-                </div>
-                <div className="bg-primary-900/50 p-3 rounded-full"><UserGroupIcon /></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                <p className="text-sm text-gray-400">Total Data</p>
+                <p className="text-2xl font-bold text-gray-100">{summary.totalPerhitungan}</p>
             </div>
-            <div className="bg-yellow-900/30 p-5 rounded-lg border border-yellow-700/50 flex items-center justify-between">
-                 <div>
-                    <p className="text-sm text-yellow-400 font-medium">Total Gaji Bruto</p>
-                    <p className="text-3xl font-bold text-white">{formatCurrency(summary.totalGajiBruto)}</p>
-                </div>
-                <div className="bg-yellow-500/20 text-yellow-300 font-bold text-lg p-3 rounded-full w-12 h-12 flex items-center justify-center">Rp</div>
+            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                <p className="text-sm text-gray-400">Total Gaji Bruto</p>
+                <p className="text-2xl font-bold text-blue-400">{formatCurrency(summary.totalGajiBruto)}</p>
             </div>
-             <div className="bg-teal-900/30 p-5 rounded-lg border border-teal-700/50 flex items-center justify-between">
-                 <div>
-                    <p className="text-sm text-teal-400 font-medium">Total PPH 21</p>
-                    <p className="text-3xl font-bold text-white">{formatCurrency(summary.totalPph21)}</p>
-                </div>
-                <div className="bg-teal-500/20 text-teal-300 font-bold text-lg p-3 rounded-full w-12 h-12 flex items-center justify-center">%</div>
+            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                <p className="text-sm text-gray-400">Total PPh 21 {isAnnual ? 'Kurang Bayar' : 'Terpotong'}</p>
+                <p className="text-2xl font-bold text-orange-400">{formatCurrency(summary.totalPph21)}</p>
             </div>
         </div>
-        
+
         {/* Filter Section */}
         <div className="bg-gray-800 rounded-lg border border-gray-700">
             <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className="w-full flex justify-between items-center p-4 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 rounded-lg"
-                aria-expanded={isFilterOpen}
-                aria-controls="filter-section-content"
             >
                 <div className="flex items-center space-x-3">
                     <FilterIcon />
@@ -370,25 +342,23 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
                 <ChevronDownIcon className={`transform transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
             </button>
             {isFilterOpen && (
-                <div id="filter-section-content" className="p-4 border-t border-gray-700">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <SearchIcon />
-                            </div>
-                            <input type="text" placeholder="Cari nama atau NPWP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 placeholder-gray-400" />
+                <div className="p-4 border-t border-gray-700">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="relative md:col-span-1">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
+                            <input type="text" placeholder="Cari Nama/NPWP..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 placeholder-gray-400" />
                         </div>
-                        <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">
-                            <option value="">Semua bulan</option>
-                            {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
-                        </select>
-                        <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">
-                            <option value="">Semua tahun</option>
+                        <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
+                            <option value="">Semua Tahun</option>
                             {uniqueYears.map(year => <option key={year} value={year}>{year}</option>)}
                         </select>
-                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200">
-                            <option value="">Semua status</option>
-                            {Object.values(MaritalStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                        <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
+                            <option value="">Semua Bulan</option>
+                            {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                        </select>
+                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800">
+                            <option value="">Semua PTKP</option>
+                            {Object.values(MaritalStatus).map(status => <option key={status} value={status}>{status}</option>)}
                         </select>
                     </div>
                     <div className="flex justify-end mt-4">
@@ -398,50 +368,73 @@ const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
             )}
         </div>
 
-        {/* Employee Table */}
+        {/* Data Table */}
         <div className="overflow-x-auto bg-gray-800 rounded-lg border border-gray-700">
             <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-700/50">
-                <tr>
-                    <SortableHeader sortKey="employeeId">ID</SortableHeader>
-                    <SortableHeader sortKey="name">Nama Karyawan</SortableHeader>
-                    <SortableHeader sortKey="npwp">NPWP</SortableHeader>
-                    <SortableHeader sortKey="period">Periode</SortableHeader>
-                    <SortableHeader sortKey="status">Status</SortableHeader>
-                    <SortableHeader sortKey="grossIncome" className="text-right">Gaji Bruto</SortableHeader>
-                    <SortableHeader sortKey="finalPPh21Monthly" className="text-right">PPh 21</SortableHeader>
-                    <th className="px-5 py-3 text-center text-xs font-semibold text-gray-300 uppercase tracking-wider">Aksi</th>
-                </tr>
-            </thead>
-            <tbody className="bg-gray-800 divide-y divide-gray-700">
-                {filteredAndSortedEmployees.length > 0 ? filteredAndSortedEmployees.map((employee) => {
-                    const masterEmp = masterEmployees.find(m => m.id === employee.masterEmployeeId);
-                    return (
-                        <tr key={employee.id} className="hover:bg-gray-700/50 transition-colors">
-                            <td className="px-5 py-4 whitespace-nowrap text-sm font-mono text-gray-400">{masterEmp?.employeeId || 'N/A'}</td>
-                            <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-white">{employee.name}</td>
-                            <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-400 font-mono">{employee.npwp || 'Tidak Ada NPWP'}</td>
-                            <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-400">{`${months[employee.periodMonth - 1]} ${employee.periodYear}`}</td>
-                            <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-300">{employee.status}</td>
-                            <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-300 text-right">{formatCurrency(employee.grossIncome)}</td>
-                            <td className="px-5 py-4 whitespace-nowrap text-sm font-semibold text-accent-400 text-right">{formatCurrency(employee.finalPPh21Monthly)}</td>
-                            <td className="px-5 py-4 whitespace-nowrap text-center text-sm font-medium">
-                            <div className="flex items-center justify-center space-x-2">
-                                <button onClick={() => onOpenDetailModal(employee)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md" title="Lihat Detail"><ViewIcon /></button>
-                                <button onClick={() => onEdit(employee)} className="p-2 text-gray-400 hover:text-primary-400 hover:bg-gray-700 rounded-md" title="Edit"><EditIcon /></button>
-                                <button onClick={() => handleDeleteClick(employee)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md" title="Hapus"><TrashIcon /></button>
+                <thead className="bg-gray-700/50">
+                    <tr>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => requestSort('name')}>
+                            <div className="flex items-center space-x-1">
+                                <span>Nama Karyawan</span>
+                                {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? <SortAscIcon /> : <SortDescIcon />)}
                             </div>
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => requestSort('period')}>
+                            <div className="flex items-center space-x-1">
+                                <span>Periode</span>
+                                {sortConfig.key === 'period' && (sortConfig.direction === 'ascending' ? <SortAscIcon /> : <SortDescIcon />)}
+                            </div>
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => requestSort('grossIncome')}>
+                            <div className="flex items-center justify-end space-x-1">
+                                <span>Bruto</span>
+                                {sortConfig.key === 'grossIncome' && (sortConfig.direction === 'ascending' ? <SortAscIcon /> : <SortDescIcon />)}
+                            </div>
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => requestSort(isAnnual ? 'taxUnderOverPayment' : 'finalPPh21Monthly')}>
+                            <div className="flex items-center justify-end space-x-1">
+                                <span>{isAnnual ? 'KB/LB' : 'PPh 21'}</span>
+                                {sortConfig.key === (isAnnual ? 'taxUnderOverPayment' : 'finalPPh21Monthly') && (sortConfig.direction === 'ascending' ? <SortAscIcon /> : <SortDescIcon />)}
+                            </div>
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-300 uppercase tracking-wider">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody className="bg-gray-800 divide-y divide-gray-700">
+                    {filteredAndSortedEmployees.length > 0 ? (
+                        filteredAndSortedEmployees.map((employee) => (
+                            <tr key={employee.id} className="hover:bg-gray-700/50 transition-colors">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm font-medium text-gray-200">{employee.name}</div>
+                                    <div className="text-xs text-gray-400">{employee.npwp}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="text-sm text-gray-300">{months[employee.periodMonth - 1]} {employee.periodYear}</div>
+                                    <div className="text-xs text-gray-500">{employee.calculationType === 'annual' ? 'Tahunan A1' : (employee.calculationType === 'nonFinal' ? 'Non-Final' : 'Bulanan')}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-300">
+                                    {formatCurrency(employee.grossIncome)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-orange-400">
+                                    {formatCurrency(isAnnual ? (employee.taxUnderOverPayment || 0) : employee.finalPPh21Monthly)}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                    <div className="flex items-center justify-center space-x-2">
+                                        <button onClick={() => onOpenDetailModal(employee)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md" title="Lihat Detail"><ViewIcon /></button>
+                                        <button onClick={() => onEdit(employee)} className="p-2 text-gray-400 hover:text-primary-400 hover:bg-gray-700 rounded-md" title="Edit"><EditIcon /></button>
+                                        <button onClick={() => handleDeleteClick(employee)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-md" title="Hapus"><TrashIcon /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
+                                Tidak ada data yang ditemukan.
                             </td>
                         </tr>
-                    )
-                }) : (
-                    <tr>
-                        <td colSpan={8} className="text-center py-10 text-gray-500">
-                            Tidak ada data yang cocok dengan filter Anda.
-                        </td>
-                    </tr>
-                )}
-            </tbody>
+                    )}
+                </tbody>
             </table>
         </div>
     </div>

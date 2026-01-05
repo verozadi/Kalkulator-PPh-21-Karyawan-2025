@@ -2,7 +2,7 @@
 import * as React from 'react';
 import * as XLSX from 'xlsx';
 import { Employee, MasterEmployee, Profile, MaritalStatus } from '../types';
-import { TER_RATES, TER_CATEGORY_MAP } from '../constants';
+import { TER_RATES, TER_CATEGORY_MAP, getAvailableTaxYears } from '../constants';
 
 interface ReportsProps {
   employees: Employee[];
@@ -237,7 +237,14 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
     }
   };
 
-  const uniqueYears = React.useMemo(() => Array.from(new Set<number>(employees.map(e => e.periodYear))).sort((a,b) => b - a), [employees]);
+  // Combine dynamic years with existing data years to ensure all are available
+  const availableYears = React.useMemo(() => {
+      const dataYears = Array.from(new Set<number>(employees.map(e => e.periodYear)));
+      const dynamicYears = getAvailableTaxYears();
+      const allYears = Array.from(new Set([...dataYears, ...dynamicYears])).sort((a,b) => b - a);
+      return allYears;
+  }, [employees]);
+
   const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
   return (
@@ -262,9 +269,9 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
                   id="year-select" 
                   value={selectedYear} 
                   onChange={e => setSelectedYear(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800"
               >
-                {uniqueYears.length > 0 ? uniqueYears.map(year => <option key={year} value={year}>{year}</option>) : <option>{new Date().getFullYear()}</option>}
+                {availableYears.length > 0 ? availableYears.map(year => <option key={year} value={year}>{year}</option>) : <option>{new Date().getFullYear()}</option>}
               </select>
             </div>
             <div className="flex-1">
@@ -273,7 +280,7 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
                   id="month-select" 
                   value={selectedMonth} 
                   onChange={e => setSelectedMonth(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200 [&>option]:bg-gray-800"
               >
                 {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
               </select>
