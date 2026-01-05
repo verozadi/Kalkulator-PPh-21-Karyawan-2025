@@ -1,25 +1,12 @@
 
+import firebase from 'firebase/compat/app';
 import { auth, googleProvider } from './firebase';
-import { 
-    signInWithPopup, 
-    signOut as firebaseSignOut, 
-    User as FirebaseUser, 
-    createUserWithEmailAndPassword, 
-    updateProfile, 
-    signInWithEmailAndPassword, 
-    updatePassword,
-    sendEmailVerification,
-    sendPasswordResetEmail,
-    reauthenticateWithCredential,
-    EmailAuthProvider,
-    updateEmail
-} from 'firebase/auth';
 import { User } from '../types';
 
 const LICENSE_API_URL = "https://script.google.com/macros/s/AKfycbwC5xHIrnG39FMYU853IOAwrLGE4U25ZTZc_MbWXkhQHNgY27WIRXy48NmzXTkXhZeStQ/exec";
 
 // Map Firebase User to App User Type
-export const mapFirebaseUser = (fbUser: FirebaseUser): User => {
+export const mapFirebaseUser = (fbUser: firebase.User): User => {
     return {
         id: fbUser.uid,
         name: fbUser.displayName || 'User',
@@ -30,8 +17,8 @@ export const mapFirebaseUser = (fbUser: FirebaseUser): User => {
 
 export const loginWithGoogle = async (): Promise<{ success: boolean; message: string; user?: User }> => {
     try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = mapFirebaseUser(result.user);
+        const result = await auth.signInWithPopup(googleProvider);
+        const user = mapFirebaseUser(result.user!);
         return { success: true, message: 'Login berhasil!', user };
     } catch (error: any) {
         console.error("Firebase Login Error", error);
@@ -41,15 +28,15 @@ export const loginWithGoogle = async (): Promise<{ success: boolean; message: st
 
 export const loginWithEmail = async (email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
     try {
-        const result = await signInWithEmailAndPassword(auth, email, password);
+        const result = await auth.signInWithEmailAndPassword(email, password);
         
         // Check Email Verification
-        if (!result.user.emailVerified) {
-            await firebaseSignOut(auth);
+        if (!result.user?.emailVerified) {
+            await auth.signOut();
             return { success: false, message: 'Email belum diverifikasi. Silakan cek inbox email Anda.' };
         }
 
-        const user = mapFirebaseUser(result.user);
+        const user = mapFirebaseUser(result.user!);
         return { success: true, message: 'Login berhasil!', user };
     } catch (error: any) {
         console.error("Firebase Email Login Error", error);
@@ -67,14 +54,15 @@ export const loginWithEmail = async (email: string, password: string): Promise<{
 
 export const register = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
     try {
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(result.user, { displayName: name });
-        
-        // Send Verification Email
-        await sendEmailVerification(result.user);
+        const result = await auth.createUserWithEmailAndPassword(email, password);
+        if (result.user) {
+            await result.user.updateProfile({ displayName: name });
+            // Send Verification Email
+            await result.user.sendEmailVerification();
+        }
         
         // Force Logout so they can't access app without verifying
-        await firebaseSignOut(auth);
+        await auth.signOut();
 
         // Note: user is undefined here because we logged out
         return { success: true, message: 'Akun berhasil dibuat! Silakan cek email Anda untuk verifikasi sebelum login.' };
@@ -96,7 +84,7 @@ export const updateUserPassword = async (password: string): Promise<{ success: b
     }
 
     try {
-        await updatePassword(user, password);
+        await user.updatePassword(password);
         return { success: true, message: 'Kata sandi berhasil disimpan. Sekarang Anda bisa login menggunakan Email & Password atau Google.' };
     } catch (error: any) {
         console.error("Update Password Error", error);
@@ -119,8 +107,8 @@ export const changeUserEmail = async (newEmail: string, password: string): Promi
 
     try {
         // 1. Re-authenticate User (Security Requirement)
-        const credential = EmailAuthProvider.credential(oldEmail, password);
-        await reauthenticateWithCredential(user, credential);
+        const credential = firebase.auth.EmailAuthProvider.credential(oldEmail, password);
+        await user.reauthenticateWithCredential(credential);
 
         // 2. Update License Database (Crucial to prevent lockout)
         const licenseKey = localStorage.getItem('veroz_license_key');
@@ -138,7 +126,7 @@ export const changeUserEmail = async (newEmail: string, password: string): Promi
         }
 
         // 3. Update Firebase Email
-        await updateEmail(user, newEmail);
+        await user.updateEmail(newEmail);
 
         return { success: true, message: 'Email berhasil diperbarui.' };
     } catch (error: any) {
@@ -161,7 +149,7 @@ export const changeUserEmail = async (newEmail: string, password: string): Promi
 
 export const sendPasswordReset = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
-        await sendPasswordResetEmail(auth, email);
+        await auth.sendPasswordResetEmail(email);
         return { success: true, message: 'Link reset kata sandi telah dikirim ke email Anda, Jangan Lupa cek di SPAM jika tidak muncul di Kotak Masuk.' };
     } catch (error: any) {
         console.error("Reset Password Error", error);
@@ -173,7 +161,7 @@ export const sendPasswordReset = async (email: string): Promise<{ success: boole
 };
 
 export const logout = async (): Promise<void> => {
-    await firebaseSignOut(auth);
+    await auth.signOut();
 };
 
 export const getCurrentUser = (): User | null => {

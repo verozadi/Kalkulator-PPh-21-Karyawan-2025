@@ -1,9 +1,6 @@
-
 import * as React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { auth, db } from './services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, onSnapshot, doc } from 'firebase/firestore';
 
 // Component Imports
 import Footer from './components/Footer';
@@ -74,7 +71,7 @@ const App: React.FC = () => {
 
     // --- AUTH LISTENER (Firebase) ---
     React.useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 setCurrentUser(authService.mapFirebaseUser(user));
             } else {
@@ -96,26 +93,26 @@ const App: React.FC = () => {
         const userId = currentUser.id;
 
         // 1. Employees Listener
-        const unsubEmployees = onSnapshot(collection(db, 'users', userId, 'employees'), (snapshot) => {
+        const unsubEmployees = db.collection('users').doc(userId).collection('employees').onSnapshot((snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as Employee);
             setEmployees(data);
         }, (error) => console.error("Sync Error Employees:", error));
 
         // 2. Master Employees Listener
-        const unsubMasters = onSnapshot(collection(db, 'users', userId, 'master_employees'), (snapshot) => {
+        const unsubMasters = db.collection('users').doc(userId).collection('master_employees').onSnapshot((snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as MasterEmployee);
             setMasterEmployees(data);
         }, (error) => console.error("Sync Error Master:", error));
 
         // 3. Overtime Listener
-        const unsubOvertime = onSnapshot(collection(db, 'users', userId, 'overtime_records'), (snapshot) => {
+        const unsubOvertime = db.collection('users').doc(userId).collection('overtime_records').onSnapshot((snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as OvertimeRecord);
             setOvertimeRecords(data);
         }, (error) => console.error("Sync Error Overtime:", error));
 
         // 4. Profile Listener
-        const unsubProfile = onSnapshot(doc(db, 'users', userId, 'settings', 'profile'), (docSnap) => {
-            if (docSnap.exists()) {
+        const unsubProfile = db.collection('users').doc(userId).collection('settings').doc('profile').onSnapshot((docSnap) => {
+            if (docSnap.exists) {
                 setProfile(docSnap.data() as Profile);
             } else {
                 setProfile(defaultProfile); // Use default if fresh account

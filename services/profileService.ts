@@ -1,7 +1,5 @@
-
 import { Profile } from '../types';
 import { db } from './firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 // Default logo (same as before)
 const defaultLogoSvg = `<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -29,8 +27,7 @@ export const defaultProfile: Profile = {
 
 export const saveProfile = async (userId: string, profile: Profile): Promise<void> => {
     try {
-        const ref = doc(db, 'users', userId, 'settings', 'profile');
-        await setDoc(ref, profile);
+        await db.collection('users').doc(userId).collection('settings').doc('profile').set(profile);
     } catch (error) {
         console.error("Error saving profile:", error);
         throw error;

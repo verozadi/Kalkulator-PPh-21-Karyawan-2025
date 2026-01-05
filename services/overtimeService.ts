@@ -1,16 +1,14 @@
-
 import { OvertimeRecord } from '../types';
 import { db } from './firebase';
-import { doc, setDoc, writeBatch, collection, getDocs, query } from 'firebase/firestore';
 
 export const saveOvertimeRecords = async (userId: string, records: OvertimeRecord[]): Promise<void> => {
-    const batch = writeBatch(db);
+    const batch = db.batch();
     
     // For simplicity in this specific "bulk save" feature of the Overtime component,
     // we iterate and set each record. 
     // Optimization: In a real app, only save changed/new records.
     records.forEach(rec => {
-        const ref = doc(db, 'users', userId, 'overtime_records', rec.id);
+        const ref = db.collection('users').doc(userId).collection('overtime_records').doc(rec.id);
         batch.set(ref, rec);
     });
 
