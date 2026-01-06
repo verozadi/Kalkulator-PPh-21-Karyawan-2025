@@ -1,45 +1,50 @@
 
 import * as React from 'react';
-import { MasterEmployee, OvertimeRecord } from '../types';
+import { MasterEmployee, OvertimeRecord, Page } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { getAvailableTaxYears } from '../constants';
 
 interface OvertimeProps {
   masterEmployees: MasterEmployee[];
   existingRecords: OvertimeRecord[];
-  onSave: (records: OvertimeRecord[]) => Promise<void> | void;
+  onSave: (records: OvertimeRecord[], deletedIds?: string[]) => Promise<void> | void;
+  navigateTo?: (page: Page) => void;
 }
 
+// --- Helpers ---
 const formatCurrency = (value: number): string => {
-    if (value === 0) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
-};
-
-const formatNumberForDisplay = (num: number): string => {
-    if (typeof num !== 'number' || isNaN(num)) return '0';
-    return new Intl.NumberFormat('id-ID').format(num);
 };
 
 const parseFormattedNumber = (str: string): number => {
     if (typeof str !== 'string') return 0;
-    const numericString = str.replace(/[^0-9-]/g, '');
-    return parseInt(numericString, 10) || 0;
+    return parseInt(str.replace(/[^0-9-]/g, ''), 10) || 0;
+};
+
+const calculateDuration = (start: string, end: string) => {
+    if (!start || !end) return { hours: 0, minutes: 0 };
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
+    
+    let diffInMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+    if (diffInMinutes < 0) diffInMinutes += 24 * 60; 
+
+    const hours = Math.floor(diffInMinutes / 60);
+    const minutes = diffInMinutes % 60;
+    return { hours, minutes };
 };
 
 const calculateDepnakerOvertimePay = (
-    calculationBase: number, // Base Salary + (optional) Allowance
+    calculationBase: number,
     dayType: 'workday' | 'holiday',
     workSystem: '5-day' | '6-day',
     hours: number,
     minutes: number
 ): number => {
-    if (calculationBase <= 0 || (hours <= 0 && minutes <= 0)) {
-        return 0;
-    }
+    if (calculationBase <= 0 || (hours <= 0 && minutes <= 0)) return 0;
 
     const hourlyRate = calculationBase / 173;
     const totalDuration = hours + (minutes / 60);
-
     let overtimePay = 0;
 
     if (dayType === 'workday') {
@@ -70,137 +75,354 @@ const calculateDepnakerOvertimePay = (
             }
         }
     }
-
     return Math.round(overtimePay);
 };
 
-
 // --- Icons ---
-const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
-const RefreshIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
-const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
+const TimeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const RefreshIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
 
+// --- Components ---
 
-const AddEmployeeOvertimeModal: React.FC<{
+// 1. Employee Search Modal (Unchanged)
+const EmployeeSearchModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (masterEmployeeId: string) => void;
-    availableEmployees: MasterEmployee[];
-}> = ({ isOpen, onClose, onAdd, availableEmployees }) => {
-    const [selectedId, setSelectedId] = React.useState('');
+    masterEmployees: MasterEmployee[];
+    onSelect: (employee: MasterEmployee) => void;
+}> = ({ isOpen, onClose, masterEmployees, onSelect }) => {
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const inputRef = React.useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+        if (isOpen) setTimeout(() => inputRef.current?.focus(), 100);
+        else setSearchTerm('');
+    }, [isOpen]);
+
+    const filteredEmployees = React.useMemo(() => {
+        if (searchTerm.length < 2) return [];
+        return masterEmployees.filter(e => 
+            e.isActive && (
+                e.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                e.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        );
+    }, [searchTerm, masterEmployees]);
 
     if (!isOpen) return null;
 
-    const handleAdd = () => {
-        if (selectedId) {
-            onAdd(selectedId);
-            setSelectedId('');
-            onClose();
-        }
-    };
-
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-700">
-                <h3 className="text-lg font-bold text-gray-100 mb-4">Tambah Karyawan Lembur</h3>
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-400 mb-2">Pilih Karyawan</label>
-                    <select
-                        value={selectedId}
-                        onChange={(e) => setSelectedId(e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-primary-500"
-                    >
-                        <option value="">-- Pilih Karyawan --</option>
-                        {availableEmployees.map(emp => (
-                            <option key={emp.id} value={emp.id}>{emp.fullName}</option>
-                        ))}
-                    </select>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex justify-center items-start pt-32 p-4 animate-fade-in">
+            <div className="bg-gray-800 rounded-xl shadow-2xl border border-gray-700 w-full max-w-lg overflow-hidden animate-fade-in-up">
+                <div className="p-4 border-b border-gray-700 bg-gray-900">
+                    <h3 className="text-lg font-bold text-white">Tambah Lembur Karyawan</h3>
+                    <p className="text-xs text-gray-400">Pilih karyawan untuk ditambahkan ke daftar lembur.</p>
                 </div>
-                <div className="flex justify-end space-x-3">
-                    <button onClick={onClose} className="px-4 py-2 text-sm text-gray-300 hover:text-white">Batal</button>
-                    <button 
-                        onClick={handleAdd} 
-                        disabled={!selectedId}
-                        className="px-4 py-2 text-sm bg-primary-600 text-white rounded hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Tambah
-                    </button>
+                <div className="p-4">
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        placeholder="Ketik nama atau ID karyawan (min. 2 huruf)..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-600 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                    />
+                </div>
+                <div className="max-h-64 overflow-y-auto custom-scrollbar border-t border-gray-700">
+                    {searchTerm.length >= 2 && filteredEmployees.length === 0 && (
+                        <div className="p-6 text-center text-gray-500 text-sm">Tidak ditemukan.</div>
+                    )}
+                    {filteredEmployees.map(emp => (
+                        <button
+                            key={emp.id}
+                            onClick={() => { onSelect(emp); onClose(); }}
+                            className="w-full text-left px-4 py-3 hover:bg-gray-700/50 transition-colors flex justify-between items-center border-b border-gray-700/30 last:border-0 group"
+                        >
+                            <div>
+                                <div className="font-bold text-gray-200 group-hover:text-primary-400">{emp.fullName}</div>
+                                <div className="text-xs text-gray-500">{emp.employeeId} • {emp.position}</div>
+                            </div>
+                            <div className="text-xs font-mono text-gray-400">
+                                {formatCurrency(emp.baseSalary)}
+                            </div>
+                        </button>
+                    ))}
+                </div>
+                <div className="p-3 bg-gray-900 border-t border-gray-700 flex justify-end">
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm font-bold transition-colors">Batal</button>
                 </div>
             </div>
         </div>
     );
 };
 
+// 2. Overtime Row Component
+const OvertimeRow: React.FC<{
+    record: OvertimeRecord;
+    onChange: (id: string, field: keyof OvertimeRecord, value: any) => void;
+    onDelete: (id: string) => void;
+    baseSalary: number;
+    allowance: number;
+    workSystem: '5-day' | '6-day';
+    includeAllowance: boolean;
+}> = ({ record, onChange, onDelete, baseSalary, allowance, workSystem, includeAllowance }) => {
+    
+    // Auto Calculation Logic
+    const base = baseSalary + (includeAllowance ? allowance : 0);
+    const { hours, minutes } = calculateDuration(record.startTime, record.endTime);
+    const autoPay = calculateDepnakerOvertimePay(base, record.dayType, workSystem, hours, minutes);
+
+    // Update derived values if not manual
+    React.useEffect(() => {
+        if (!record.isManualPay) {
+            if (autoPay !== record.totalPay || hours !== record.overtimeHours || minutes !== record.overtimeMinutes) {
+                onChange(record.id, 'overtimeHours', hours);
+                onChange(record.id, 'overtimeMinutes', minutes);
+                onChange(record.id, 'totalPay', autoPay);
+            }
+        }
+    }, [base, record.dayType, workSystem, record.startTime, record.endTime, record.isManualPay]);
+
+    const handlePayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = parseFormattedNumber(e.target.value);
+        onChange(record.id, 'totalPay', val);
+        onChange(record.id, 'isManualPay', true);
+    };
+
+    const resetToAuto = () => {
+        onChange(record.id, 'isManualPay', false);
+        onChange(record.id, 'totalPay', autoPay);
+    };
+
+    // Grid Definition matches the Header below
+    const gridClass = "grid grid-cols-1 md:grid-cols-12 gap-2";
+
+    return (
+        <div className={`${gridClass} p-2 hover:bg-gray-800/50 rounded-md border-b border-gray-800/50 last:border-0 transition-colors items-center text-sm group`}>
+            
+            {/* 1. Date (Col 2) */}
+            <div className="md:col-span-2 relative">
+                <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none text-gray-500"><CalendarIcon /></div>
+                <input 
+                    type="date" 
+                    value={record.overtimeDate} 
+                    onChange={(e) => onChange(record.id, 'overtimeDate', e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded px-2 pl-8 py-1.5 text-white focus:border-primary-500 focus:outline-none"
+                />
+            </div>
+
+            {/* 2. Type (Col 2) */}
+            <div className="md:col-span-2">
+                <select 
+                    value={record.dayType} 
+                    onChange={(e) => onChange(record.id, 'dayType', e.target.value)}
+                    className={`w-full border border-gray-700 rounded px-2 py-1.5 focus:border-primary-500 focus:outline-none font-medium cursor-pointer appearance-none ${record.dayType === 'workday' ? 'bg-blue-900/40 text-blue-300' : 'bg-red-900/40 text-red-300'} [&>option]:bg-gray-800 [&>option]:text-white`}
+                >
+                    <option value="workday">Hari Kerja</option>
+                    <option value="holiday">Hari Libur</option>
+                </select>
+            </div>
+
+            {/* 3. Time (Col 3) - Start & End */}
+            <div className="md:col-span-3 flex items-center gap-1">
+                <div className="relative flex-1">
+                    <input 
+                        type="time" 
+                        value={record.startTime} 
+                        onChange={(e) => onChange(record.id, 'startTime', e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-700 rounded px-1 py-1.5 text-center text-white focus:border-primary-500 focus:outline-none [color-scheme:dark]"
+                    />
+                </div>
+                <span className="text-gray-500">-</span>
+                <div className="relative flex-1">
+                    <input 
+                        type="time" 
+                        value={record.endTime} 
+                        onChange={(e) => onChange(record.id, 'endTime', e.target.value)}
+                        className="w-full bg-gray-900 border border-gray-700 rounded px-1 py-1.5 text-center text-white focus:border-primary-500 focus:outline-none [color-scheme:dark]"
+                    />
+                </div>
+            </div>
+
+            {/* 4. Duration (Col 1) */}
+            <div className="md:col-span-1 text-center">
+                <span className="inline-block w-full bg-gray-800 border border-gray-700 rounded py-1.5 text-gray-300 font-mono text-xs">
+                    {hours}j {minutes}m
+                </span>
+            </div>
+
+            {/* 5. Activity (Col 2) */}
+            <div className="md:col-span-2">
+                <input 
+                    type="text" 
+                    placeholder="Kegiatan" 
+                    value={record.activity}
+                    onChange={(e) => onChange(record.id, 'activity', e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-gray-300 placeholder-gray-600 focus:border-primary-500 focus:outline-none"
+                />
+            </div>
+
+            {/* 6. Pay & Action (Col 2) */}
+            <div className="md:col-span-2 flex items-center gap-1 pl-2">
+                <div className="relative flex-1">
+                    <input 
+                        type="text"
+                        value={formatCurrency(record.totalPay)}
+                        onChange={handlePayChange}
+                        className={`w-full bg-gray-900 border rounded px-2 py-1.5 text-right font-bold focus:outline-none text-xs ${record.isManualPay ? 'border-orange-500/50 text-orange-400' : 'border-gray-700 text-green-400'}`}
+                    />
+                    {record.isManualPay && (
+                        <button 
+                            onClick={resetToAuto}
+                            title="Reset ke Hitungan Otomatis"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 bg-gray-800 text-gray-400 hover:text-white p-0.5 rounded"
+                        >
+                            <RefreshIcon />
+                        </button>
+                    )}
+                </div>
+                <button onClick={() => onDelete(record.id)} className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors">
+                    <TrashIcon />
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// Main Component
 const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, onSave }) => {
+    // Filters
     const [year, setYear] = React.useState(new Date().getFullYear());
     const [month, setMonth] = React.useState(new Date().getMonth() + 1);
-    const [records, setRecords] = React.useState<OvertimeRecord[]>([]);
-    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [workSystem, setWorkSystem] = React.useState<'5-day' | '6-day'>('5-day');
+
+    // Local State for Manipulation
+    const [localRecords, setLocalRecords] = React.useState<OvertimeRecord[]>([]);
+    const [deletedRecordIds, setDeletedRecordIds] = React.useState<Set<string>>(new Set());
+    const [visibleEmployeeIds, setVisibleEmployeeIds] = React.useState<Set<string>>(new Set());
+    const [isSearchOpen, setIsSearchOpen] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
 
-    // Initialize/Sync records from existing data for the selected period
+    // Sync Props to State when filters change
     React.useEffect(() => {
-        const periodRecords = existingRecords.filter(r => r.year === year && r.month === month);
-        setRecords(periodRecords);
+        const filtered = existingRecords.filter(r => r.year === year && r.month === month);
+        setLocalRecords(filtered);
+        setDeletedRecordIds(new Set()); 
+        const ids = new Set(filtered.map(r => r.masterEmployeeId));
+        setVisibleEmployeeIds(ids);
     }, [year, month, existingRecords]);
 
-    const handleAddEmployee = (masterEmployeeId: string) => {
-        const existing = records.find(r => r.masterEmployeeId === masterEmployeeId);
-        if (existing) return;
+    const groupedData = React.useMemo(() => {
+        const groups: { [key: string]: OvertimeRecord[] } = {};
+        localRecords.forEach(rec => {
+            if (!groups[rec.masterEmployeeId]) groups[rec.masterEmployeeId] = [];
+            groups[rec.masterEmployeeId].push(rec);
+        });
+        return groups;
+    }, [localRecords]);
 
+    const activeEmployees = React.useMemo(() => {
+        return Array.from(visibleEmployeeIds)
+            .map(id => masterEmployees.find(m => m.id === id))
+            .filter(Boolean) as MasterEmployee[];
+    }, [visibleEmployeeIds, masterEmployees]);
+
+    const handleAddEmployee = (employee: MasterEmployee) => {
+        setVisibleEmployeeIds(prev => new Set(prev).add(employee.id));
+    };
+
+    const handleAddRow = (employeeId: string) => {
         const newRecord: OvertimeRecord = {
             id: uuidv4(),
-            masterEmployeeId,
+            masterEmployeeId: employeeId,
             year,
             month,
             dayType: 'workday',
-            workSystem: '5-day',
-            overtimeHours: 0,
-            overtimeMinutes: 0,
-            totalPay: 0,
-            overtimeDate: new Date().toISOString().split('T')[0],
+            workSystem,
+            overtimeDate: `${year}-${String(month).padStart(2, '0')}-01`,
             startTime: '17:00',
             endTime: '18:00',
+            overtimeHours: 1,
+            overtimeMinutes: 0,
+            totalPay: 0, 
             activity: '',
-            isManualPay: false,
-            includePositionAllowance: false
+            includePositionAllowance: false,
+            isManualPay: false
         };
-        setRecords([...records, newRecord]);
+        
+        const employeeRecs = groupedData[employeeId];
+        if (employeeRecs && employeeRecs.length > 0) {
+            newRecord.includePositionAllowance = employeeRecs[0].includePositionAllowance;
+        }
+
+        setLocalRecords(prev => [...prev, newRecord]);
     };
 
-    const handleRemoveRecord = (id: string) => {
-        setRecords(records.filter(r => r.id !== id));
+    const handleRemoveRow = (recordId: string) => {
+        setDeletedRecordIds(prev => new Set(prev).add(recordId));
+        setLocalRecords(prev => prev.filter(r => r.id !== recordId));
     };
 
-    const handleChange = (id: string, field: keyof OvertimeRecord, value: any) => {
-        setRecords(prev => prev.map(record => {
-            if (record.id !== id) return record;
+    const handleRemoveEmployee = (employeeId: string) => {
+        if(confirm("Hapus karyawan ini dari daftar lembur bulan ini?")) {
+            const recordsToDelete = localRecords.filter(r => r.masterEmployeeId === employeeId);
+            setDeletedRecordIds(prev => {
+                const next = new Set(prev);
+                recordsToDelete.forEach(r => next.add(r.id));
+                return next;
+            });
+            setVisibleEmployeeIds(prev => {
+                const next = new Set(prev);
+                next.delete(employeeId);
+                return next;
+            });
+            setLocalRecords(prev => prev.filter(r => r.masterEmployeeId !== employeeId));
+        }
+    };
 
-            const updatedRecord = { ...record, [field]: value };
-
-            if (!updatedRecord.isManualPay) {
-                const master = masterEmployees.find(m => m.id === updatedRecord.masterEmployeeId);
-                const base = master ? master.baseSalary + (updatedRecord.includePositionAllowance ? (master.positionAllowance || 0) : 0) : 0;
-                updatedRecord.totalPay = calculateDepnakerOvertimePay(
-                    base,
-                    updatedRecord.dayType,
-                    updatedRecord.workSystem,
-                    updatedRecord.overtimeHours,
-                    updatedRecord.overtimeMinutes
-                );
-            }
-
-            return updatedRecord;
+    const handleUpdateRow = (id: string, field: keyof OvertimeRecord, value: any) => {
+        setLocalRecords(prev => prev.map(rec => {
+            if (rec.id !== id) return rec;
+            return { ...rec, [field]: value };
         }));
     };
 
-    const handleSave = async () => {
+    const handleToggleAllowance = (employeeId: string, checked: boolean) => {
+        setLocalRecords(prev => prev.map(rec => {
+            if (rec.masterEmployeeId !== employeeId) return rec;
+            return { ...rec, includePositionAllowance: checked };
+        }));
+    };
+
+    const handleSaveAll = async () => {
+        const finalRecords = localRecords.map(rec => {
+            // Only recalculate if NOT manual pay
+            if (rec.isManualPay) return { ...rec, workSystem };
+
+            const master = masterEmployees.find(m => m.id === rec.masterEmployeeId);
+            if (!master) return rec;
+
+            const base = master.baseSalary + (rec.includePositionAllowance ? (master.positionAllowance || 0) : 0);
+            const { hours, minutes } = calculateDuration(rec.startTime, rec.endTime);
+            const pay = calculateDepnakerOvertimePay(base, rec.dayType, workSystem, hours, minutes);
+            
+            return {
+                ...rec,
+                overtimeHours: hours,
+                overtimeMinutes: minutes,
+                totalPay: pay,
+                workSystem: workSystem
+            };
+        });
+
         setIsSaving(true);
         try {
-            // We need to save the current state of records to the global store
-            await onSave(records);
+            await onSave(finalRecords, Array.from(deletedRecordIds));
+            setDeletedRecordIds(new Set());
         } finally {
             setIsSaving(false);
         }
@@ -209,153 +431,167 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
     return (
-        <div className="space-y-6 animate-fade-in-up pb-20">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-6 animate-fade-in-up pb-20 max-w-[1400px] mx-auto">
+            
+            {/* Header & Main Actions */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
                 <div>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
                         <ClockIcon />
-                        <h1 className="text-3xl font-bold text-gray-100">Perhitungan Lembur</h1>
+                        <h1 className="text-3xl font-bold text-gray-100">Input & Perhitungan Lembur</h1>
                     </div>
-                    <p className="text-gray-400 mt-1">Hitung upah lembur karyawan berdasarkan aturan Depnaker.</p>
+                    <p className="text-gray-400 mt-1">Kelola data lembur karyawan sesuai peraturan Depnaker.</p>
                 </div>
-                
-                <div className="flex items-center space-x-3 bg-gray-800 p-2 rounded-lg border border-gray-700">
-                    <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:outline-none focus:border-primary-500">
-                        {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                    </select>
-                    <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:outline-none focus:border-primary-500">
-                        {getAvailableTaxYears().map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                </div>
-            </div>
-
-            <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
-                <div className="p-4 border-b border-gray-700 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-gray-200">Daftar Lembur Periode Ini</h2>
+                <div className="flex gap-3">
                     <button 
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center space-x-2 text-sm bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded transition-colors"
+                        onClick={() => setIsSearchOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-blue-900/20 transition-all active:scale-95"
                     >
-                        <PlusCircleIcon />
-                        <span>Tambah Karyawan</span>
+                        <PlusCircleIcon /> Tambah Karyawan
+                    </button>
+                    <button 
+                        onClick={handleSaveAll}
+                        disabled={isSaving}
+                        className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-lg shadow-orange-900/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isSaving ? 'Menyimpan...' : 'Simpan Data Lembur'}
                     </button>
                 </div>
+            </div>
 
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-700">
-                        <thead className="bg-gray-700/50">
-                            <tr>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase w-48">Nama Karyawan</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase w-32">Tipe Hari</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase w-32">Durasi (Jam)</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase w-32">Durasi (Menit)</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase w-40">Basis (Gaji+Tunj)</th>
-                                <th className="px-4 py-3 text-right text-xs font-bold text-gray-300 uppercase w-40">Upah Lembur</th>
-                                <th className="px-4 py-3 text-center text-xs font-bold text-gray-300 uppercase w-16">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700">
-                            {records.length > 0 ? records.map((record) => {
-                                const master = masterEmployees.find(m => m.id === record.masterEmployeeId);
-                                const base = master ? master.baseSalary + (record.includePositionAllowance ? (master.positionAllowance || 0) : 0) : 0;
+            {/* Filter Bar */}
+            <div className="bg-gray-800 p-5 rounded-xl border border-gray-700 shadow-md">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Tahun</label>
+                        <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all">
+                            {getAvailableTaxYears().map(y => <option key={y} value={y}>{y}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Bulan</label>
+                        <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all">
+                            {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Sistem Jam Kerja</label>
+                        <select value={workSystem} onChange={(e) => setWorkSystem(e.target.value as any)} className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all">
+                            <option value="5-day">5 Hari Kerja (40 Jam/Minggu)</option>
+                            <option value="6-day">6 Hari Kerja (40 Jam/Minggu)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-                                return (
-                                    <tr key={record.id} className="hover:bg-gray-700/50">
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-white">{master?.fullName || 'Unknown'}</div>
-                                            <div className="text-xs text-gray-500">{master?.employeeId}</div>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <select 
-                                                value={record.dayType} 
-                                                onChange={(e) => handleChange(record.id, 'dayType', e.target.value)}
-                                                className="bg-gray-700 text-white text-xs rounded border border-gray-600 px-2 py-1 w-full"
-                                            >
-                                                <option value="workday">Hari Kerja</option>
-                                                <option value="holiday">Hari Libur</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <input 
-                                                type="number" 
-                                                min="0"
-                                                value={record.overtimeHours}
-                                                onChange={(e) => handleChange(record.id, 'overtimeHours', parseInt(e.target.value) || 0)}
-                                                className="bg-gray-700 text-white text-xs rounded border border-gray-600 px-2 py-1 w-20"
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap">
-                                            <input 
-                                                type="number" 
-                                                min="0"
-                                                max="59"
-                                                value={record.overtimeMinutes}
-                                                onChange={(e) => handleChange(record.id, 'overtimeMinutes', parseInt(e.target.value) || 0)}
-                                                className="bg-gray-700 text-white text-xs rounded border border-gray-600 px-2 py-1 w-20"
-                                            />
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-400">
-                                            <div className="flex flex-col">
-                                                <span>{formatCurrency(base)}</span>
-                                                <label className="flex items-center space-x-1 text-[10px] mt-1 cursor-pointer">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={record.includePositionAllowance || false}
-                                                        onChange={(e) => handleChange(record.id, 'includePositionAllowance', e.target.checked)}
-                                                        className="form-checkbox h-3 w-3 text-primary-500 rounded bg-gray-700 border-gray-600"
-                                                    />
-                                                    <span>+ Tunj. Jabatan</span>
-                                                </label>
+            {/* Main Content Area */}
+            <div className="space-y-6">
+                {activeEmployees.length === 0 ? (
+                    <div className="bg-gray-800/50 border border-gray-700 border-dashed rounded-xl p-12 text-center">
+                        <p className="text-gray-400 text-lg">Tidak ada data lembur untuk periode ini. Klik "Tambah Karyawan" untuk memulai.</p>
+                    </div>
+                ) : (
+                    activeEmployees.map(emp => {
+                        const empRecords = groupedData[emp.id] || [];
+                        const includeAllowance = empRecords.length > 0 ? (empRecords[0].includePositionAllowance || false) : true;
+                        
+                        // Calculate Total for this Employee
+                        const totalEmpPay = empRecords.reduce((sum, rec) => sum + rec.totalPay, 0);
+
+                        return (
+                            <div key={emp.id} className="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden animate-fade-in">
+                                {/* Employee Header Card */}
+                                <div className="p-5 bg-gray-800 border-b border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
+                                    <div className="flex items-center gap-4 w-full md:w-auto">
+                                        <button onClick={() => handleRemoveEmployee(emp.id)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-900/20 rounded transition-colors" title="Hapus Karyawan">
+                                            <TrashIcon />
+                                        </button>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-white">{emp.fullName}</h3>
+                                            <div className="text-xs text-gray-400 mt-0.5">
+                                                Gaji: {formatCurrency(emp.baseSalary)} 
+                                                {(emp.positionAllowance || 0) > 0 && ` + Tunj: ${formatCurrency(emp.positionAllowance || 0)}`}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-bold text-primary-400">
-                                            {formatCurrency(record.totalPay)}
-                                        </td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-center">
-                                            <button onClick={() => handleRemoveRecord(record.id)} className="text-red-400 hover:text-red-300 p-1">
-                                                <TrashIcon />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            }) : (
-                                <tr>
-                                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                                        Belum ada data lembur untuk periode ini.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-gray-900/50 px-4 py-2 rounded-lg border border-gray-700">
+                                        <div className="relative inline-block w-10 h-5 align-middle select-none transition duration-200 ease-in">
+                                            <input 
+                                                type="checkbox" 
+                                                name={`toggle-${emp.id}`} 
+                                                id={`toggle-${emp.id}`} 
+                                                checked={includeAllowance}
+                                                onChange={(e) => handleToggleAllowance(emp.id, e.target.checked)}
+                                                className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                                                style={{ left: includeAllowance ? '1.25rem' : '0', borderColor: includeAllowance ? '#10B981' : '#4B5563' }}
+                                            />
+                                            <label htmlFor={`toggle-${emp.id}`} className={`toggle-label block overflow-hidden h-5 rounded-full cursor-pointer ${includeAllowance ? 'bg-green-500' : 'bg-gray-600'}`}></label>
+                                        </div>
+                                        <label htmlFor={`toggle-${emp.id}`} className="text-xs text-gray-300 font-medium cursor-pointer select-none">
+                                            Hitung dari Gaji + Tunjangan
+                                        </label>
+                                    </div>
+
+                                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                                        <button 
+                                            onClick={() => handleAddRow(emp.id)}
+                                            className="px-4 py-2 border border-green-600 text-green-500 hover:bg-green-900/30 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
+                                        >
+                                            <PlusCircleIcon /> Tambah Baris Lembur
+                                        </button>
+                                        <div className="text-right">
+                                            <div className="text-xs text-gray-400 uppercase font-bold">Total Upah</div>
+                                            <div className="text-xl font-bold text-orange-500">{formatCurrency(totalEmpPay)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Table Header (Grid based matching rows EXACTLY) */}
+                                {empRecords.length > 0 && (
+                                    <div className="bg-gray-900/80 text-xs font-bold text-gray-400 uppercase tracking-wider border-b border-gray-700 p-2 hidden md:grid md:grid-cols-12 gap-2">
+                                        <div className="md:col-span-2 pl-2">Tanggal</div>
+                                        <div className="md:col-span-2">Tipe Hari</div>
+                                        <div className="md:col-span-3 text-center">Jam Mulai - Selesai</div>
+                                        <div className="md:col-span-1 text-center">Durasi</div>
+                                        <div className="md:col-span-2">Kegiatan</div>
+                                        <div className="md:col-span-2 text-right pr-8">Upah Lembur</div>
+                                    </div>
+                                )}
+
+                                {/* Rows */}
+                                <div className="p-2 bg-gray-900/30">
+                                    {empRecords.length === 0 ? (
+                                        <div className="text-center py-6 text-sm text-gray-500 italic">Belum ada baris lembur. Klik tombol tambah di atas.</div>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            {empRecords.map(rec => (
+                                                <OvertimeRow 
+                                                    key={rec.id} 
+                                                    record={rec} 
+                                                    onChange={handleUpdateRow} 
+                                                    onDelete={handleRemoveRow}
+                                                    baseSalary={emp.baseSalary}
+                                                    allowance={emp.positionAllowance || 0}
+                                                    workSystem={workSystem}
+                                                    includeAllowance={includeAllowance}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 p-4 flex justify-end z-20 md:pl-64">
-                <div className="flex items-center space-x-4 mr-4">
-                    <p className="text-gray-400 text-sm">Total Lembur Periode Ini:</p>
-                    <p className="text-xl font-bold text-white">{formatCurrency(records.reduce((sum, r) => sum + r.totalPay, 0))}</p>
-                </div>
-                <button 
-                    onClick={handleSave}
-                    disabled={isSaving || records.length === 0}
-                    className="bg-primary-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-primary-700 transition-colors shadow-lg shadow-primary-900/50 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
-                    {isSaving ? (
-                        <>
-                            <SpinnerIcon />
-                            <span>Menyimpan...</span>
-                        </>
-                    ) : (
-                        <span>Simpan Data Lembur</span>
-                    )}
-                </button>
-            </div>
-
-            <AddEmployeeOvertimeModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
-                onAdd={handleAddEmployee} 
-                availableEmployees={masterEmployees} 
+            {/* Modal */}
+            <EmployeeSearchModal 
+                isOpen={isSearchOpen} 
+                onClose={() => setIsSearchOpen(false)}
+                masterEmployees={masterEmployees}
+                onSelect={handleAddEmployee}
             />
         </div>
     );

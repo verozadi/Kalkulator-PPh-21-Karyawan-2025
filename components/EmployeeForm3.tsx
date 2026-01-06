@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Employee, EmployeeData, MasterEmployee, Profile, MaritalStatus, CalculationType } from '../types';
@@ -401,14 +400,15 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
             return;
         }
 
+        // Ensure robust filtering: force conversion to Number for year check
         const monthlyRecords = employees.filter(e =>
             e.masterEmployeeId === formData.masterEmployeeId &&
-            e.periodYear === Number(formData.periodYear) &&
+            Number(e.periodYear) === Number(formData.periodYear) &&
             e.calculationType === 'monthly'
         );
 
         if (monthlyRecords.length === 0) {
-            showNotification(`Data Bulanan belum ada untuk ${formData.name} di tahun ${formData.periodYear}.`, 'error');
+            showNotification(`Data Bulanan belum ditemukan untuk karyawan ini di tahun ${formData.periodYear}. Pastikan Anda sudah membuat perhitungan bulanan (Jan-Des) terlebih dahulu.`, 'error');
             return;
         }
 
@@ -416,30 +416,38 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
         monthlyRecords.forEach(rec => {
             switch (type) {
                 case 'salary':
+                    // Gaji/Pensiun/THT Berkala (Total Gaji Pokok)
                     total += rec.baseSalary || 0;
                     break;
                 case 'allowance':
-                    // Total Tunjangan Tetap + sebagian Tidak Tetap (Excl Bonus & Natura)
+                    // Tunjangan Lainnya, Uang Lembur, dsb
+                    // (Total Tunjangan Tetap + sebagian Tunjangan Tidak Tetap kecuali Tunjangan PPh 21 + Natura/Kenikmatan + THR/Bonus)
+                    
+                    // Fixed Allowances
                     total += (rec.tunjanganJabatan || 0) +
                              (rec.tunjanganTelekomunikasi || 0) +
-                             (rec.tunjanganMakan || 0) +
+                             (rec.customFixedAllowances || []).reduce((s, i) => s + i.value, 0);
+                    
+                    // Variable Allowances (excluding Bonus & Natura)
+                    total += (rec.tunjanganMakan || 0) +
                              (rec.tunjanganTransportasi || 0) +
-                             (rec.overtimePay || 0);
-                    const fixed = (rec.customFixedAllowances || []).reduce((s, i) => s + i.value, 0);
-                    const variable = (rec.customVariableAllowances || []).reduce((s, i) => s + i.value, 0);
-                    total += fixed + variable;
+                             (rec.overtimePay || 0) + 
+                             (rec.customVariableAllowances || []).reduce((s, i) => s + i.value, 0);
                     break;
                 case 'bonus':
+                    // Tantiem, Bonus, THR (Total THR/Bonus)
                     total += rec.bonus || 0;
                     break;
                 case 'natura':
+                    // Natura & Kenikmatan (Total Natura/Kenikmatan)
                     total += rec.facilityValue || 0;
                     break;
                 case 'pension':
-                    // Total JHT (2%) + JP (1%)
+                    // Iuran Pensiun / THT / JHT (Total JHT - Karyawan (2%) + JP - Karyawan (1%))
                     total += (rec.pensionDeduction || 0) + (rec.jpDeduction || 0);
                     break;
                 case 'zakat':
+                    // Zakat / Sumbangan Keagamaan Wajib
                     total += rec.zakatDeduction || 0;
                     break;
             }
@@ -456,7 +464,7 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
         // NOTE: For 'pension', we are summing into 'pensionDeduction' in A1 logic as the aggregate field.
         
         setFormData(prev => ({ ...prev, [fieldName]: total }));
-        showNotification(`Berhasil menarik data dari ${monthlyRecords.length} bulan.`, 'success');
+        showNotification(`Berhasil menarik data dari ${monthlyRecords.length} bulan transaksi.`, 'success');
     };
 
     const handleUpdateFromMaster = () => {

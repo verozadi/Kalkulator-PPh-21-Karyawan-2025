@@ -1,4 +1,3 @@
-
 import { EmployeeData, TaxCalculationResult, MaritalStatus } from '../types';
 import { PTKP_RATES, PASAL_17_RATES, TER_RATES, TER_CATEGORY_MAP, DTP_INCOME_LIMIT, NPWP_SURCHARGE_RATE } from '../constants';
 
@@ -66,6 +65,12 @@ export const calculatePPh21 = (employee: EmployeeData): TaxCalculationResult => 
                   tunjanganMakan + tunjanganTransportasi + overtimePay + bonus + facilityValue + 
                   customFixedTotal + customVarTotal;
 
+    // --- NPWP VALIDATION LOGIC ---
+    // Clean non-digits
+    const cleanNpwp = npwp ? npwp.replace(/\D/g, '') : '';
+    // Valid if length >= 15 AND NOT all zeros
+    const hasValidNpwp = cleanNpwp.length >= 15 && cleanNpwp !== '0000000000000000';
+
     if (calculationType === 'annual') {
         const biayaJabatanYearly = Math.min(grossIncome * 0.05, 6000000);
         const iuranWajibTotal = pensionDeduction + jpDeduction + (zakatDeduction || 0);
@@ -77,9 +82,8 @@ export const calculatePPh21 = (employee: EmployeeData): TaxCalculationResult => 
         pkpYearly = Math.max(0, Math.floor(rawPkp / 1000) * 1000);
         pph21Yearly = calculatePasal17(pkpYearly);
 
-        const hasNpwp = npwp && npwp.trim() !== '' && !/^\d{16}$/.test(npwp.replace(/\D/g, ''));
-        if (!hasNpwp) {
-            pph21Yearly *= NPWP_SURCHARGE_RATE;
+        if (!hasValidNpwp) {
+            pph21Yearly = Math.floor(pph21Yearly * NPWP_SURCHARGE_RATE);
         }
 
         if (taxFacility === 'PPh Ditanggung Pemerintah (DTP)') {
@@ -100,7 +104,12 @@ export const calculatePPh21 = (employee: EmployeeData): TaxCalculationResult => 
 
     } else if (calculationType === 'nonFinal') {
         const terRate = getTerRate(status, grossIncome);
-        pph21Monthly = grossIncome * terRate;
+        pph21Monthly = Math.floor(grossIncome * terRate);
+        
+        if (!hasValidNpwp) {
+            pph21Monthly = Math.floor(pph21Monthly * NPWP_SURCHARGE_RATE);
+        }
+
         finalPPh21Monthly = pph21Monthly;
         netIncomeForTax = grossIncome; 
 
@@ -116,8 +125,7 @@ export const calculatePPh21 = (employee: EmployeeData): TaxCalculationResult => 
         const terRate = getTerRate(status, grossIncome);
         pph21Monthly = Math.floor(grossIncome * terRate);
 
-        const hasNpwp = npwp && npwp.trim() !== '' && !/^\d{16}$/.test(npwp.replace(/\D/g, ''));
-        if (!hasNpwp) {
+        if (!hasValidNpwp) {
             pph21Monthly = Math.floor(pph21Monthly * NPWP_SURCHARGE_RATE);
         }
 

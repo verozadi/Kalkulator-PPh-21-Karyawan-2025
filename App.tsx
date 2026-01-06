@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { auth, db } from './services/firebase';
@@ -338,10 +339,10 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSaveOvertime = async (records: OvertimeRecord[]) => {
+    const handleSaveOvertime = async (records: OvertimeRecord[], deletedIds?: string[]) => {
         if (!currentUser) return;
         try {
-            await saveOvertimeRecordsService(currentUser.id, records);
+            await saveOvertimeRecordsService(currentUser.id, records, deletedIds);
             showNotification('Data lembur tersimpan di Cloud');
         } catch (error) {
             showNotification('Gagal menyimpan lembur', 'error');

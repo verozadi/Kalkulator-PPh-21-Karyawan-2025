@@ -1,9 +1,8 @@
-
 import * as React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Employee, EmployeeData, MasterEmployee, OvertimeRecord, Profile, MaritalStatus, CalculationType } from '../types';
 import { getTerRate } from '../services/taxCalculator';
-import { getAvailableTaxYears } from '../constants';
+import { getAvailableTaxYears, NPWP_SURCHARGE_RATE } from '../constants';
 
 interface EmployeeFormProps {
     onSave: (data: EmployeeData) => Promise<void> | void;
@@ -318,8 +317,24 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         return formData.bpjsDeduction + formData.loan + formData.otherDeductions + customDeductionsTotal;
     }, [formData.bpjsDeduction, formData.loan, formData.otherDeductions, formData.customDeductions]);
     
-    const terRate = getTerRate(formData.status, totalPenghasilanBruto);
-    const pph21Est = Math.floor(totalPenghasilanBruto * terRate);
+    // PPh 21 Calculation with real-time NPWP Surcharge visualization
+    const { terRate, pph21Est, hasValidNpwp } = React.useMemo(() => {
+        const rate = getTerRate(formData.status, totalPenghasilanBruto);
+        const baseTax = Math.floor(totalPenghasilanBruto * rate);
+        
+        // Clean and Check NPWP
+        const cleanNpwp = formData.npwp ? formData.npwp.replace(/\D/g, '') : '';
+        
+        // Validation: Must be >= 15 digits AND NOT "0000000000000000"
+        const valid = cleanNpwp.length >= 15 && cleanNpwp !== '0000000000000000'; 
+        
+        let finalTax = baseTax;
+        if (!valid) {
+            finalTax = Math.floor(baseTax * NPWP_SURCHARGE_RATE);
+        }
+
+        return { terRate: rate, pph21Est: finalTax, hasValidNpwp: valid };
+    }, [formData.status, totalPenghasilanBruto, formData.npwp]);
     
     // Calculate Take Home Pay
     const takeHomePay = React.useMemo(() => {
@@ -856,7 +871,10 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                             {/* Large PPh Display */}
                             <div className="bg-[#0f172a] border border-[#334155] rounded-lg p-6">
                                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">PPh Pasal 21 Bulan Ini</p>
-                                <p className="text-5xl font-black text-gray-100">{formatNumberForDisplay(pph21Est)}</p>
+                                <div className="flex items-center space-x-2">
+                                    <p className={`text-5xl font-black ${!hasValidNpwp ? 'text-orange-400' : 'text-gray-100'}`}>{formatNumberForDisplay(pph21Est)}</p>
+                                    {!hasValidNpwp && <span className="text-xs text-orange-400 font-bold bg-orange-900/30 px-2 py-1 rounded border border-orange-700/50">+20% (Non-NPWP)</span>}
+                                </div>
                             </div>
 
                             {/* Take Home Pay Box */}
