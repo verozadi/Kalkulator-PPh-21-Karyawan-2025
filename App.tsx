@@ -30,7 +30,7 @@ import MasterEmployeeDetailModal from './components/MasterEmployeeDetailModal';
 import LicenseActivation from './components/LicenseActivation';
 
 // Type Imports
-import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User } from './types';
+import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User, AppTheme } from './types';
 
 // Service Imports (Note: save functions now use Firestore)
 import { calculatePPh21 } from './services/taxCalculator';
@@ -41,6 +41,90 @@ import { saveMasterEmployee as saveMasterEmployeeService, deleteMasterEmployee a
 import { saveOvertimeRecords as saveOvertimeRecordsService } from './services/overtimeService';
 
 const LICENSE_API_URL = "https://script.google.com/macros/s/AKfycbwC5xHIrnG39FMYU853IOAwrLGE4U25ZTZc_MbWXkhQHNgY27WIRXy48NmzXTkXhZeStQ/exec";
+
+// --- THEME DEFINITIONS ---
+const themes: Record<AppTheme, React.CSSProperties> = {
+    default: {
+        '--bg-main': '#111827', // gray-900
+        '--bg-card': '#1f2937', // gray-800
+        '--bg-input': '#374151', // gray-700
+        '--border-color': '#4b5563', // gray-600
+        '--text-highlight': '#f3f4f6', // gray-100
+        '--text-primary': '#e5e7eb', // gray-200
+        '--text-secondary': '#d1d5db', // gray-300
+        '--text-muted': '#9ca3af', // gray-400
+        '--primary-light': '#60a5fa',
+        '--primary-main': '#2563eb', // blue-600
+        '--primary-hover': '#1d4ed8', // blue-700
+        '--primary-dark': '#1e3a8a',
+        '--accent-main': '#ea580c', // orange-600
+        '--accent-hover': '#c2410c',
+    } as React.CSSProperties,
+    word: {
+        '--bg-main': '#f3f4f6', // Light gray
+        '--bg-card': '#ffffff', // White
+        '--bg-input': '#e5e7eb', // Slightly darker input
+        '--border-color': '#d1d5db',
+        '--text-highlight': '#111827', // Black/Dark
+        '--text-primary': '#1f2937',
+        '--text-secondary': '#374151',
+        '--text-muted': '#6b7280',
+        '--primary-light': '#3b82f6',
+        '--primary-main': '#2b579a', // Word Blue
+        '--primary-hover': '#1e3a8a',
+        '--primary-dark': '#172554',
+        '--accent-main': '#2563eb',
+        '--accent-hover': '#1d4ed8',
+    } as React.CSSProperties,
+    cyberpunk: {
+        '--bg-main': '#050505', // Deep Black
+        '--bg-card': '#121212', // Dark Gray
+        '--bg-input': '#2a2a2a',
+        '--border-color': '#fde047', // Yellow border
+        '--text-highlight': '#fde047', // Yellow Text
+        '--text-primary': '#22d3ee', // Cyan Text
+        '--text-secondary': '#ffffff',
+        '--text-muted': '#94a3b8',
+        '--primary-light': '#fde047',
+        '--primary-main': '#facc15', // Yellow
+        '--primary-hover': '#eab308',
+        '--primary-dark': '#854d0e',
+        '--accent-main': '#06b6d4', // Cyan
+        '--accent-hover': '#0891b2',
+    } as React.CSSProperties,
+    anime: {
+        '--bg-main': '#fdf2f8', // Pinkish White
+        '--bg-card': '#fff1f2', // Soft Rose
+        '--bg-input': '#ffe4e6',
+        '--border-color': '#fda4af',
+        '--text-highlight': '#881337', // Deep Rose
+        '--text-primary': '#be185d',
+        '--text-secondary': '#9d174d',
+        '--text-muted': '#db2777',
+        '--primary-light': '#f472b6',
+        '--primary-main': '#db2777', // Pink-600
+        '--primary-hover': '#be185d',
+        '--primary-dark': '#831843',
+        '--accent-main': '#c026d3', // Purple
+        '--accent-hover': '#a21caf',
+    } as React.CSSProperties,
+    blackRed: {
+        '--bg-main': '#000000',
+        '--bg-card': '#18181b', // Zinc 900
+        '--bg-input': '#27272a',
+        '--border-color': '#7f1d1d', // Red 900
+        '--text-highlight': '#ef4444', // Red 500
+        '--text-primary': '#f87171', // Red 400
+        '--text-secondary': '#d1d5db',
+        '--text-muted': '#9ca3af',
+        '--primary-light': '#ef4444',
+        '--primary-main': '#dc2626', // Red 600
+        '--primary-hover': '#b91c1c',
+        '--primary-dark': '#7f1d1d',
+        '--accent-main': '#991b1b',
+        '--accent-hover': '#7f1d1d',
+    } as React.CSSProperties,
+};
 
 const App: React.FC = () => {
     // --- AUTH & LICENSE STATE ---
@@ -67,8 +151,24 @@ const App: React.FC = () => {
     const [detailMasterEmployee, setDetailMasterEmployee] = React.useState<MasterEmployee | null>(null);
     const [isProfileDropdownOpen, setProfileDropdownOpen] = React.useState(false);
     
+    // --- THEME STATE ---
+    const [currentTheme, setCurrentTheme] = React.useState<AppTheme>('default');
+    
     const profileDropdownRef = React.useRef<HTMLDivElement>(null);
     const mainContentRef = React.useRef<HTMLElement>(null);
+
+    // Load theme from localStorage
+    React.useEffect(() => {
+        const savedTheme = localStorage.getItem('veroz_theme') as AppTheme;
+        if (savedTheme && themes[savedTheme]) {
+            setCurrentTheme(savedTheme);
+        }
+    }, []);
+
+    const handleSetTheme = (theme: AppTheme) => {
+        setCurrentTheme(theme);
+        localStorage.setItem('veroz_theme', theme);
+    };
 
     // --- AUTH LISTENER (Firebase) ---
     React.useEffect(() => {
@@ -419,6 +519,7 @@ const App: React.FC = () => {
             onOpenDetailModal: handleOpenDetailModal,
             onImport: handleImportEmployees,
             showNotification: showNotification,
+            profile: activeProfile, // Send synced profile data
         };
 
         switch (currentPage) {
@@ -470,7 +571,7 @@ const App: React.FC = () => {
             case 'overtime':
                 return <Overtime masterEmployees={masterEmployees} existingRecords={overtimeRecords} onSave={handleSaveOvertime} />;
             case 'settings':
-                return <Settings showNotification={showNotification} currentUser={currentUser} />;
+                return <Settings showNotification={showNotification} currentUser={currentUser} currentTheme={currentTheme} onSetTheme={handleSetTheme} />;
             default:
                 return <Dashboard employees={employees} masterEmployees={masterEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee} />;
         }
@@ -480,8 +581,11 @@ const App: React.FC = () => {
     const activeProfile = profile || defaultProfile;
 
     return (
-        <div className="flex flex-col h-screen bg-gray-900 font-sans text-gray-200">
-            <header className="flex-shrink-0 bg-gray-800 border-b border-gray-700 flex items-center h-16 z-10">
+        <div 
+            className="flex flex-col h-screen bg-gray-900 font-sans text-gray-200 transition-colors duration-300"
+            style={themes[currentTheme]}
+        >
+            <header className="flex-shrink-0 bg-gray-800 border-b border-gray-700 flex items-center h-16 z-10 transition-colors duration-300">
                 <div className={`flex-shrink-0 h-full flex items-center border-r border-gray-700 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64 px-6' : 'w-20 px-4 justify-center'}`}>
                     <div className="flex items-center space-x-3">
                         <img src={activeProfile.logoUrl} alt="Logo" className="h-8 w-8 rounded-md object-cover bg-gray-700 flex-shrink-0"/>

@@ -77,22 +77,29 @@ export const register = async (name: string, email: string, password: string): P
     }
 };
 
-export const updateUserPassword = async (password: string): Promise<{ success: boolean; message: string }> => {
+export const updateUserPassword = async (newPassword: string, oldPassword: string): Promise<{ success: boolean; message: string }> => {
     const user = auth.currentUser;
-    if (!user) {
+    if (!user || !user.email) {
         return { success: false, message: 'Tidak ada sesi pengguna aktif.' };
     }
 
     try {
-        await user.updatePassword(password);
-        return { success: true, message: 'Kata sandi berhasil disimpan. Sekarang Anda bisa login menggunakan Email & Password atau Google.' };
+        // 1. Re-authenticate User
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldPassword);
+        await user.reauthenticateWithCredential(credential);
+
+        // 2. Update Password
+        await user.updatePassword(newPassword);
+        return { success: true, message: 'Kata sandi berhasil diperbarui.' };
     } catch (error: any) {
         console.error("Update Password Error", error);
         let message = 'Gagal menyimpan kata sandi.';
-        if (error.code === 'auth/weak-password') {
-            message = 'Kata sandi terlalu lemah (minimal 6 karakter).';
+        if (error.code === 'auth/wrong-password') {
+            message = 'Kata sandi lama salah.';
+        } else if (error.code === 'auth/weak-password') {
+            message = 'Kata sandi baru terlalu lemah (minimal 6 karakter).';
         } else if (error.code === 'auth/requires-recent-login') {
-            message = 'Demi keamanan, silakan logout dan login kembali untuk mengubah kata sandi.';
+            message = 'Demi keamanan, silakan logout dan login kembali.';
         }
         return { success: false, message };
     }

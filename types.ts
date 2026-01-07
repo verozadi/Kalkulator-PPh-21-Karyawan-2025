@@ -1,6 +1,8 @@
 
 export type Page = 'dashboard' | 'employeeInput' | 'pph21Monthly' | 'pph21NonFinal' | 'pph21Annual' | 'employeeList' | 'employeeListMonthly' | 'employeeListNonFinal' | 'employeeListAnnual' | 'taxRules' | 'reports' | 'overtime' | 'employeeMasterList' | 'settings' | 'login' | 'register' | 'forgotPassword' | 'landing';
 
+export type AppTheme = 'default' | 'word' | 'cyberpunk' | 'anime' | 'blackRed';
+
 export interface User {
   id: string;
   name: string;

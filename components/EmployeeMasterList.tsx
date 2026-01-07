@@ -2,41 +2,47 @@
 import * as React from 'react';
 import * as XLSX from 'xlsx';
 import { MasterEmployee, MaritalStatus } from '../types';
+import ConfirmationModal from './ConfirmationModal';
 
 interface EmployeeMasterListProps {
   masterEmployees: MasterEmployee[];
   onAddNew: () => void;
   onEdit: (employee: MasterEmployee) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void> | void; // Updated to Promise for bulk await
   onImport: (employees: Omit<MasterEmployee, 'id'>[]) => void;
   showNotification: (message: string, type?: 'success' | 'error') => void;
   onOpenDetailModal: (employee: MasterEmployee) => void;
 }
 
-// --- Icon Components ---
-const IdentificationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 012-2h2a2 2 0 012 2v1m-4 0h4m-4 0H9m4 0h2m-2 0h-2m2 0h2m-6 4h6m-6 4h6m-6 4h6" /></svg>;
-const ImportIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
-const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
-const FilterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>;
-const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
-const SortAscIcon = () => <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg>;
-const SortDescIcon = () => <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m-4 4V4" /></svg>;
-const ChevronDownIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 ${className || ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>;
-const ViewIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
-const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>;
-const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
-const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>;
+// --- ELEGANT ACCOUNTING ICONS (Stroke 1.5) ---
+const IdentificationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-1.294-3.711 6.721 6.721 0 01-1.294 3.711 6.72 6.72 0 01-5.704 3.711 6.72 6.72 0 015.704-3.711z" /></svg>;
+const ImportIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>;
+const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>;
+const FilterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>;
+const SearchIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
+const SortAscIcon = () => <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h9.75m4.5-4.5v12m0 0l-3.75-3.75M17.25 21L21 17.25" /></svg>;
+const SortDescIcon = () => <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h5.25m5.25-.75L17.25 9m0 0L21 12.75M17.25 9v12" /></svg>;
+const ChevronDownIcon = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-400 ${className || ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>;
+const ViewIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>;
+const UserPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3.75 19.5a6.957 6.957 0 0014.049-2.343 19.08 19.08 0 00-14.049 0 6.957 6.957 0 00-3.75 6.093 16.375 16.375 0 017.5 0z" /></svg>;
 
 const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees, onAddNew, onEdit, onDelete, onImport, showNotification, onOpenDetailModal }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-    // State for filtering and sorting
+    // State
     const [searchTerm, setSearchTerm] = React.useState('');
     const [filterEmployeeStatus, setFilterEmployeeStatus] = React.useState<'all' | 'Pegawai Tetap' | 'Bukan Pegawai'>('all');
     const [filterIsActive, setFilterIsActive] = React.useState<'all' | 'true' | 'false'>('all');
-    // Set default to false (collapsed)
     const [isFilterOpen, setIsFilterOpen] = React.useState(false);
     
+    // Selection & Modal State
+    const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+    const [idsToDelete, setIdsToDelete] = React.useState<string[]>([]);
+    const [isDeleting, setIsDeleting] = React.useState(false);
+
     type SortableKey = keyof Pick<MasterEmployee, 'fullName' | 'position' | 'email' | 'employeeStatus'>;
     const [sortConfig, setSortConfig] = React.useState<{ key: SortableKey; direction: 'ascending' | 'descending' }>({ key: 'fullName', direction: 'ascending' });
 
@@ -55,45 +61,79 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
         setSortConfig({ key: 'fullName', direction: 'ascending' });
     };
 
-    const handleDeleteClick = (employee: MasterEmployee) => {
-        if (window.confirm(`Anda yakin ingin menghapus ${employee.fullName}? Ini tidak akan menghapus data PPh 21 yang sudah ada.`)) {
-            onDelete(employee.id);
-        }
-    };
-    
+    // Filter Logic
     const filteredAndSortedEmployees = React.useMemo(() => {
         let sortableEmployees = [...masterEmployees];
 
-        // Filtering
         sortableEmployees = sortableEmployees.filter(employee => {
             const searchTermMatch = searchTerm === '' ||
                 employee.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase());
             
             const employeeStatusMatch = filterEmployeeStatus === 'all' || employee.employeeStatus === filterEmployeeStatus;
-
             const isActiveMatch = filterIsActive === 'all' || String(employee.isActive) === filterIsActive;
 
             return searchTermMatch && employeeStatusMatch && isActiveMatch;
         });
 
-        // Sorting
         sortableEmployees.sort((a, b) => {
             const aValue = a[sortConfig.key];
             const bValue = b[sortConfig.key];
-
-            if (aValue < bValue) {
-                return sortConfig.direction === 'ascending' ? -1 : 1;
-            }
-            if (aValue > bValue) {
-                return sortConfig.direction === 'ascending' ? 1 : -1;
-            }
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
         });
 
         return sortableEmployees;
     }, [masterEmployees, searchTerm, filterEmployeeStatus, filterIsActive, sortConfig]);
 
+    // --- Selection Logic ---
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            const allIds = new Set(filteredAndSortedEmployees.map(emp => emp.id));
+            setSelectedIds(allIds);
+        } else {
+            setSelectedIds(new Set());
+        }
+    };
+
+    const handleSelectRow = (id: string) => {
+        const newSelected = new Set(selectedIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedIds(newSelected);
+    };
+
+    // --- Delete Logic ---
+    const handleDeleteClick = (employee: MasterEmployee) => {
+        setIdsToDelete([employee.id]);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleBulkDeleteClick = () => {
+        setIdsToDelete(Array.from(selectedIds));
+        setIsDeleteModalOpen(true);
+    };
+
+    const executeDelete = async () => {
+        setIsDeleting(true);
+        try {
+            await Promise.all(idsToDelete.map(id => onDelete(id)));
+            showNotification(`${idsToDelete.length} karyawan berhasil dihapus.`, 'success');
+            setSelectedIds(new Set());
+            setIdsToDelete([]);
+            setIsDeleteModalOpen(false);
+        } catch (error) {
+            showNotification('Gagal menghapus beberapa data.', 'error');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // --- Import/Template Logic (Unchanged) ---
     const handleDownloadTemplate = () => {
         const headers = [
             'ID Karyawan', 'Nama Lengkap', 'Jenis Kelamin (Laki-Laki/Perempuan)', 'Jabatan', 'Email', 'No. Handphone', 
@@ -110,20 +150,17 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
             '8000000', '500000', 'YA'
         ];
         const ws = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
-        ws['!cols'] = headers.map(h => ({ wch: h.length + 5 })); // Auto-width columns
+        ws['!cols'] = headers.map(h => ({ wch: h.length + 5 })); 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Template Karyawan");
         XLSX.writeFile(wb, "template_import_karyawan.xlsx");
     };
 
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
+    const handleImportClick = () => fileInputRef.current?.click();
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
@@ -134,13 +171,12 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                 const jsonData: any[] = XLSX.utils.sheet_to_json(sheet);
 
                 if (jsonData.length === 0) {
-                    showNotification('File Excel kosong atau tidak memiliki data.', 'error');
+                    showNotification('File Excel kosong.', 'error');
                     return;
                 }
                 
                 const importedEmployees: Omit<MasterEmployee, 'id'>[] = [];
                 const errors: string[] = [];
-
                 const ptkpValues = Object.values(MaritalStatus);
 
                 jsonData.forEach((row, index) => {
@@ -177,9 +213,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                          errors.push(`Baris ${index + 2}: Gaji Pokok harus berupa angka.`);
                          return;
                     }
-                    
                     const positionAllowance = parseInt(row['Tunjangan Jabatan (Angka saja)'] || '0', 10);
-
                     const rawGender = String(row['Jenis Kelamin (Laki-Laki/Perempuan)'] || 'Laki-Laki');
                     const gender = (rawGender.toLowerCase() === 'perempuan') ? 'Perempuan' : 'Laki-Laki';
 
@@ -208,27 +242,22 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                 });
 
                 if (errors.length > 0) {
-                    showNotification(`Gagal mengimpor. Ditemukan ${errors.length} error. Cek konsol browser untuk detail.`, 'error');
-                    console.error("Import Errors:", errors);
+                    showNotification(`Gagal import. ${errors.length} error ditemukan.`, 'error');
                 } else if (importedEmployees.length > 0) {
                     onImport(importedEmployees);
                 } else {
-                    showNotification('Tidak ada data karyawan yang valid untuk diimpor.', 'error');
+                    showNotification('Tidak ada data valid.', 'error');
                 }
-
             } catch (error) {
                 console.error(error);
-                showNotification('Gagal memproses file. Pastikan format file dan data sudah benar.', 'error');
+                showNotification('Gagal memproses file.', 'error');
             } finally {
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
+                if (fileInputRef.current) fileInputRef.current.value = '';
             }
         };
         reader.readAsBinaryString(file);
     };
 
-    // FIX: Added 'children' to props type to allow content within the component tags.
     const SortableHeader: React.FC<{ sortKey: SortableKey; children: React.ReactNode; className?: string; }> = ({ sortKey, children, className = '' }) => (
         <th className={`px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider ${className}`}>
             <button onClick={() => requestSort(sortKey)} className="flex items-center space-x-1 hover:text-white">
@@ -249,38 +278,46 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                     <p className="text-gray-400 mt-1">Kelola data master seluruh karyawan Anda.</p>
                 </div>
                 <div className="flex items-center flex-wrap gap-2">
-                     <button
-                        onClick={handleDownloadTemplate}
-                        className="bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-500 transition-colors flex items-center justify-center space-x-2"
-                    >
+                     <button onClick={handleDownloadTemplate} className="bg-gray-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-gray-500 transition-colors flex items-center justify-center space-x-2">
                         <DownloadIcon />
                         <span>Download Template</span>
                     </button>
-                     <button
-                        onClick={handleImportClick}
-                        className="bg-primary-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-                    >
+                     <button onClick={handleImportClick} className="bg-primary-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2">
                         <ImportIcon />
                         <span>Import Karyawan</span>
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept=".xlsx, .xls" />
-                    <button
-                        onClick={onAddNew}
-                        className="bg-accent-500 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-accent-600 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-accent-900/50"
-                    >
+                    <button onClick={onAddNew} className="bg-accent-500 text-white font-bold py-2.5 px-5 rounded-lg hover:bg-accent-600 transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-accent-900/50">
                         <UserPlusIcon />
                         <span>Tambah Karyawan Baru</span>
                     </button>
                 </div>
             </div>
             
+            {/* Bulk Action Bar */}
+            {selectedIds.size > 0 && (
+                <div className="bg-blue-900/40 border border-blue-700 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-center animate-fade-in gap-4">
+                    <div className="text-blue-200 font-medium flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {selectedIds.size} Data Terpilih
+                    </div>
+                    <div className="flex gap-3 items-center">
+                        <button 
+                            onClick={handleBulkDeleteClick} 
+                            className="bg-red-600 text-white font-bold py-2 px-4 rounded hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm"
+                        >
+                            <TrashIcon />
+                            Hapus ({selectedIds.size})
+                        </button>
+                    </div>
+                </div>
+            )}
+
              {/* Filter Section */}
             <div className="bg-gray-800 rounded-lg border border-gray-700">
                 <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="w-full flex justify-between items-center p-4 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 rounded-lg"
-                    aria-expanded={isFilterOpen}
-                    aria-controls="master-filter-content"
                 >
                     <div className="flex items-center space-x-3">
                         <FilterIcon />
@@ -289,7 +326,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                     <ChevronDownIcon className={`transform transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isFilterOpen && (
-                    <div id="master-filter-content" className="p-4 border-t border-gray-700">
+                    <div className="p-4 border-t border-gray-700">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="relative md:col-span-2">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
@@ -317,6 +354,14 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                 <table className="min-w-full divide-y divide-gray-700">
                     <thead className="bg-gray-700/50">
                         <tr>
+                            <th className="px-4 py-3 w-10 text-center">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-4 h-4 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500"
+                                    onChange={handleSelectAll}
+                                    checked={filteredAndSortedEmployees.length > 0 && selectedIds.size === filteredAndSortedEmployees.length}
+                                />
+                            </th>
                             <SortableHeader sortKey="fullName">Nama Lengkap / ID</SortableHeader>
                             <SortableHeader sortKey="position">Jabatan</SortableHeader>
                             <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">No. NPWP</th>
@@ -327,10 +372,15 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                     </thead>
                     <tbody className="bg-gray-800 divide-y divide-gray-700">
                         {filteredAndSortedEmployees.length > 0 ? filteredAndSortedEmployees.map((employee) => (
-                            <tr 
-                                key={employee.id} 
-                                className="hover:bg-gray-700/50 transition-colors"
-                            >
+                            <tr key={employee.id} className={`hover:bg-gray-700/50 transition-colors ${selectedIds.has(employee.id) ? 'bg-blue-900/20' : ''}`}>
+                                <td className="px-4 py-4 text-center">
+                                    <input 
+                                        type="checkbox" 
+                                        className="w-4 h-4 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500"
+                                        checked={selectedIds.has(employee.id)}
+                                        onChange={() => handleSelectRow(employee.id)}
+                                    />
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-200">{employee.fullName}</div>
                                     <div className="text-sm text-gray-400 font-mono">{employee.employeeId}</div>
@@ -361,7 +411,7 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                             </tr>
                         )) : (
                             <tr>
-                                <td colSpan={6} className="text-center py-10 text-gray-500">
+                                <td colSpan={7} className="text-center py-10 text-gray-500">
                                    {masterEmployees.length > 0 ? "Tidak ada karyawan yang cocok dengan filter Anda." : "Belum ada data master karyawan."}
                                 </td>
                             </tr>
@@ -369,6 +419,15 @@ const EmployeeMasterList: React.FC<EmployeeMasterListProps> = ({ masterEmployees
                     </tbody>
                 </table>
             </div>
+
+            <ConfirmationModal 
+                isOpen={isDeleteModalOpen} 
+                onClose={() => setIsDeleteModalOpen(false)} 
+                onConfirm={executeDelete}
+                title="Hapus Karyawan Master"
+                message={`Anda akan menghapus ${idsToDelete.length} data karyawan master. Data PPh 21 yang sudah ada tidak akan hilang, tetapi karyawan ini tidak akan muncul di opsi input baru.`}
+                isLoading={isDeleting}
+            />
         </div>
     );
 };

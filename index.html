@@ -15,28 +15,41 @@
         theme: {
           extend: {
             colors: {
-              'primary': {
+              // Map standard colors to CSS variables for theming
+              gray: {
+                '950': 'var(--bg-deep)',       // Darkest/Overlay
+                '900': 'var(--bg-main)',       // Background Utama (Body)
+                '800': 'var(--bg-card)',       // Background Card/Sidebar/Form Container
+                '700': 'var(--bg-input)',      // Input Background / Hover Items
+                '600': 'var(--border-color)',  // Border & Dividers
+                '500': 'var(--text-muted)',    // Placeholder / Muted Text
+                '400': 'var(--text-secondary)',// Secondary labels
+                '300': 'var(--text-primary)',  // Main Text
+                '200': 'var(--text-primary)',  // Main Text (Alias for stronger readability)
+                '100': 'var(--text-highlight)',// Headers / Highlights
+              },
+              primary: {
                 '50': '#eff6ff',
                 '100': '#dbeafe',
                 '200': '#bfdbfe',
                 '300': '#93c5fd',
-                '400': '#60a5fa',
-                '500': '#3b82f6',
-                '600': '#2563eb',
-                '700': '#1d4ed8',
+                '400': 'var(--primary-light)',
+                '500': 'var(--primary-main)',
+                '600': 'var(--primary-main)',  // Main Button/Action
+                '700': 'var(--primary-hover)', // Hover State
                 '800': '#1e40af',
-                '900': '#1e3a8a',
+                '900': 'var(--primary-dark)',
                 '950': '#172554',
               },
-              'accent': {
+              accent: {
                 '50': '#fff7ed',
                 '100': '#ffedd5',
                 '200': '#fed7aa',
                 '300': '#fdba74',
                 '400': '#fb923c',
                 '500': '#f97316',
-                '600': '#ea580c',
-                '700': '#c2410c',
+                '600': 'var(--accent-main)',
+                '700': 'var(--accent-hover)',
                 '800': '#9a3412',
                 '900': '#7c2d12',
                 '950': '#431407',
@@ -47,6 +60,117 @@
       }
     </script>
     <style>
+      /* --- 1. DEFAULT THEME (Dark Mode Standard) --- */
+      :root {
+        --bg-deep: #020617;
+        --bg-main: #111827;       /* gray-900 */
+        --bg-card: #1f2937;       /* gray-800 */
+        --bg-input: #374151;      /* gray-700 */
+        --border-color: #4b5563;  /* gray-600 */
+        
+        --text-highlight: #f9fafb; /* gray-50 */
+        --text-primary: #e5e7eb;   /* gray-200 */
+        --text-secondary: #9ca3af; /* gray-400 */
+        --text-muted: #6b7280;     /* gray-500 */
+
+        --primary-light: #60a5fa;
+        --primary-main: #2563eb;
+        --primary-hover: #1d4ed8;
+        --primary-dark: #1e3a8a;
+        
+        --accent-main: #ea580c;
+        --accent-hover: #c2410c;
+      }
+
+      /* --- 2. MS WORD THEME (Light Mode Professional) --- */
+      /* Fix: Dark text on light background */
+      [style*="--bg-main: #f3f4f6"] { 
+        --bg-deep: #e5e7eb;
+        --bg-main: #f3f4f6;       /* Light Gray Body */
+        --bg-card: #ffffff;       /* White Card */
+        --bg-input: #ffffff;      /* White Input */
+        --border-color: #d1d5db;  /* Light Gray Border */
+        
+        --text-highlight: #111827; /* Almost Black */
+        --text-primary: #1f2937;   /* Dark Gray */
+        --text-secondary: #4b5563; /* Medium Gray */
+        --text-muted: #9ca3af;     /* Light Gray Text */
+
+        --primary-light: #3b82f6;
+        --primary-main: #2b579a;   /* Word Blue */
+        --primary-hover: #1e3a8a;
+        --primary-dark: #172554;
+        
+        --accent-main: #2563eb;
+        --accent-hover: #1d4ed8;
+      }
+
+      /* --- 3. CYBERPUNK THEME (High Contrast Neon) --- */
+      [style*="--bg-main: #050505"] {
+        --bg-deep: #000000;
+        --bg-main: #050505;
+        --bg-card: #121212;
+        --bg-input: #1a1a1a;
+        --border-color: #fde047;   /* Neon Yellow Border */
+        
+        --text-highlight: #fde047; /* Yellow */
+        --text-primary: #22d3ee;   /* Cyan */
+        --text-secondary: #e5e7eb; /* White */
+        --text-muted: #6b7280;
+
+        --primary-light: #fde047;
+        --primary-main: #facc15;   /* Yellow */
+        --primary-hover: #eab308;
+        --primary-dark: #854d0e;
+        
+        --accent-main: #06b6d4;
+        --accent-hover: #0891b2;
+      }
+
+      /* --- 4. ANIME THEME (Soft Light Mode) --- */
+      [style*="--bg-main: #fdf2f8"] {
+        --bg-deep: #fce7f3;
+        --bg-main: #fdf2f8;       /* Pinkish White */
+        --bg-card: #fff1f2;       /* Soft Rose */
+        --bg-input: #ffffff;      /* White Input */
+        --border-color: #fda4af;  /* Pink Border */
+        
+        --text-highlight: #881337; /* Deep Rose */
+        --text-primary: #9d174d;   /* Pink Text */
+        --text-secondary: #be185d; 
+        --text-muted: #db2777;
+
+        --primary-light: #f472b6;
+        --primary-main: #db2777;
+        --primary-hover: #be185d;
+        --primary-dark: #831843;
+        
+        --accent-main: #c026d3;
+        --accent-hover: #a21caf;
+      }
+
+      /* --- 5. BLACK & RED (Gaming Dark Mode) --- */
+      [style*="--bg-main: #000000"] {
+        --bg-deep: #0f0f0f;
+        --bg-main: #000000;
+        --bg-card: #18181b;       /* Zinc 900 */
+        --bg-input: #27272a;      /* Zinc 800 */
+        --border-color: #7f1d1d;  /* Red 900 */
+        
+        --text-highlight: #ef4444; /* Red 500 */
+        --text-primary: #f87171;   /* Red 400 */
+        --text-secondary: #d1d5db; /* Light Gray */
+        --text-muted: #6b7280;
+
+        --primary-light: #ef4444;
+        --primary-main: #dc2626;   /* Red 600 */
+        --primary-hover: #b91c1c;
+        --primary-dark: #7f1d1d;
+        
+        --accent-main: #991b1b;
+        --accent-hover: #7f1d1d;
+      }
+
       @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -87,6 +211,22 @@
         animation-delay: var(--stagger-delay, 0s);
       }
 
+      /* Scrollbar Customization for all themes */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg-main); 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--border-color); 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-main); 
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .animate-fade-in,
         .animate-fade-in-up,
@@ -114,7 +254,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-900">
+  <body class="bg-gray-900 text-gray-200 font-sans transition-colors duration-300">
     <div id="root"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>

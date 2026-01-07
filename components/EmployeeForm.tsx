@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Employee, EmployeeData, MasterEmployee, OvertimeRecord, Profile, MaritalStatus, CalculationType } from '../types';
@@ -50,6 +51,7 @@ const FormLabel: React.FC<{ children: React.ReactNode, required?: boolean, info?
     </label>
 );
 
+// Updated to use semantic Tailwind classes for theming support
 const FormInput = ({ value, onChange, name, readOnly, placeholder, className = "" }: any) => (
     <input
         type="text"
@@ -58,7 +60,7 @@ const FormInput = ({ value, onChange, name, readOnly, placeholder, className = "
         onChange={onChange}
         readOnly={readOnly}
         placeholder={placeholder}
-        className={`w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-[#1e293b] text-gray-500 cursor-not-allowed' : ''} ${className}`}
+        className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''} ${className}`}
     />
 );
 
@@ -67,8 +69,8 @@ const FormSelect = ({ value, onChange, name, children, className = "" }: any) =>
         name={name}
         value={value}
         onChange={onChange}
-        className={`w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 appearance-none transition-colors [&>option]:bg-[#1e293b] [&>option]:text-gray-200 ${className}`}
-        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+        className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 appearance-none transition-colors [&>option]:bg-gray-800 [&>option]:text-gray-200 ${className}`}
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
     >
         {children}
     </select>
@@ -105,7 +107,6 @@ const SearchableEmployeeSelect: React.FC<{
     }, [selectedEmployee]);
 
     const filteredEmployees = React.useMemo(() => {
-        // Logic: Show all if empty or < 2 chars (for scrolling), filter if >= 2 chars
         if (searchTerm.length < 2) return masterEmployees;
         
         return masterEmployees.filter(e => 
@@ -126,10 +127,10 @@ const SearchableEmployeeSelect: React.FC<{
                 }}
                 onFocus={() => setIsOpen(true)}
                 placeholder="Ketik min. 2 huruf atau pilih..."
-                className="w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors"
             />
             {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
                     {filteredEmployees.length > 0 ? (
                         filteredEmployees.map(emp => (
                             <button
@@ -139,7 +140,7 @@ const SearchableEmployeeSelect: React.FC<{
                                     onSelect(emp.id);
                                     setIsOpen(false);
                                 }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-700/50 last:border-0"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-600 last:border-0"
                             >
                                 <div className="font-bold">{emp.fullName}</div>
                                 <div className="text-xs opacity-70">{emp.employeeId} - {emp.position}</div>
@@ -178,7 +179,8 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         employeeStatus: 'Pegawai Tetap',
         isForeigner: false,
         periodYear: new Date().getFullYear(),
-        periodMonth: new Date().getMonth() + 1 > 11 ? 11 : new Date().getMonth() + 1,
+        // Update: Allow 12 months (removed the > 11 clamp)
+        periodMonth: new Date().getMonth() + 1,
         baseSalary: 0,
         tunjanganPph: 0,
         tunjanganJabatan: 0,
@@ -513,7 +515,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-100">Hitung PPh 21 Bulanan</h1>
-                    <p className="text-sm text-gray-400">Perhitungan untuk masa pajak Januari s.d. November (TER).</p>
+                    <p className="text-sm text-gray-400">Perhitungan untuk masa pajak Januari s.d. Desember (TER/Slip).</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <button 
@@ -527,7 +529,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                     <button 
                         type="button"
                         onClick={handleFetchPreviousData}
-                        className="flex items-center space-x-2 px-4 py-2 bg-[#334155]/60 hover:bg-[#475569] text-gray-300 text-sm font-medium rounded border border-[#475569] transition-colors"
+                        className="flex items-center space-x-2 px-4 py-2 bg-gray-700/60 hover:bg-gray-600 text-gray-300 text-sm font-medium rounded border border-gray-600 transition-colors"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
                         <span>Ambil Data Bulan Sebelumnya</span>
@@ -536,13 +538,15 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
             </div>
 
             {/* Identitas Card */}
-            <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-6 mb-8 shadow-md">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-8 shadow-md">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div>
                         <FormLabel required>Masa Pajak</FormLabel>
                         <FormSelect name="periodMonth" value={formData.periodMonth} onChange={handleChange}>
-                            {MONTH_NAMES.slice(0, 11).map((m, i) => (
-                                <option key={m} value={i + 1}>{m}</option>
+                            {MONTH_NAMES.map((m, i) => (
+                                <option key={m} value={i + 1}>
+                                    {i === 11 ? "Desember (Slip & Tahunan)" : m}
+                                </option>
                             ))}
                         </FormSelect>
                     </div>
@@ -598,13 +602,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                 {/* Left Column: Earnings & Deductions */}
                 {/* ... (omitted repeated rendering code for brevity, logic handled in SearchableEmployeeSelect and component state) ... */}
                 <div className="lg:col-span-3 space-y-8">
-                    <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-sm">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 shadow-sm">
                         <FormSectionHeader>Rincian Penghasilan Bulanan Ini</FormSectionHeader>
                         
                         {/* Penghasilan Pokok */}
                         <div className="mb-10">
                             <FormSubHeader>Penghasilan Pokok</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <FormLabel>Gaji Pokok</FormLabel>
                                 <FormInput name="baseSalary" value={formatNumberForDisplay(formData.baseSalary)} onChange={handleChange} />
                             </div>
@@ -613,7 +617,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                         {/* Tunjangan Tetap */}
                         <div className="mb-10">
                             <FormSubHeader>Tunjangan Tetap</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-4">
                                     <div>
                                         <FormLabel>Tunjangan Jabatan</FormLabel>
@@ -665,7 +669,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                         {/* Tunjangan Tidak Tetap */}
                         <div className="mb-10">
                             <FormSubHeader>Tunjangan Tidak Tetap / Insidentil</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                     <div>
                                         <FormLabel>Tunjangan Makan</FormLabel>
@@ -726,7 +730,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                         {/* Pengurangan Pajak */}
                         <div className="mb-10">
                             <FormSubHeader>Komponen Pengurangan Penghasilan (Tax Deductible)</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                                     <div>
                                         <FormLabel info="Otomatis max 500rb/bulan">Biaya Jabatan (5%)</FormLabel>
@@ -757,7 +761,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                         {/* Potongan Non-Pajak */}
                         <div className="mb-6">
                             <FormSubHeader>Potongan Lain / Non-Pajak (Take Home Pay)</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-4">
                                     <div>
                                         <FormLabel>BPJS Kesehatan (1%)</FormLabel>
@@ -810,7 +814,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                         </div>
 
                         {/* Left Bottom Neto Box */}
-                        <div className="mt-8 bg-[#0f172a] border border-[#334155] rounded-lg p-5">
+                        <div className="mt-8 bg-gray-900 border border-gray-700 rounded-lg p-5">
                             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Penghasilan Neto (Dasar Pajak)</p>
                             <p className="text-3xl font-bold text-gray-100">{formatNumberForDisplay(totalPenghasilanBruto - totalTaxDeductions)}</p>
                         </div>
@@ -819,7 +823,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
                 {/* Right Column: Tax Summary */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-lg">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 shadow-lg">
                         <FormSectionHeader>Perhitungan PPh 21 Bulanan (TER)</FormSectionHeader>
                         
                         <div className="space-y-6">
@@ -852,24 +856,24 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                             </div>
                             <div>
                                 <FormLabel>Kode Objek Pajak</FormLabel>
-                                <div className="bg-[#1e293b] border border-[#475569] rounded px-3 py-2 text-gray-500 text-sm cursor-not-allowed">
+                                <div className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-gray-500 text-sm cursor-not-allowed">
                                     {formData.taxObjectCode || '21-100-01'}
                                 </div>
                             </div>
                             
                             {/* Updated Gross Income UI */}
-                            <div className="bg-[#0f172a] border border-[#334155] rounded-lg p-5">
+                            <div className="bg-gray-900 border border-gray-700 rounded-lg p-5">
                                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Penghasilan Bruto Bulan Ini</p>
                                 <p className="text-3xl font-bold text-gray-100">{formatNumberForDisplay(totalPenghasilanBruto)}</p>
                             </div>
 
                             <div>
                                 <FormLabel info="Tarif berdasarkan Kategori PTKP dan Range Penghasilan Bruto (PMK 168/2023)">Tarif TER</FormLabel>
-                                <div className="bg-[#334155]/40 border border-[#475569] rounded px-3 py-2 text-gray-100 text-sm font-bold">{`${(terRate * 100).toFixed(2)}%`}</div>
+                                <div className="bg-gray-700/40 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm font-bold">{`${(terRate * 100).toFixed(2)}%`}</div>
                             </div>
 
                             {/* Large PPh Display */}
-                            <div className="bg-[#0f172a] border border-[#334155] rounded-lg p-6">
+                            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6">
                                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">PPh Pasal 21 Bulan Ini</p>
                                 <div className="flex items-center space-x-2">
                                     <p className={`text-5xl font-black ${!hasValidNpwp ? 'text-orange-400' : 'text-gray-100'}`}>{formatNumberForDisplay(pph21Est)}</p>
@@ -883,7 +887,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                                 <p className="text-4xl font-black text-white">{formatNumberForDisplay(takeHomePay)}</p>
                             </div>
 
-                            <div className="pt-4 space-y-4 border-t border-[#334155]">
+                            <div className="pt-4 space-y-4 border-t border-gray-700">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <FormLabel>KAP-KJS</FormLabel>
@@ -911,7 +915,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                             type="button" 
                             onClick={onCancel}
                             disabled={isSaving}
-                            className="px-8 py-3 bg-[#334155]/60 hover:bg-[#475569] text-gray-200 font-bold rounded-lg transition-all border border-[#475569] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-8 py-3 bg-gray-700/60 hover:bg-gray-600 text-gray-200 font-bold rounded-lg transition-all border border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Batal
                         </button>

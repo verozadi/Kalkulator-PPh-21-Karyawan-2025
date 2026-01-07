@@ -1,21 +1,23 @@
 
 import * as React from 'react';
 import * as XLSX from 'xlsx';
-import { Employee, Page, MasterEmployee, MaritalStatus, OvertimeRecord, EmployeeData } from '../types';
+import { Employee, Page, MasterEmployee, MaritalStatus, OvertimeRecord, EmployeeData, Profile } from '../types';
 import { getAvailableTaxYears } from '../constants';
+import ConfirmationModal from './ConfirmationModal';
 
 interface EmployeeListProps {
   employees: Employee[];
   masterEmployees: MasterEmployee[];
   overtimeRecords: OvertimeRecord[];
   onEdit: (employee: Employee) => void;
-  onDelete: (employeeId: string) => void;
+  onDelete: (employeeId: string) => Promise<void> | void;
   navigateTo: (page: Page) => void;
   onOpenDetailModal: (employee: Employee) => void;
   onImport: (employees: Omit<EmployeeData, 'id'>[]) => void;
   showNotification: (message: string, type?: 'success' | 'error') => void;
   title?: string;
   addNewPage?: Page;
+  profile: Profile; // ADDED: Prop Profile
 }
 
 const formatCurrency = (value: number) => {
@@ -37,7 +39,7 @@ const SortDescIcon = () => <svg className="h-4 w-4 ml-1 text-gray-200" fill="non
 
 type SortableKey = 'employeeId' | 'name' | 'npwp' | 'period' | 'status' | 'grossIncome' | 'taxUnderOverPayment';
 
-const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees, onEdit, onDelete, navigateTo, onOpenDetailModal, onImport, showNotification, title, addNewPage }) => {
+const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees, onEdit, onDelete, navigateTo, onOpenDetailModal, onImport, showNotification, title, addNewPage, profile }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterYear, setFilterYear] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState('');
@@ -46,6 +48,14 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [sortConfig, setSortConfig] = React.useState<{ key: SortableKey; direction: 'ascending' | 'descending' }>({ key: 'name', direction: 'ascending' });
   
+  // Selection
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  
+  // Modal Delete State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [idsToDelete, setIdsToDelete] = React.useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
   const requestSort = (key: SortableKey) => {
     let direction: 'ascending' | 'descending' = 'ascending';
     if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -55,7 +65,7 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
   };
 
   const handleDownloadTemplate = () => {
-      // Annual Template 
+      // ... (Existing)
       const headers = [
           'ID Karyawan*', 'Tahun*', 'Tanggal A1 (YYYY-MM-DD)*',
           'Jenis Pemotongan (Setahun penuh/Disetahunkan/Kurang dari setahun)',
@@ -87,6 +97,7 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // ... (Existing code) ...
       const file = e.target.files?.[0];
       if (!file) return;
 
@@ -197,9 +208,29 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
     setFilterStatus('');
   };
 
+  // --- DELETE LOGIC ---
   const handleDeleteClick = (employee: Employee) => {
-    if (window.confirm(`Anda yakin ingin menghapus data PPh 21 Tahunan (A1) untuk ${employee.name} Tahun ${employee.periodYear}?`)) {
-        onDelete(employee.id);
+    setIdsToDelete([employee.id]);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleBulkDeleteClick = () => {
+    setIdsToDelete(Array.from(selectedIds));
+    setIsDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    setIsDeleting(true);
+    try {
+        await Promise.all(idsToDelete.map(id => onDelete(id)));
+        showNotification(`${idsToDelete.length} data A1 berhasil dihapus.`, 'success');
+        setSelectedIds(new Set());
+        setIdsToDelete([]);
+        setIsDeleteModalOpen(false);
+    } catch (error) {
+        showNotification('Gagal menghapus beberapa data.', 'error');
+    } finally {
+        setIsDeleting(false);
     }
   };
 
@@ -252,6 +283,26 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
       return allYears;
   }, [employees]);
 
+  // Bulk Selection Logic (added)
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.checked) {
+          const allIds = new Set(filteredAndSortedEmployees.map(emp => emp.id));
+          setSelectedIds(allIds);
+      } else {
+          setSelectedIds(new Set());
+      }
+  };
+
+  const handleSelectRow = (id: string) => {
+      const newSelected = new Set(selectedIds);
+      if (newSelected.has(id)) {
+          newSelected.delete(id);
+      } else {
+          newSelected.add(id);
+      }
+      setSelectedIds(newSelected);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -278,6 +329,25 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
                 </button>
             </div>
         </div>
+
+        {/* Bulk Action Bar */}
+        {selectedIds.size > 0 && (
+            <div className="bg-blue-900/40 border border-blue-700 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-center animate-fade-in gap-4">
+                <div className="text-blue-200 font-medium flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    {selectedIds.size} Data Terpilih
+                </div>
+                <div className="flex gap-3 items-center">
+                    <button 
+                        onClick={handleBulkDeleteClick} 
+                        className="bg-red-600 text-white font-bold py-2 px-4 rounded hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                        <TrashIcon />
+                        Hapus ({selectedIds.size})
+                    </button>
+                </div>
+            </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
@@ -329,6 +399,15 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
             <table className="min-w-full divide-y divide-gray-700">
                 <thead className="bg-gray-700/50">
                     <tr>
+                        {/* Added Checkbox Header */}
+                        <th className="px-4 py-3 w-10 text-center">
+                            <input 
+                                type="checkbox" 
+                                className="w-4 h-4 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500"
+                                onChange={handleSelectAll}
+                                checked={filteredAndSortedEmployees.length > 0 && selectedIds.size === filteredAndSortedEmployees.length}
+                            />
+                        </th>
                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white" onClick={() => requestSort('name')}>
                             <div className="flex items-center space-x-1">
                                 <span>Nama Karyawan</span>
@@ -359,7 +438,16 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
                 <tbody className="bg-gray-800 divide-y divide-gray-700">
                     {filteredAndSortedEmployees.length > 0 ? (
                         filteredAndSortedEmployees.map((employee) => (
-                            <tr key={employee.id} className="hover:bg-gray-700/50 transition-colors">
+                            <tr key={employee.id} className={`hover:bg-gray-700/50 transition-colors ${selectedIds.has(employee.id) ? 'bg-blue-900/20' : ''}`}>
+                                {/* Added Checkbox Row */}
+                                <td className="px-4 py-4 text-center">
+                                    <input 
+                                        type="checkbox" 
+                                        className="w-4 h-4 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500"
+                                        checked={selectedIds.has(employee.id)}
+                                        onChange={() => handleSelectRow(employee.id)}
+                                    />
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="text-sm font-medium text-gray-200">{employee.name}</div>
                                     <div className="text-xs text-gray-400">{employee.npwp}</div>
@@ -386,11 +474,20 @@ const EmployeeList3: React.FC<EmployeeListProps> = ({ employees, masterEmployees
                             </tr>
                         ))
                     ) : (
-                        <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">Tidak ada data.</td></tr>
+                        <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500">Tidak ada data.</td></tr>
                     )}
                 </tbody>
             </table>
         </div>
+
+        <ConfirmationModal 
+            isOpen={isDeleteModalOpen} 
+            onClose={() => setIsDeleteModalOpen(false)} 
+            onConfirm={executeDelete}
+            title="Hapus Data A1"
+            message={`Anda akan menghapus ${idsToDelete.length} data PPh 21 Tahunan (A1). Tindakan ini tidak dapat dibatalkan.`}
+            isLoading={isDeleting}
+        />
     </div>
   );
 };

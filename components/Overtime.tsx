@@ -3,6 +3,7 @@ import * as React from 'react';
 import { MasterEmployee, OvertimeRecord, Page } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { getAvailableTaxYears } from '../constants';
+import ConfirmationModal from './ConfirmationModal';
 
 interface OvertimeProps {
   masterEmployees: MasterEmployee[];
@@ -78,13 +79,13 @@ const calculateDepnakerOvertimePay = (
     return Math.round(overtimePay);
 };
 
-// --- Icons ---
-const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>;
-const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
-const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>;
-const TimeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const RefreshIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
+// --- ELEGANT ACCOUNTING ICONS (Stroke 1.5) ---
+const ClockIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>;
+const CalendarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>;
+const TimeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const RefreshIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>;
 
 // --- Components ---
 
@@ -307,6 +308,12 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
     const [isSearchOpen, setIsSearchOpen] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
 
+    // Bulk Delete & Selection State
+    const [selectedEmployeeIds, setSelectedEmployeeIds] = React.useState<Set<string>>(new Set());
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+    const [idsToDelete, setIdsToDelete] = React.useState<string[]>([]);
+    const [isDeleting, setIsDeleting] = React.useState(false);
+
     // Sync Props to State when filters change
     React.useEffect(() => {
         const filtered = existingRecords.filter(r => r.year === year && r.month === month);
@@ -314,6 +321,7 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
         setDeletedRecordIds(new Set()); 
         const ids = new Set(filtered.map(r => r.masterEmployeeId));
         setVisibleEmployeeIds(ids);
+        setSelectedEmployeeIds(new Set()); // Reset selection on filter change
     }, [year, month, existingRecords]);
 
     const groupedData = React.useMemo(() => {
@@ -367,21 +375,72 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
         setLocalRecords(prev => prev.filter(r => r.id !== recordId));
     };
 
-    const handleRemoveEmployee = (employeeId: string) => {
-        if(confirm("Hapus karyawan ini dari daftar lembur bulan ini?")) {
-            const recordsToDelete = localRecords.filter(r => r.masterEmployeeId === employeeId);
-            setDeletedRecordIds(prev => {
-                const next = new Set(prev);
-                recordsToDelete.forEach(r => next.add(r.id));
-                return next;
-            });
-            setVisibleEmployeeIds(prev => {
-                const next = new Set(prev);
-                next.delete(employeeId);
-                return next;
-            });
-            setLocalRecords(prev => prev.filter(r => r.masterEmployeeId !== employeeId));
+    // New Delete Logic using Modal
+    const handleDeleteClick = (employeeId: string) => {
+        setIdsToDelete([employeeId]);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleBulkDeleteClick = () => {
+        setIdsToDelete(Array.from(selectedEmployeeIds));
+        setIsDeleteModalOpen(true);
+    };
+
+    const executeDelete = async () => {
+        setIsDeleting(true);
+        // Simulate delay for smooth UI or actual async ops
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Logic to remove employees matches previous handleRemoveEmployee but handles array
+        // 1. Identify records to delete from DB
+        const recordsToDelete = localRecords.filter(r => idsToDelete.includes(r.masterEmployeeId));
+        
+        setDeletedRecordIds(prev => {
+            const next = new Set(prev);
+            recordsToDelete.forEach(r => next.add(r.id));
+            return next;
+        });
+
+        // 2. Remove employees from view
+        setVisibleEmployeeIds(prev => {
+            const next = new Set(prev);
+            idsToDelete.forEach(id => next.delete(id));
+            return next;
+        });
+
+        // 3. Remove records from local state
+        setLocalRecords(prev => prev.filter(r => !idsToDelete.includes(r.masterEmployeeId)));
+
+        // Reset Selection
+        setSelectedEmployeeIds(prev => {
+            const next = new Set(prev);
+            idsToDelete.forEach(id => next.delete(id));
+            return next;
+        });
+
+        setIsDeleting(false);
+        setIsDeleteModalOpen(false);
+        setIdsToDelete([]);
+    };
+
+    // Selection Logic
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            const allIds = new Set(activeEmployees.map(emp => emp.id));
+            setSelectedEmployeeIds(allIds);
+        } else {
+            setSelectedEmployeeIds(new Set());
         }
+    };
+
+    const handleSelectEmployee = (id: string) => {
+        const newSelected = new Set(selectedEmployeeIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedEmployeeIds(newSelected);
     };
 
     const handleUpdateRow = (id: string, field: keyof OvertimeRecord, value: any) => {
@@ -484,6 +543,33 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
                 </div>
             </div>
 
+            {/* Bulk Action Bar & Select All */}
+            {activeEmployees.length > 0 && (
+                <div className="flex items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <div className="flex items-center gap-3">
+                        <input 
+                            type="checkbox" 
+                            id="selectAll"
+                            className="w-5 h-5 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500 cursor-pointer"
+                            onChange={handleSelectAll}
+                            checked={activeEmployees.length > 0 && selectedEmployeeIds.size === activeEmployees.length}
+                        />
+                        <label htmlFor="selectAll" className="text-sm font-bold text-gray-300 cursor-pointer select-none">Pilih Semua Karyawan</label>
+                    </div>
+                    {selectedEmployeeIds.size > 0 && (
+                        <div className="flex items-center gap-4 animate-fade-in">
+                            <span className="text-sm text-blue-300 font-medium bg-blue-900/30 px-3 py-1 rounded-md">{selectedEmployeeIds.size} Karyawan Terpilih</span>
+                            <button 
+                                onClick={handleBulkDeleteClick}
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-md text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
+                            >
+                                <TrashIcon /> Hapus Massal
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Main Content Area */}
             <div className="space-y-6">
                 {activeEmployees.length === 0 ? (
@@ -497,15 +583,24 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
                         
                         // Calculate Total for this Employee
                         const totalEmpPay = empRecords.reduce((sum, rec) => sum + rec.totalPay, 0);
+                        const isSelected = selectedEmployeeIds.has(emp.id);
 
                         return (
-                            <div key={emp.id} className="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden animate-fade-in">
+                            <div key={emp.id} className={`bg-gray-800 rounded-xl border shadow-lg overflow-hidden animate-fade-in transition-colors ${isSelected ? 'border-blue-500/50 ring-1 ring-blue-500/30' : 'border-gray-700'}`}>
                                 {/* Employee Header Card */}
-                                <div className="p-5 bg-gray-800 border-b border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
+                                <div className={`p-5 border-b border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4 ${isSelected ? 'bg-blue-900/10' : 'bg-gray-800'}`}>
                                     <div className="flex items-center gap-4 w-full md:w-auto">
-                                        <button onClick={() => handleRemoveEmployee(emp.id)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-900/20 rounded transition-colors" title="Hapus Karyawan">
-                                            <TrashIcon />
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="checkbox" 
+                                                className="w-5 h-5 text-primary-600 bg-gray-700 border-gray-600 rounded focus:ring-primary-500 cursor-pointer"
+                                                checked={isSelected}
+                                                onChange={() => handleSelectEmployee(emp.id)}
+                                            />
+                                            <button onClick={() => handleDeleteClick(emp.id)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-900/20 rounded transition-colors" title="Hapus Karyawan">
+                                                <TrashIcon />
+                                            </button>
+                                        </div>
                                         <div>
                                             <h3 className="text-lg font-bold text-white">{emp.fullName}</h3>
                                             <div className="text-xs text-gray-400 mt-0.5">
@@ -592,6 +687,15 @@ const Overtime: React.FC<OvertimeProps> = ({ masterEmployees, existingRecords, o
                 onClose={() => setIsSearchOpen(false)}
                 masterEmployees={masterEmployees}
                 onSelect={handleAddEmployee}
+            />
+
+            <ConfirmationModal 
+                isOpen={isDeleteModalOpen} 
+                onClose={() => setIsDeleteModalOpen(false)} 
+                onConfirm={executeDelete}
+                title="Hapus Karyawan dari Lembur"
+                message={`Anda akan menghapus ${idsToDelete.length} karyawan dari daftar lembur bulan ini. Semua baris lembur terkait akan dihapus.`}
+                isLoading={isDeleting}
             />
         </div>
     );

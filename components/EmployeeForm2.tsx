@@ -91,7 +91,7 @@ const FormInput = ({ value, onChange, name, readOnly, placeholder, className = "
         onChange={onChange}
         readOnly={readOnly}
         placeholder={placeholder}
-        className={`w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-[#1e293b] text-gray-500 cursor-not-allowed' : ''} ${className}`}
+        className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''} ${className}`}
     />
 );
 
@@ -100,8 +100,8 @@ const FormSelect = ({ value, onChange, name, children, className = "" }: any) =>
         name={name}
         value={value}
         onChange={onChange}
-        className={`w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 appearance-none transition-colors [&>option]:bg-[#1e293b] [&>option]:text-gray-200 ${className}`}
-        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
+        className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 appearance-none transition-colors [&>option]:bg-gray-800 [&>option]:text-gray-200 ${className}`}
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
     >
         {children}
     </select>
@@ -160,17 +160,17 @@ const SearchableTaxObjectSelect: React.FC<{
                 }}
                 onFocus={() => setIsOpen(true)}
                 placeholder="Ketik nama atau kode objek pajak..."
-                className="w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors"
             />
             {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
                     {filteredOptions.length > 0 ? (
                         filteredOptions.map((option) => (
                             <button
                                 key={option.code}
                                 type="button"
                                 onClick={() => handleSelect(option)}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-700/50 last:border-0"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-600 last:border-0"
                             >
                                 <div className="flex justify-between items-center mb-1">
                                      <span className="font-bold text-xs text-primary-400 bg-primary-900/30 px-1.5 py-0.5 rounded">{option.code}</span>
@@ -238,10 +238,10 @@ const SearchableEmployeeSelect: React.FC<{
                 }}
                 onFocus={() => setIsOpen(true)}
                 placeholder="Ketik min. 2 huruf atau pilih..."
-                className="w-full px-3 py-2 bg-[#334155]/50 border border-[#475569] rounded text-gray-100 text-sm focus:outline-none focus:border-primary-500 transition-colors"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors"
             />
             {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-[#1e293b] border border-[#475569] rounded shadow-2xl max-h-60 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-600 rounded shadow-2xl max-h-60 overflow-y-auto">
                     {filteredEmployees.length > 0 ? (
                         filteredEmployees.map(emp => (
                             <button
@@ -251,7 +251,7 @@ const SearchableEmployeeSelect: React.FC<{
                                     onSelect(emp.id);
                                     setIsOpen(false);
                                 }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-700/50 last:border-0"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-primary-600 hover:text-white transition-colors border-b border-gray-600 last:border-0"
                             >
                                 <div className="font-bold">{emp.fullName}</div>
                                 <div className="text-xs opacity-70">{emp.employeeId} - {emp.position}</div>
@@ -279,6 +279,8 @@ const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-w
 const EmployeeForm2: React.FC<EmployeeFormProps> = ({ 
     onSave, existingEmployee, onCancel, profile, masterEmployees, showNotification, fixedType, employees = [] 
 }) => {
+    
+    // ... [State and Effects remain unchanged, only render updates] ...
     
     const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>({
         masterEmployeeId: '',
@@ -568,7 +570,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                     <button 
                         type="button"
                         onClick={handleFetchPreviousData}
-                        className="flex items-center space-x-2 px-4 py-2 bg-[#334155]/60 hover:bg-[#475569] text-gray-300 text-sm font-medium rounded border border-[#475569] transition-colors"
+                        className="flex items-center space-x-2 px-4 py-2 bg-gray-700/60 hover:bg-gray-600 text-gray-300 text-sm font-medium rounded border border-gray-600 transition-colors"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
                         <span>Ambil Data Bulan Sebelumnya</span>
@@ -577,7 +579,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
             </div>
 
             {/* Identitas Card */}
-            <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-6 mb-8 shadow-md">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-8 shadow-md">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div>
                         <FormLabel required>Masa Pajak</FormLabel>
@@ -638,13 +640,13 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                 
                 {/* Left Column: Earnings & Deductions */}
                 <div className="lg:col-span-3 space-y-8">
-                    <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-sm">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 shadow-sm">
                         <FormSectionHeader>Rincian Penghasilan</FormSectionHeader>
                         
                         {/* Penghasilan Pokok */}
                         <div className="mb-10">
                             <FormSubHeader>Penghasilan Pokok / Imbalan</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <FormLabel>Gaji Pokok / Imbalan Utama</FormLabel>
                                 <FormInput name="baseSalary" value={formatNumberForDisplay(formData.baseSalary)} onChange={handleChange} />
                             </div>
@@ -653,7 +655,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                         {/* Tunjangan Tetap */}
                         <div className="mb-10">
                             <FormSubHeader>Tunjangan Tetap</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-4">
                                     <div>
                                         <FormLabel>Tunjangan Jabatan</FormLabel>
@@ -705,7 +707,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                         {/* Tunjangan Tidak Tetap */}
                         <div className="mb-10">
                             <FormSubHeader>Tunjangan Tidak Tetap / Insidentil</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                     <div>
                                         <FormLabel>Tunjangan Makan</FormLabel>
@@ -766,7 +768,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                         {/* Pengurangan Pajak */}
                         <div className="mb-10">
                             <FormSubHeader>Komponen Pengurangan Penghasilan</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                                     <div>
                                         <FormLabel info="Otomatis max 500rb/bulan jika berlaku">Biaya Jabatan (5%)</FormLabel>
@@ -797,7 +799,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                         {/* Potongan Non-Pajak */}
                         <div className="mb-6">
                             <FormSubHeader>Potongan Lain / Non-Pajak (Take Home Pay)</FormSubHeader>
-                            <div className="bg-[#0f172a]/30 p-5 rounded border border-[#334155]">
+                            <div className="bg-gray-900/50 p-5 rounded border border-gray-700">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mb-4">
                                     <div>
                                         <FormLabel>BPJS Kesehatan (1%)</FormLabel>
@@ -850,7 +852,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                         </div>
 
                         {/* Left Bottom Neto Box */}
-                        <div className="mt-8 bg-[#0f172a] border border-[#334155] rounded-lg p-5">
+                        <div className="mt-8 bg-gray-900 border border-gray-700 rounded-lg p-5">
                             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Penghasilan Bruto (Dasar Pajak Non-Final)</p>
                             <p className="text-3xl font-bold text-gray-100">{formatNumberForDisplay(totalPenghasilanBruto)}</p>
                         </div>
@@ -859,7 +861,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
 
                 {/* Right Column: Tax Summary */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-[#1e293b] border border-[#334155] rounded-lg p-8 shadow-lg">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 shadow-lg">
                         <FormSectionHeader>Perhitungan Pajak Non-Final</FormSectionHeader>
                         
                         <div className="space-y-6">
@@ -898,24 +900,24 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
 
                             <div>
                                 <FormLabel>Kode Objek Pajak</FormLabel>
-                                <div className="bg-[#1e293b] border border-[#475569] rounded px-3 py-2 text-gray-500 text-sm cursor-not-allowed">
+                                <div className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-gray-500 text-sm cursor-not-allowed">
                                     {formData.taxObjectCode || '21-100-35'}
                                 </div>
                             </div>
                             
                             {/* Updated Gross Income UI */}
-                            <div className="bg-[#0f172a] border border-[#334155] rounded-lg p-5">
+                            <div className="bg-gray-900 border border-gray-700 rounded-lg p-5">
                                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Penghasilan Bruto Bulan Ini</p>
                                 <p className="text-3xl font-bold text-gray-100">{formatNumberForDisplay(totalPenghasilanBruto)}</p>
                             </div>
 
                             <div>
                                 <FormLabel info="Tarif TER diterapkan pada Penghasilan Bruto untuk Bukan Pegawai (sesuai PP 58/2023)">Tarif TER</FormLabel>
-                                <div className="bg-[#334155]/40 border border-[#475569] rounded px-3 py-2 text-gray-100 text-sm font-bold">{`${(terRate * 100).toFixed(2)}%`}</div>
+                                <div className="bg-gray-700/40 border border-gray-600 rounded px-3 py-2 text-gray-100 text-sm font-bold">{`${(terRate * 100).toFixed(2)}%`}</div>
                             </div>
 
                             {/* Large PPh Display */}
-                            <div className="bg-[#0f172a] border border-[#334155] rounded-lg p-6">
+                            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6">
                                 <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">PPh Pasal 21 Terutang</p>
                                 <p className="text-5xl font-black text-gray-100">{formatNumberForDisplay(pph21Est)}</p>
                             </div>
@@ -926,7 +928,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                                 <p className="text-4xl font-black text-white">{formatNumberForDisplay(takeHomePay)}</p>
                             </div>
 
-                            <div className="pt-4 space-y-4 border-t border-[#334155]">
+                            <div className="pt-4 space-y-4 border-t border-gray-700">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <FormLabel>KAP-KJS</FormLabel>
@@ -954,7 +956,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                             type="button" 
                             onClick={onCancel}
                             disabled={isSaving}
-                            className="px-8 py-3 bg-[#334155]/60 hover:bg-[#475569] text-gray-200 font-bold rounded-lg transition-all border border-[#475569] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-8 py-3 bg-gray-700/60 hover:bg-gray-600 text-gray-200 font-bold rounded-lg transition-all border border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Batal
                         </button>
