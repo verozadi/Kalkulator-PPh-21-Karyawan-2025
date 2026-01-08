@@ -20,7 +20,7 @@ interface EmployeeFormProps {
 const MONTHLY_TAX_OBJECTS = [
     { code: '21-100-01', name: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap' },
     { code: '21-100-02', name: 'Penghasilan yang Diterima atau Diperoleh Pensiun Secara Teratur' },
-    { code: '21-100-03', name: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap yang Menerima Fasilitas di Daerah Tertentu' },
+    { code: '21-100-32', name: 'Penghasilan yang Diterima atau Diperoleh Pegawai Tetap yang Menerima Fasilitas di Daerah Tertentu' },
 ];
 
 const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -54,13 +54,13 @@ const FormLabel: React.FC<{ children: React.ReactNode, required?: boolean, info?
 // Updated to use semantic Tailwind classes for theming support
 const FormInput = ({ value, onChange, name, readOnly, placeholder, className = "" }: any) => (
     <input
-        type="text"
         name={name}
         value={value}
         onChange={onChange}
         readOnly={readOnly}
         placeholder={placeholder}
         className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''} ${className}`}
+        type={name === 'tanggalPemotongan' ? 'date' : 'text'}
     />
 );
 
@@ -209,6 +209,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
         signerIdentity: 'NPWP',
         pph21PaidPreviously: 0,
         periodType: 'fullYear',
+        tanggalPemotongan: new Date().toISOString().split('T')[0],
     });
 
     const [isSaving, setIsSaving] = React.useState(false);
@@ -216,6 +217,9 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
     React.useEffect(() => {
         if (existingEmployee) {
             const { id, ...data } = existingEmployee;
+            if (!data.tanggalPemotongan) {
+                data.tanggalPemotongan = new Date().toISOString().split('T')[0];
+            }
             setFormData(data);
         }
     }, [existingEmployee]);
@@ -539,7 +543,7 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
 
             {/* Identitas Card */}
             <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-8 shadow-md">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     <div>
                         <FormLabel required>Masa Pajak</FormLabel>
                         <FormSelect name="periodMonth" value={formData.periodMonth} onChange={handleChange}>
@@ -555,6 +559,10 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
                         <FormSelect name="periodYear" value={formData.periodYear} onChange={handleChange}>
                             {getAvailableTaxYears().map(y => <option key={y} value={y}>{y}</option>)}
                         </FormSelect>
+                    </div>
+                    <div>
+                        <FormLabel required>Tanggal Pemotongan</FormLabel>
+                        <FormInput name="tanggalPemotongan" value={formData.tanggalPemotongan} onChange={handleChange} />
                     </div>
                     <div>
                         <SearchableEmployeeSelect 

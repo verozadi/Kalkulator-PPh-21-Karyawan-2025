@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Employee, EmployeeData, MasterEmployee, Profile, MaritalStatus, CalculationType } from '../types';
@@ -61,7 +60,7 @@ const FormInput = ({ value, onChange, name, readOnly, placeholder, className = "
         onChange={onChange}
         readOnly={readOnly}
         placeholder={placeholder}
-        className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-gray-800 text-gray-400 cursor-not-allowed border-transparent' : ''} ${className}`}
+        className={`w-full px-3 py-2 rounded text-sm focus:outline-none focus:border-primary-500 transition-colors border ${readOnly ? 'bg-gray-900 border-gray-800 text-gray-500 cursor-not-allowed' : 'bg-gray-700 border-gray-600 text-gray-200'} ${className}`}
     />
 );
 
@@ -71,7 +70,7 @@ const FormSelect = ({ value, onChange, name, children, className = "", disabled 
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 appearance-none transition-colors [&>option]:bg-gray-800 [&>option]:text-gray-200 ${disabled ? 'opacity-60 cursor-not-allowed bg-gray-800' : ''} ${className}`}
+        className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 appearance-none transition-colors [&>option]:bg-gray-800 [&>option]:text-gray-200 ${disabled ? 'opacity-60 cursor-not-allowed bg-gray-900 border-gray-800 text-gray-500' : ''} ${className}`}
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem' }}
     >
         {children}
@@ -176,6 +175,18 @@ const AutoCalcButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 );
 
 const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+
+// Matching Sidebar: CalculatorIcon
+const CalculatorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-primary-400"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+
+const ReadOnlyBox: React.FC<{ label: string, value: string | number, className?: string }> = ({ label, value, className = "" }) => (
+    <div className={`flex flex-col ${className}`}>
+        <FormLabel>{label}</FormLabel>
+        <div className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded text-gray-400 text-sm font-medium overflow-hidden text-ellipsis whitespace-nowrap">
+            {value}
+        </div>
+    </div>
+);
 
 const EmployeeForm3: React.FC<EmployeeFormProps> = ({ 
     onSave, existingEmployee, onCancel, profile, masterEmployees, showNotification, fixedType, employees = []
@@ -568,7 +579,10 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
         <div className="max-w-[1400px] mx-auto pb-10 animate-fade-in-up">
             <div className="mb-6 flex flex-col md:flex-row justify-between items-start gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-100">PPh 21 Tahunan 1721-A1</h1>
+                    <div className="flex items-center space-x-2">
+                        <CalculatorIcon />
+                        <h1 className="text-2xl font-bold text-gray-100">PPh 21 Tahunan 1721-A1</h1>
+                    </div>
                     <p className="text-sm text-gray-400">Pemotongan Pajak Penghasilan Pasal 21 Tahunan (Final Year).</p>
                 </div>
                 <button 
@@ -583,24 +597,12 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
                 
-                {/* --- KOTAK ATAS: Identitas --- */}
+                {/* --- KOTAK ATAS: Identitas (Updated Layout) --- */}
                 <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 shadow-md">
                     <FormSectionHeader>Identitas Penerima Penghasilan</FormSectionHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-4">
-                        <div className="md:col-span-4">
-                            <FormLabel>NPWP / NIK</FormLabel>
-                            <FormInput value={formData.npwp} readOnly className="!bg-gray-900/50 border-none" />
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-6 gap-y-4">
                         <div className="md:col-span-8">
                             <SearchableEmployeeSelect masterEmployees={masterEmployees} value={formData.masterEmployeeId} onSelect={handleEmployeeSelect} />
-                        </div>
-                        <div className="md:col-span-12">
-                            <FormLabel>Alamat</FormLabel>
-                            <FormInput value={formData.address} readOnly className="!bg-gray-900/50 border-none" />
-                        </div>
-                        <div className="md:col-span-4">
-                            <FormLabel>Jenis Kelamin</FormLabel>
-                            <FormInput value={formData.gender || '-'} readOnly className="!bg-gray-900/50 border-none" />
                         </div>
                         <div className="md:col-span-4">
                             <FormLabel>Gross Up</FormLabel>
@@ -609,20 +611,23 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                 <option value="true">Ya</option>
                             </FormSelect>
                         </div>
+
+                        {/* Read-Only Identity Fields in Boxes */}
                         <div className="md:col-span-4">
-                            <FormLabel>Kode PTKP</FormLabel>
-                            <div className="flex items-center space-x-2">
-                                <span className="bg-gray-700 px-2 py-2 rounded text-sm text-white font-bold w-16 text-center border border-gray-600">{formData.status}</span>
-                                <span className="text-gray-400 text-xs truncate">{formatCurrency(PTKP_RATES[formData.status])}</span>
-                            </div>
+                            <ReadOnlyBox label="NPWP / NIK" value={formData.npwp || '-'} />
+                        </div>
+                        <div className="md:col-span-4">
+                            <ReadOnlyBox label="Status PTKP" value={formData.status ? `${formData.status} - ${formatCurrency(PTKP_RATES[formData.status])}` : '-'} />
+                        </div>
+                        <div className="md:col-span-4">
+                            <ReadOnlyBox label="Jenis Kelamin" value={formData.gender || '-'} />
+                        </div>
+
+                        <div className="md:col-span-6">
+                            <ReadOnlyBox label="Jabatan" value={formData.position || '-'} />
                         </div>
                         <div className="md:col-span-6">
-                            <FormLabel>Jabatan</FormLabel>
-                            <FormInput value={formData.position || '-'} readOnly className="!bg-gray-900/50 border-none" />
-                        </div>
-                        <div className="md:col-span-6">
-                            <FormLabel>Status Pegawai Asing</FormLabel>
-                            <FormInput value={formData.isForeigner ? 'Ya' : 'Tidak'} readOnly className="!bg-gray-900/50 border-none" />
+                            <ReadOnlyBox label="Alamat" value={formData.address || '-'} />
                         </div>
                     </div>
                 </div>
@@ -657,7 +662,7 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <FormLabel required>Tanggal</FormLabel>
+                                    <FormLabel required>Tanggal Pemotongan</FormLabel>
                                     <FormInput type="date" name="tanggalPemotongan" value={formData.tanggalPemotongan} onChange={handleChange} />
                                 </div>
                                 <div>
@@ -769,10 +774,13 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                         <AutoCalcButton onClick={() => calculateFromMonthly('bonus')} />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-12 items-center gap-2 bg-gray-900/30 p-2 rounded">
-                                    <div className="col-span-1 text-xs text-gray-500 font-bold">08.</div>
-                                    <div className="col-span-4"><FormLabel>Jumlah Penghasilan Bruto (01 s.d 07)</FormLabel></div>
-                                    <div className="col-span-7"><FormInput value={formatNumberForDisplay(calc.totalBruto)} readOnly className="!bg-transparent font-bold text-gray-100 border-none" /></div>
+                                {/* Highlights Item 08 */}
+                                <div className="grid grid-cols-12 items-center gap-2 bg-gray-900 border border-gray-600 p-3 rounded mt-2">
+                                    <div className="col-span-1 text-sm text-gray-300 font-bold">08.</div>
+                                    <div className="col-span-4 text-sm font-bold text-white uppercase">Jumlah Penghasilan Bruto (01 s.d 07)</div>
+                                    <div className="col-span-7 text-right">
+                                        <div className="text-xl font-bold text-white">{formatCurrency(calc.totalBruto)}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -802,10 +810,13 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                         <AutoCalcButton onClick={() => calculateFromMonthly('zakat')} />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-12 items-center gap-2 bg-gray-900/30 p-2 rounded">
-                                    <div className="col-span-1 text-xs text-gray-500 font-bold">12.</div>
-                                    <div className="col-span-4"><FormLabel>Jumlah Pengurangan (09 s.d 11)</FormLabel></div>
-                                    <div className="col-span-7"><FormInput value={formatNumberForDisplay(calc.totalPengurangan)} readOnly className="!bg-transparent font-bold text-gray-100 border-none" /></div>
+                                {/* Highlight Item 12 */}
+                                <div className="grid grid-cols-12 items-center gap-2 bg-gray-900 border border-gray-600 p-3 rounded mt-2">
+                                    <div className="col-span-1 text-sm text-gray-300 font-bold">12.</div>
+                                    <div className="col-span-4 text-sm font-bold text-white uppercase">Jumlah Pengurangan (09 s.d 11)</div>
+                                    <div className="col-span-7 text-right">
+                                        <div className="text-xl font-bold text-white">{formatCurrency(calc.totalPengurangan)}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -888,16 +899,18 @@ const EmployeeForm3: React.FC<EmployeeFormProps> = ({
                                         />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-12 items-center gap-2 bg-primary-900/30 p-2 rounded border border-primary-800">
-                                    <div className="col-span-1 text-xs text-white font-bold">23.</div>
-                                    <div className="col-span-4"><FormLabel>PPh 21 Kurang (Lebih) Bayar</FormLabel></div>
+                                
+                                {/* Highlight Item 23 (The Big Total) */}
+                                <div className="grid grid-cols-12 items-center gap-2 bg-gray-900 border-2 border-yellow-600 p-4 rounded-lg mt-4 shadow-lg shadow-black/40">
+                                    <div className="col-span-1 text-lg text-white font-black">23.</div>
+                                    <div className="col-span-4 text-base font-bold text-yellow-400 uppercase tracking-wide">PPh 21 Kurang (Lebih) Bayar</div>
                                     <div className="col-span-7">
                                         <FormInput 
                                             name="manualPph21KurangBayar"
                                             value={formatNumberForDisplay(isFasilitasLainnya ? (formData.manualPph21KurangBayar || calc.pph21KurangBayar) : calc.pph21KurangBayar)} 
                                             onChange={handleChange}
                                             readOnly={!isFasilitasLainnya}
-                                            className={!isFasilitasLainnya ? "!bg-transparent font-black text-xl text-white border-none" : "border-yellow-500 font-black text-xl"}
+                                            className={!isFasilitasLainnya ? "!bg-transparent font-black text-5xl md:text-6xl text-white text-right border-none p-0 focus:ring-0" : "border-yellow-500 font-black text-2xl text-right bg-yellow-900/20 text-yellow-200"}
                                         />
                                     </div>
                                 </div>

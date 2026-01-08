@@ -110,7 +110,7 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
 
           const rate = getTerRate(emp.status, emp.grossIncome) * 100;
           const idPlace = (profile.idTku || (companyTin + '000000')).replace(/\D/g, '');
-          const withholdingDate = formatDateForXML(new Date(selectedYear, selectedMonth, 0).toISOString());
+          const withholdingDate = formatDateForXML(emp.tanggalPemotongan || new Date(selectedYear, selectedMonth, 0).toISOString());
 
           return `
     <MmPayroll>
@@ -161,7 +161,7 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
       const data = filtered.map((emp, index) => {
           const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
           const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
-          const withholdingDate = formatDateForExcel(new Date(selectedYear, selectedMonth, 0).toISOString());
+          const withholdingDate = formatDateForExcel(emp.tanggalPemotongan || new Date(selectedYear, selectedMonth, 0).toISOString());
           
           let fasilitas = emp.taxFacility;
           if (fasilitas === 'Surat Keterangan Bebas (SKB) Pemotongan PPh Pasal 21') fasilitas = 'Fasilitas Lainnya'; 
@@ -228,7 +228,7 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
           if (emp.taxObjectCode === '21-100-07') deemed = 50; 
 
           const idPlace = (profile.idTku || (companyTin + '000000')).replace(/\D/g, '');
-          const withholdingDate = formatDateForXML(new Date(selectedYear, selectedMonth, 0).toISOString());
+          const withholdingDate = formatDateForXML(emp.tanggalPemotongan || new Date(selectedYear, selectedMonth, 0).toISOString());
 
           return `
         <Bp21>
@@ -281,7 +281,7 @@ const Reports: React.FC<ReportsProps> = ({ employees, masterEmployees, profile, 
       const data = filtered.map((emp, index) => {
           const master = masterEmployees.find(m => m.id === emp.masterEmployeeId);
           const tin = (master?.npwp || emp.npwp || '').replace(/\D/g, '');
-          const withholdingDate = formatDateForExcel(new Date(selectedYear, selectedMonth, 0).toISOString());
+          const withholdingDate = formatDateForExcel(emp.tanggalPemotongan || new Date(selectedYear, selectedMonth, 0).toISOString());
 
           return [
               index + 1,

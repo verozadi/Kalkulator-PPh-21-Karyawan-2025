@@ -85,13 +85,13 @@ const FormLabel: React.FC<{ children: React.ReactNode, required?: boolean, info?
 
 const FormInput = ({ value, onChange, name, readOnly, placeholder, className = "" }: any) => (
     <input
-        type="text"
         name={name}
         value={value}
         onChange={onChange}
         readOnly={readOnly}
         placeholder={placeholder}
         className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''} ${className}`}
+        type={name === 'tanggalPemotongan' ? 'date' : 'text'}
     />
 );
 
@@ -280,8 +280,6 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
     onSave, existingEmployee, onCancel, profile, masterEmployees, showNotification, fixedType, employees = [] 
 }) => {
     
-    // ... [State and Effects remain unchanged, only render updates] ...
-    
     const [formData, setFormData] = React.useState<Omit<EmployeeData, 'id'>>({
         masterEmployeeId: '',
         calculationType: fixedType || 'nonFinal',
@@ -321,6 +319,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         signerIdentity: 'NPWP',
         pph21PaidPreviously: 0,
         periodType: 'fullYear',
+        tanggalPemotongan: new Date().toISOString().split('T')[0],
     });
 
     const [isSaving, setIsSaving] = React.useState(false);
@@ -328,10 +327,15 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
     React.useEffect(() => {
         if (existingEmployee) {
             const { id, ...data } = existingEmployee;
+            if (!data.tanggalPemotongan) {
+                data.tanggalPemotongan = new Date().toISOString().split('T')[0];
+            }
             setFormData(data);
         }
     }, [existingEmployee]);
 
+    // ... [Other Effects and Logic remain unchanged] ...
+    
     React.useEffect(() => {
         const {
             baseSalary, tunjanganJabatan, tunjanganTelekomunikasi,
@@ -506,6 +510,8 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         }
     };
 
+    // ... [Calculations handlers unchanged] ...
+    
     const handleAutoCalculate = (type: 'jht' | 'jp' | 'bpjs') => {
         const baseForBpjs = formData.baseSalary + formData.tunjanganJabatan + formData.tunjanganTelekomunikasi + (formData.customFixedAllowances || []).reduce((s, i) => s + i.value, 0);
         let val = 0;
@@ -580,7 +586,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
 
             {/* Identitas Card */}
             <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-8 shadow-md">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     <div>
                         <FormLabel required>Masa Pajak</FormLabel>
                         <FormSelect name="periodMonth" value={formData.periodMonth} onChange={handleChange}>
@@ -594,6 +600,10 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                         <FormSelect name="periodYear" value={formData.periodYear} onChange={handleChange}>
                             {getAvailableTaxYears().map(y => <option key={y} value={y}>{y}</option>)}
                         </FormSelect>
+                    </div>
+                    <div>
+                        <FormLabel required>Tanggal Pemotongan</FormLabel>
+                        <FormInput name="tanggalPemotongan" value={formData.tanggalPemotongan} onChange={handleChange} />
                     </div>
                     <div>
                         <SearchableEmployeeSelect 
@@ -640,6 +650,7 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                 
                 {/* Left Column: Earnings & Deductions */}
                 <div className="lg:col-span-3 space-y-8">
+                    {/* ... (Same as monthly layout) ... */}
                     <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 shadow-sm">
                         <FormSectionHeader>Rincian Penghasilan</FormSectionHeader>
                         

@@ -365,24 +365,31 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
             }));
             setCountrySearch('');
         } else {
-            setFormData(prev => ({ ...prev, [name]: processedValue }));
+            setFormData(prev => {
+                const newData = { ...prev, [name]: processedValue };
+                // Sync KTP with NPWP (NIK/NPWP16) to ensure both fields have data
+                if (name === 'npwp') {
+                    newData.ktp = processedValue as string;
+                }
+                return newData;
+            });
         }
     };
 
-    const handleValidation = async (type: 'npwp' | 'ktp') => {
-        setIsValidating(type);
+    const handleValidation = async () => {
+        // Use 'npwp' as the primary field for NIK/NPWP16 validation
+        setIsValidating('npwp');
         setValidationMessage(null);
-        const idToValidate = formData[type];
+        const idToValidate = formData.npwp;
     
         if (!idToValidate) {
-            setValidationMessage({ type: 'error', text: `Harap isi No. ${type.toUpperCase()} terlebih dahulu.` });
+            setValidationMessage({ type: 'error', text: `Harap isi NIK/NPWP16 terlebih dahulu.` });
             setIsValidating(null);
             return;
         }
     
-        // In a real app, 'ktp' would be 'nik' for the API call
-        const apiType = type === 'ktp' ? 'nik' : 'npwp';
-        const response = await validateTaxId(idToValidate, apiType);
+        // We use 'npwp' validation type as it relates to tax identity primarily
+        const response = await validateTaxId(idToValidate, 'npwp');
     
         if (response.success && response.data) {
             setFormData(prev => ({
@@ -461,21 +468,13 @@ const MasterEmployeeFormModal: React.FC<MasterEmployeeFormModalProps> = ({ isOpe
                         </div>
                         <hr className="border-gray-700 my-4" />
                         
+                        {/* Modified ID Section: Removed KTP input, updated NPWP to NIK/NPWP16 */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                            <div>
-                                <label htmlFor="ktp" className="block text-sm font-medium text-gray-300 mb-1">No. KTP<span className="text-red-400">*</span></label>
+                            <div className="md:col-span-2">
+                                <label htmlFor="npwp" className="block text-sm font-medium text-gray-300 mb-1">NIK/NPWP16</label>
                                 <div className="flex items-center space-x-2">
-                                    <input type="text" id="ktp" name="ktp" value={formData.ktp} onChange={handleChange} required className="flex-grow w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200" />
-                                    <button type="button" onClick={() => handleValidation('ktp')} disabled={isValidating === 'ktp'} className="px-3 py-2 text-sm font-semibold text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-gray-500 disabled:cursor-wait flex items-center min-w-[90px] justify-center">
-                                        {isValidating === 'ktp' ? <SpinnerIcon/> : 'Validasi'}
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <label htmlFor="npwp" className="block text-sm font-medium text-gray-300 mb-1">No. NPWP (16 Digit)</label>
-                                <div className="flex items-center space-x-2">
-                                    <input type="text" id="npwp" name="npwp" value={formData.npwp} onChange={handleChange} className="flex-grow w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200" />
-                                    <button type="button" onClick={() => handleValidation('npwp')} disabled={isValidating === 'npwp'} className="px-3 py-2 text-sm font-semibold text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-gray-500 disabled:cursor-wait flex items-center min-w-[90px] justify-center">
+                                    <input type="text" id="npwp" name="npwp" value={formData.npwp} onChange={handleChange} placeholder="Masukkan 16 digit NIK atau NPWP" className="flex-grow w-full px-3 py-2 border border-gray-600 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 bg-gray-700 text-gray-200" />
+                                    <button type="button" onClick={handleValidation} disabled={isValidating === 'npwp'} className="px-3 py-2 text-sm font-semibold text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-gray-500 disabled:cursor-wait flex items-center min-w-[90px] justify-center">
                                          {isValidating === 'npwp' ? <SpinnerIcon/> : 'Validasi'}
                                     </button>
                                 </div>
