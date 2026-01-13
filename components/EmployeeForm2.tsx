@@ -55,6 +55,20 @@ const NON_FINAL_TAX_OBJECTS = [
     { code: '21-402-04', name: 'Honor atau Imbalan Lain yang Dibebankan kepada APBN atau APBD yang Diterima oleh PNS Golongan I dan Golongan II, Anggota TNI dan Anggota POLRI Golongan Pangkat Tamtama dan Bintara, dan Pensiunannya' },
 ];
 
+const REFERENCE_DOC_TYPES = [
+    'Pengumuman',
+    'Faktur pembelian',
+    'Kontrak',
+    'Nomor account',
+    'Akta perjanjian',
+    'Akta RUPS',
+    'Lainnya',
+    'Bukti bayar',
+    'Surat pernyataan',
+    'Faktur Pajak',
+    'Konfirmasi transaksi'
+];
+
 const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 const formatNumberForDisplay = (num: number): string => {
@@ -91,7 +105,7 @@ const FormInput = ({ value, onChange, name, readOnly, placeholder, className = "
         readOnly={readOnly}
         placeholder={placeholder}
         className={`w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200 text-sm focus:outline-none focus:border-primary-500 transition-colors ${readOnly ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : ''} ${className}`}
-        type={name === 'tanggalPemotongan' ? 'date' : 'text'}
+        type={name === 'tanggalPemotongan' || name === 'referenceDocumentDate' ? 'date' : 'text'}
     />
 );
 
@@ -320,6 +334,10 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
         pph21PaidPreviously: 0,
         periodType: 'fullYear',
         tanggalPemotongan: new Date().toISOString().split('T')[0],
+        // Reference Documents Default Empty
+        referenceDocumentType: '',
+        referenceDocumentNumber: '',
+        referenceDocumentDate: '',
     });
 
     const [isSaving, setIsSaving] = React.useState(false);
@@ -330,6 +348,8 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
             if (!data.tanggalPemotongan) {
                 data.tanggalPemotongan = new Date().toISOString().split('T')[0];
             }
+            if (!data.referenceDocumentType) data.referenceDocumentType = '';
+            if (!data.referenceDocumentDate) data.referenceDocumentDate = '';
             setFormData(data);
         }
     }, [existingEmployee]);
@@ -896,6 +916,28 @@ const EmployeeForm2: React.FC<EmployeeFormProps> = ({
                                     />
                                 </div>
                             )}
+
+                            {/* Dokumen Referensi Section */}
+                            <div className="pt-4 mt-4 border-t border-gray-700">
+                                <FormLabel>Dokumen Referensi</FormLabel>
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                        <label className="block text-[10px] text-gray-400 mb-1">Jenis Dokumen</label>
+                                        <FormSelect name="referenceDocumentType" value={formData.referenceDocumentType} onChange={handleChange}>
+                                            <option value="">-- Pilih --</option>
+                                            {REFERENCE_DOC_TYPES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </FormSelect>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-gray-400 mb-1">Nomor Dokumen</label>
+                                        <FormInput name="referenceDocumentNumber" value={formData.referenceDocumentNumber} onChange={handleChange} placeholder="No. Dokumen..." />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] text-gray-400 mb-1">Tanggal Dokumen</label>
+                                    <FormInput type="date" name="referenceDocumentDate" value={formData.referenceDocumentDate} onChange={handleChange} />
+                                </div>
+                            </div>
 
                             <SearchableTaxObjectSelect 
                                 options={NON_FINAL_TAX_OBJECTS} 

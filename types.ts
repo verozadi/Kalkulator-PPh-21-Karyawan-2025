@@ -145,6 +145,11 @@ export interface EmployeeData {
   manualPph21KurangBayar?: number; // 23
   manualPph21Dtp?: number; // 22. PPh 21 DTP Manual Override
 
+  // Reference Document Fields (Non-Final)
+  referenceDocumentType?: string;
+  referenceDocumentNumber?: string;
+  referenceDocumentDate?: string;
+
   // Deprecated fields, kept for potential data migration but not used in new forms
   dependents?: number;
   fixedAllowance?: number;
