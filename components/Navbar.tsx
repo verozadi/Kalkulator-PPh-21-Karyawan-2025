@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { Profile, User } from '../types';
+import { Profile, User, AppNotification } from '../types';
 
 interface NavbarProps {
     profile: Profile;
@@ -10,16 +10,23 @@ interface NavbarProps {
     onLogout: () => void;
     isLicenseActivated: boolean;
     onOpenActivation: () => void;
+    notifications?: AppNotification[];
+    onClearNotifications?: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ profile, user, onOpenProfileModal, onToggleSidebar, onLogout, isLicenseActivated, onOpenActivation }) => {
+const Navbar: React.FC<NavbarProps> = ({ profile, user, onOpenProfileModal, onToggleSidebar, onLogout, isLicenseActivated, onOpenActivation, notifications = [], onClearNotifications }) => {
   const [isDropdownOpen, setDropdownOpen] = React.useState(false);
+  const [isNotifOpen, setIsNotifOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const notifRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -31,6 +38,15 @@ const Navbar: React.FC<NavbarProps> = ({ profile, user, onOpenProfileModal, onTo
   // Display logic: Use authenticated user data if available, fallback to profile contact
   const displayName = user?.name || profile.contactName || 'Guest User';
   const displayEmail = user?.email || '';
+
+  const formatTime = (date: Date) => {
+      return new Intl.DateTimeFormat('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          day: '2-digit',
+          month: 'short'
+      }).format(new Date(date));
+  };
 
   return (
     <>
@@ -87,10 +103,50 @@ const Navbar: React.FC<NavbarProps> = ({ profile, user, onOpenProfileModal, onTo
                 )}
 
                 {/* Notification Bell */}
-                <button className="p-2 rounded-full text-gray-400 hover:bg-gray-800 hover:text-white transition-colors relative" title="Notifikasi">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                    <span className="absolute top-2 right-2.5 h-2 w-2 bg-red-500 rounded-full border border-gray-900 shadow-sm"></span>
-                </button>
+                <div className="relative" ref={notifRef}>
+                    <button 
+                        onClick={() => setIsNotifOpen(!isNotifOpen)}
+                        className="p-2 rounded-full text-gray-400 hover:bg-gray-800 hover:text-white transition-colors relative" 
+                        title="Notifikasi"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        {notifications.length > 0 && (
+                            <span className="absolute top-2 right-2.5 h-2 w-2 bg-red-500 rounded-full border border-gray-900 shadow-sm animate-pulse"></span>
+                        )}
+                    </button>
+
+                    {isNotifOpen && (
+                        <div className="absolute right-0 mt-2 w-80 bg-gray-800 rounded-lg shadow-xl border border-gray-700 animate-fade-in-up origin-top-right ring-1 ring-black ring-opacity-5 z-50 overflow-hidden">
+                            <div className="px-4 py-3 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+                                <h3 className="text-sm font-bold text-gray-200">Notifikasi</h3>
+                                {notifications.length > 0 && onClearNotifications && (
+                                    <button onClick={onClearNotifications} className="text-xs text-primary-400 hover:text-primary-300">
+                                        Hapus Semua
+                                    </button>
+                                )}
+                            </div>
+                            <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                                {notifications.length > 0 ? (
+                                    notifications.map((notif) => (
+                                        <div key={notif.id} className="px-4 py-3 border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors last:border-0">
+                                            <div className="flex items-start gap-3">
+                                                <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${notif.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                                                <div className="flex-1">
+                                                    <p className="text-sm text-gray-300 leading-snug">{notif.message}</p>
+                                                    <p className="text-[10px] text-gray-500 mt-1">{formatTime(notif.timestamp)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                                        Tidak ada notifikasi baru.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* User Profile Dropdown */}
                 <div className="relative" ref={dropdownRef}>

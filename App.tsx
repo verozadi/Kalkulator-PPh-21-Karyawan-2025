@@ -31,7 +31,7 @@ import LicenseActivation from './components/LicenseActivation';
 import Navbar from './components/Navbar'; // Import Navbar directly here to control props
 
 // Type Imports
-import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User, AppTheme } from './types';
+import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User, AppTheme, AppNotification } from './types';
 
 // Service Imports
 import { calculatePPh21 } from './services/taxCalculator';
@@ -151,6 +151,7 @@ const App: React.FC = () => {
     const [editingMasterEmployee, setEditingMasterEmployee] = React.useState<MasterEmployee | null>(null);
     const [detailEmployee, setDetailEmployee] = React.useState<Employee | null>(null);
     const [detailMasterEmployee, setDetailMasterEmployee] = React.useState<MasterEmployee | null>(null);
+    const [notificationHistory, setNotificationHistory] = React.useState<AppNotification[]>([]); // New State
     
     // --- THEME STATE ---
     const [currentTheme, setCurrentTheme] = React.useState<AppTheme>('default');
@@ -179,12 +180,22 @@ const App: React.FC = () => {
         const unsubscribe = auth.onAuthStateChanged((user) => {
             if (user) {
                 setCurrentUser(authService.mapFirebaseUser(user));
+                // Add login notification
+                const loginNotif: AppNotification = {
+                    id: uuidv4(),
+                    message: `Berhasil Login sebagai ${user.displayName || user.email}`,
+                    type: 'success',
+                    timestamp: new Date(),
+                    isRead: false
+                };
+                setNotificationHistory(prev => [loginNotif, ...prev]);
             } else {
                 setCurrentUser(null);
                 setEmployees([]);
                 setMasterEmployees([]);
                 setOvertimeRecords([]);
                 setProfile(null);
+                setNotificationHistory([]); // Clear history on logout
             }
             setAuthLoading(false);
         });
@@ -316,6 +327,19 @@ const App: React.FC = () => {
 
     const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
         setNotification({ message, type });
+        // Add to history
+        const newNotif: AppNotification = {
+            id: uuidv4(),
+            message,
+            type: type === 'error' ? 'error' : 'success', // Normalize type
+            timestamp: new Date(),
+            isRead: false
+        };
+        setNotificationHistory(prev => [newNotif, ...prev]);
+    };
+
+    const handleClearNotifications = () => {
+        setNotificationHistory([]);
     };
 
     const handleLogout = async () => {
@@ -622,6 +646,8 @@ const App: React.FC = () => {
                 onLogout={handleLogout}
                 isLicenseActivated={isLicenseActivated}
                 onOpenActivation={handleOpenActivation}
+                notifications={notificationHistory}
+                onClearNotifications={handleClearNotifications}
             />
             
             <div className="flex flex-1 overflow-hidden">
@@ -652,6 +678,8 @@ const App: React.FC = () => {
                 onActivationSuccess={() => {
                     setIsLicenseActivated(true);
                     setActivationModalOpen(false);
+                    // Add activation notification
+                    showNotification('Produk berhasil diaktivasi!', 'success');
                 }} 
             />
         </div>

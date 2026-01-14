@@ -14,6 +14,7 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onNavigate }) =>
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
+    const [isSuccess, setIsSuccess] = React.useState(false); // New state for success view
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,15 +28,14 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onNavigate }) =>
         try {
             const result = await register(name, email, password);
             if (result.success) {
-                // Do not auto-login. Show alert and go to login.
-                alert(result.message);
-                onNavigate('login');
+                // Show Success View instead of Alert
+                setIsSuccess(true);
             } else {
                 setError(result.message);
-                setIsLoading(false);
             }
         } catch (err: any) {
             setError(err.message || 'Terjadi kesalahan saat mendaftar.');
+        } finally {
             setIsLoading(false);
         }
     };
@@ -56,6 +56,36 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onNavigate }) =>
             setIsLoading(false);
         }
     };
+
+    // Render Success View if registration successful
+    if (isSuccess) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-sm animate-fade-in">
+                <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-2xl shadow-green-900/20 border border-gray-700 relative animate-fade-in-up text-center">
+                    <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-green-900/30 mb-6 border border-green-500/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-4">Akun berhasil dibuat!</h2>
+                    <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 text-left mb-6">
+                        <p className="text-gray-300 text-sm leading-relaxed mb-2">
+                            Silakan cek email Anda (<strong>{email}</strong>) untuk verifikasi sebelum login.
+                        </p>
+                        <p className="text-yellow-400 text-xs font-semibold">
+                            ⚠ Cek di folder SPAM jika tidak ada di kotak masuk.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => onNavigate('login')}
+                        className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition-colors shadow-lg"
+                    >
+                        Kembali ke Login
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm animate-fade-in">

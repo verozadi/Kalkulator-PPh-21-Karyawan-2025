@@ -10,6 +10,14 @@ export interface User {
   passwordHash: string;
 }
 
+export interface AppNotification {
+    id: string;
+    message: string;
+    type: 'success' | 'error' | 'info';
+    timestamp: Date;
+    isRead: boolean;
+}
+
 export enum MaritalStatus {
   TK0 = 'TK/0',
   TK1 = 'TK/1',
