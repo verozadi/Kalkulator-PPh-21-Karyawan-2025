@@ -43,10 +43,10 @@ export const loginWithEmail = async (email: string, password: string): Promise<{
     try {
         const result = await auth.signInWithEmailAndPassword(email, password);
         
-        // Check Email Verification
-        if (!result.user?.emailVerified) {
+        // Strict Email Verification Check
+        if (result.user && !result.user.emailVerified) {
             await auth.signOut();
-            return { success: false, message: 'Email belum diverifikasi. Silakan cek inbox email Anda.' };
+            return { success: false, message: 'Silahkan verifikasi email anda' };
         }
 
         const user = mapFirebaseUser(result.user!);
@@ -68,6 +68,8 @@ export const loginWithEmail = async (email: string, password: string): Promise<{
 export const register = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
     try {
         const result = await auth.createUserWithEmailAndPassword(email, password);
+        let user: User | undefined;
+
         if (result.user) {
             await result.user.updateProfile({ displayName: name });
             
@@ -80,14 +82,16 @@ export const register = async (name: string, email: string, password: string): P
             }, { merge: true });
 
             // Send Verification Email
-            await result.user.sendEmailVerification();
+            await result.user.sendEmailVerification().catch(e => console.log("Gagal kirim email verifikasi", e));
+            
+            user = mapFirebaseUser(result.user);
         }
         
-        // Force Logout so they can't access app without verifying
-        await auth.signOut();
+        // PENTING: Logout user setelah daftar agar App.tsx tidak langsung redirect ke Dashboard
+        // Ini memungkinkan tampilan 'Sukses Daftar' muncul di Register.tsx
+        await auth.signOut(); 
 
-        // Note: user is undefined here because we logged out
-        return { success: true, message: 'Akun berhasil dibuat! Silakan cek email Anda untuk verifikasi sebelum login.' };
+        return { success: true, message: 'Akun berhasil dibuat!', user };
     } catch (error: any) {
         console.error("Firebase Register Error", error);
         let message = 'Gagal mendaftar.';

@@ -151,7 +151,7 @@ const App: React.FC = () => {
     const [editingMasterEmployee, setEditingMasterEmployee] = React.useState<MasterEmployee | null>(null);
     const [detailEmployee, setDetailEmployee] = React.useState<Employee | null>(null);
     const [detailMasterEmployee, setDetailMasterEmployee] = React.useState<MasterEmployee | null>(null);
-    const [notificationHistory, setNotificationHistory] = React.useState<AppNotification[]>([]); // New State
+    const [notificationHistory, setNotificationHistory] = React.useState<AppNotification[]>([]); 
     
     // --- THEME STATE ---
     const [currentTheme, setCurrentTheme] = React.useState<AppTheme>('default');
@@ -178,6 +178,12 @@ const App: React.FC = () => {
     // --- AUTH LISTENER (Firebase) ---
     React.useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((user) => {
+            // IGNORE LOGIN IF REGISTERING (Prevent Dashboard Flash)
+            // This flag is set in Register.tsx before calling auth functions
+            if (user && sessionStorage.getItem('veroz_is_registering') === 'true') {
+                return;
+            }
+
             if (user) {
                 setCurrentUser(authService.mapFirebaseUser(user));
                 // Add login notification
@@ -239,8 +245,6 @@ const App: React.FC = () => {
                 setProfile(docSnap.data() as Profile);
             } else {
                 setProfile(defaultProfile);
-                // Note: We don't auto-save default profile on read failure to avoid write loops or permission issues for non-active users.
-                // It will be saved when user saves profile manually.
             }
         }, (error) => console.error("Sync Error Profile:", error));
 

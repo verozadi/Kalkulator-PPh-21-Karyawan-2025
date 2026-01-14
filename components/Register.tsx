@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { register, loginWithGoogle } from '../services/authService';
+import { register, loginWithGoogle, logout } from '../services/authService';
 import { User } from '../types';
 
 interface RegisterProps {
@@ -14,7 +14,12 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onNavigate }) =>
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
-    const [isSuccess, setIsSuccess] = React.useState(false); // New state for success view
+    const [isSuccess, setIsSuccess] = React.useState(false);
+
+    // On mount, check if we are in the middle of a registration flow (returning from logout)
+    React.useEffect(() => {
+        sessionStorage.removeItem('veroz_is_registering');
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -24,36 +29,47 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onNavigate }) =>
         }
         setError('');
         setIsLoading(true);
+        
+        // Set flag to tell App.tsx to ignore the intermediate "logged in" state
+        sessionStorage.setItem('veroz_is_registering', 'true');
 
         try {
             const result = await register(name, email, password);
             if (result.success) {
-                // Show Success View instead of Alert
                 setIsSuccess(true);
             } else {
                 setError(result.message);
+                sessionStorage.removeItem('veroz_is_registering');
             }
         } catch (err: any) {
             setError(err.message || 'Terjadi kesalahan saat mendaftar.');
+            sessionStorage.removeItem('veroz_is_registering');
         } finally {
             setIsLoading(false);
+            sessionStorage.removeItem('veroz_is_registering');
         }
     };
 
     const handleGoogleRegister = async () => {
         setError('');
         setIsLoading(true);
+        sessionStorage.setItem('veroz_is_registering', 'true');
+
         try {
             const result = await loginWithGoogle();
             if (result.success && result.user) {
-                onRegisterSuccess(result.user);
+                await logout(); // Ensure we are logged out
+                setIsSuccess(true);
             } else {
                 setError(result.message);
-                setIsLoading(false);
+                sessionStorage.removeItem('veroz_is_registering');
             }
         } catch (err: any) {
             setError(err.message || 'Gagal mendaftar dengan Google.');
+            sessionStorage.removeItem('veroz_is_registering');
+        } finally {
             setIsLoading(false);
+            sessionStorage.removeItem('veroz_is_registering');
         }
     };
 
@@ -70,17 +86,17 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onNavigate }) =>
                     <h2 className="text-2xl font-bold text-white mb-4">Akun berhasil dibuat!</h2>
                     <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 text-left mb-6">
                         <p className="text-gray-300 text-sm leading-relaxed mb-2">
-                            Silakan cek email Anda (<strong>{email}</strong>) untuk verifikasi sebelum login.
+                            Silakan cek email Anda{email ? <strong> ({email})</strong> : ''} untuk verifikasi sebelum login.
                         </p>
                         <p className="text-yellow-400 text-xs font-semibold">
-                            ⚠ Cek di folder SPAM jika tidak ada di kotak masuk.
+                            cek di spam jika tidak ada di kotak masuk
                         </p>
                     </div>
                     <button
                         onClick={() => onNavigate('login')}
                         className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition-colors shadow-lg"
                     >
-                        Kembali ke Login
+                        OK
                     </button>
                 </div>
             </div>

@@ -14,6 +14,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onNavigate }) => {
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
 
+    // Ensure session flag is cleared when user lands on Login page
+    React.useEffect(() => {
+        sessionStorage.removeItem('veroz_is_registering');
+    }, []);
+
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !password) {
