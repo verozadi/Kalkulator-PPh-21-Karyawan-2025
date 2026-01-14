@@ -8,14 +8,18 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwC5xHIrnG39FMYU853IOAw
 
 interface LicenseActivationProps {
     onActivationSuccess: () => void;
+    onClose: () => void; // Added onClose prop
     user: User | null;
+    isOpen: boolean; // Added isOpen prop
 }
 
-const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivationSuccess, user }) => {
+const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivationSuccess, onClose, user, isOpen }) => {
     const [licenseKey, setLicenseKey] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
     const [successMsg, setSuccessMsg] = React.useState('');
     const [error, setError] = React.useState('');
+
+    if (!isOpen) return null;
 
     const handleActivate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,6 +67,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivationSucce
                 
                 setTimeout(() => {
                     onActivationSuccess();
+                    onClose();
                 }, 1500);
             } else {
                 setError(data.message || 'License Key Invalid or Expired');
@@ -77,9 +82,15 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivationSucce
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900 animate-fade-in">
-            <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-2xl shadow-black/50 border border-gray-700 relative animate-fade-in-up">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-2xl shadow-black/50 border border-gray-700 relative animate-fade-in-up" onClick={e => e.stopPropagation()}>
                 
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
                 <div className="text-center mb-8">
                     <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-primary-900/30 mb-4 border border-primary-500/30">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -88,7 +99,7 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivationSucce
                     </div>
                     <h1 className="text-2xl font-bold text-gray-100">Aktivasi Produk</h1>
                     <p className="text-gray-400 mt-2 text-sm">
-                        Halo <span className="text-white font-semibold">{user?.name}</span>, masukkan Kunci Lisensi Anda.
+                        Halo <span className="text-white font-semibold">{user?.name}</span>, silakan aktivasi untuk membuka fitur penuh (Simpan, Export, dll).
                     </p>
                 </div>
                 
@@ -142,14 +153,14 @@ const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivationSucce
                                     <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                     Checking...
                                 </span>
-                            ) : successMsg ? 'Activated' : 'Activate'}
+                            ) : successMsg ? 'Activated' : 'Aktifkan Sekarang'}
                         </button>
                     </div>
                 </form>
                 
                 <div className="mt-8 text-center border-t border-gray-700 pt-4">
                     <p className="text-xs text-gray-500">
-                        Masalah aktivasi? Hubungi <a href="http://wa.me/6282349465835" target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:text-primary-300 transition-colors">Tim Support</a>
+                        Belum punya lisensi? <a href="http://wa.me/6282349465835" target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:text-primary-300 transition-colors font-bold">Beli Lisensi</a>
                     </p>
                 </div>
             </div>

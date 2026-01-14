@@ -28,11 +28,12 @@ import LandingPage from './components/LandingPage';
 import EmployeeDetailModal from './components/EmployeeDetailModal';
 import MasterEmployeeDetailModal from './components/MasterEmployeeDetailModal';
 import LicenseActivation from './components/LicenseActivation';
+import Navbar from './components/Navbar'; // Import Navbar directly here to control props
 
 // Type Imports
 import { Page, Employee, EmployeeData, Profile, MasterEmployee, OvertimeRecord, User, AppTheme } from './types';
 
-// Service Imports (Note: save functions now use Firestore)
+// Service Imports
 import { calculatePPh21 } from './services/taxCalculator';
 import * as authService from './services/authService';
 import { saveEmployee as saveEmployeeService, deleteEmployee as deleteEmployeeService, importEmployees as importEmployeesService } from './services/employeeService';
@@ -132,6 +133,7 @@ const App: React.FC = () => {
     const [authLoading, setAuthLoading] = React.useState(true);
     const [isLicenseActivated, setIsLicenseActivated] = React.useState<boolean>(false);
     const [authPage, setAuthPage] = React.useState<Extract<Page, 'login' | 'register' | 'forgotPassword' | 'landing'>>('landing');
+    const [isActivationModalOpen, setActivationModalOpen] = React.useState(false);
 
     // --- APP DATA STATE (Synced via Firestore) ---
     const [employees, setEmployees] = React.useState<Employee[]>([]);
@@ -149,12 +151,10 @@ const App: React.FC = () => {
     const [editingMasterEmployee, setEditingMasterEmployee] = React.useState<MasterEmployee | null>(null);
     const [detailEmployee, setDetailEmployee] = React.useState<Employee | null>(null);
     const [detailMasterEmployee, setDetailMasterEmployee] = React.useState<MasterEmployee | null>(null);
-    const [isProfileDropdownOpen, setProfileDropdownOpen] = React.useState(false);
     
     // --- THEME STATE ---
     const [currentTheme, setCurrentTheme] = React.useState<AppTheme>('default');
     
-    const profileDropdownRef = React.useRef<HTMLDivElement>(null);
     const mainContentRef = React.useRef<HTMLElement>(null);
 
     // Load theme from localStorage
@@ -166,6 +166,10 @@ const App: React.FC = () => {
     }, []);
 
     const handleSetTheme = (theme: AppTheme) => {
+        if (!isLicenseActivated) {
+            handleOpenActivation();
+            return;
+        }
         setCurrentTheme(theme);
         localStorage.setItem('veroz_theme', theme);
     };
@@ -189,50 +193,59 @@ const App: React.FC = () => {
 
     // --- FIRESTORE SYNC LISTENERS ---
     React.useEffect(() => {
-        if (!currentUser || !isLicenseActivated) return;
+        if (!currentUser) return;
 
         const userId = currentUser.id;
 
-        // 1. Employees Listener
+        // 1. Sync User Activation Status from Firestore (Source of Truth)
+        const unsubUser = db.collection('users').doc(userId).onSnapshot((doc) => {
+            const data = doc.data();
+            // Only update if true to prevent overwriting local validation temporarily
+            if (data?.isActivated === true) {
+                setIsLicenseActivated(true);
+                localStorage.setItem('veroz_license_active', 'true');
+            }
+            // If data is false or missing, we stay in Preview Mode (isLicenseActivated defaults false)
+        }, (error) => console.error("Sync Error User Data:", error));
+
         const unsubEmployees = db.collection('users').doc(userId).collection('employees').onSnapshot((snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as Employee);
             setEmployees(data);
         }, (error) => console.error("Sync Error Employees:", error));
 
-        // 2. Master Employees Listener
         const unsubMasters = db.collection('users').doc(userId).collection('master_employees').onSnapshot((snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as MasterEmployee);
             setMasterEmployees(data);
         }, (error) => console.error("Sync Error Master:", error));
 
-        // 3. Overtime Listener
         const unsubOvertime = db.collection('users').doc(userId).collection('overtime_records').onSnapshot((snapshot) => {
             const data = snapshot.docs.map(doc => doc.data() as OvertimeRecord);
             setOvertimeRecords(data);
         }, (error) => console.error("Sync Error Overtime:", error));
 
-        // 4. Profile Listener
         const unsubProfile = db.collection('users').doc(userId).collection('settings').doc('profile').onSnapshot((docSnap) => {
             if (docSnap.exists) {
                 setProfile(docSnap.data() as Profile);
             } else {
-                setProfile(defaultProfile); // Use default if fresh account
-                saveProfileService(userId, defaultProfile); // Initialize in cloud
+                setProfile(defaultProfile);
+                // Note: We don't auto-save default profile on read failure to avoid write loops or permission issues for non-active users.
+                // It will be saved when user saves profile manually.
             }
         }, (error) => console.error("Sync Error Profile:", error));
 
         return () => {
+            unsubUser();
             unsubEmployees();
             unsubMasters();
             unsubOvertime();
             unsubProfile();
         };
-    }, [currentUser, isLicenseActivated]);
+    }, [currentUser]);
 
 
     // --- LICENSE VALIDATION LOGIC ---
+    // Kept as secondary/initial check, but Firestore listener (above) is primary for updates
     const validateLicenseSession = React.useCallback(async (silent: boolean = true) => {
-        // If not logged in, we don't check license yet
         if (!currentUser) return;
 
         const storedKey = localStorage.getItem('veroz_license_key');
@@ -244,21 +257,19 @@ const App: React.FC = () => {
         }
 
         if (!storedKey) {
-            setIsLicenseActivated(false);
+            // No key found, stay in preview mode (do nothing, default is false)
             return;
         }
 
         try {
-            // Optimistic Check
             if (silent && localStorage.getItem('veroz_license_active') === 'true') {
                 setIsLicenseActivated(true);
             }
 
-            // Server Check
             const params = new URLSearchParams({
                 key: storedKey,
                 deviceId: deviceId,
-                email: currentUser.email // Validate against email too
+                email: currentUser.email
             });
 
             const response = await fetch(`${LICENSE_API_URL}?${params.toString()}`, {
@@ -271,29 +282,24 @@ const App: React.FC = () => {
                 localStorage.setItem('veroz_license_active', 'true');
             } else {
                 console.warn("License Check Failed:", data.message);
-                setIsLicenseActivated(false);
+                // Don't force false immediately if Firestore says true, but clear local storage
                 localStorage.removeItem('veroz_license_active');
-                if (!silent) {
-                    alert(`Sesi Lisensi Berakhir: ${data.message}`);
-                }
             }
         } catch (error) {
             console.error("License Validation Network Error (Offline?):", error);
-            // Allow offline access if previously valid
             if (localStorage.getItem('veroz_license_active') === 'true') {
                 setIsLicenseActivated(true);
             }
         }
     }, [currentUser]);
 
-    // Trigger license check when user logs in
     React.useEffect(() => {
         if (!authLoading && currentUser) {
             validateLicenseSession(false);
         }
     }, [authLoading, currentUser, validateLicenseSession]);
 
-    // Interval license re-check
+    // Check periodically
     React.useEffect(() => {
         const intervalId = setInterval(() => {
             if(currentUser) validateLicenseSession(true);
@@ -302,18 +308,8 @@ const App: React.FC = () => {
     }, [validateLicenseSession, currentUser]);
 
 
-    // --- HANDLERS (UPDATED TO ASYNC/FIRESTORE) ---
+    // --- HANDLERS ---
     
-    React.useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-          if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
-            setProfileDropdownOpen(false);
-          }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     React.useEffect(() => {
         if (mainContentRef.current) mainContentRef.current.scrollTop = 0;
     }, [currentPage]);
@@ -322,14 +318,20 @@ const App: React.FC = () => {
         setNotification({ message, type });
     };
 
-    // Note: Login is handled by Firebase Listener now
     const handleLogout = async () => {
         await authService.logout();
         setAuthPage('landing');
     };
 
+    // Centralized Activation Trigger
+    const handleOpenActivation = () => {
+        setActivationModalOpen(true);
+    };
+
     const handleSaveProfile = async (updatedProfile: Profile) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+        
         try {
             await saveProfileService(currentUser.id, updatedProfile);
             setProfileModalOpen(false);
@@ -355,6 +357,8 @@ const App: React.FC = () => {
 
     const handleSaveEmployee = async (employeeData: EmployeeData) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+
         try {
             let employeeToSave: Employee;
             if (employeeData.calculationType === 'annual') {
@@ -365,7 +369,6 @@ const App: React.FC = () => {
             }
 
             await saveEmployeeService(currentUser.id, employeeToSave);
-            // State updates automatically via listener
             
             if (employeeToSave.calculationType === 'annual') navigateTo('employeeListAnnual');
             else if (employeeToSave.calculationType === 'nonFinal') navigateTo('employeeListNonFinal');
@@ -380,6 +383,8 @@ const App: React.FC = () => {
     
     const handleDeleteEmployee = async (employeeId: string) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+
         try {
             await deleteEmployeeService(currentUser.id, employeeId);
             showNotification('Data dihapus dari Cloud');
@@ -390,6 +395,8 @@ const App: React.FC = () => {
 
     const handleImportEmployees = async (employeesToImport: Omit<EmployeeData, 'id'>[]) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+
         try {
             await importEmployeesService(currentUser.id, employeesToImport);
             showNotification(`${employeesToImport.length} data berhasil diimpor ke Cloud.`);
@@ -410,6 +417,8 @@ const App: React.FC = () => {
     
     const handleSaveMasterEmployee = async (masterEmployee: MasterEmployee) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+
         try {
             await saveMasterEmployeeService(currentUser.id, masterEmployee);
             showNotification('Karyawan Master Tersimpan');
@@ -421,6 +430,8 @@ const App: React.FC = () => {
 
     const handleDeleteMasterEmployee = async (id: string) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+
         try {
             await deleteMasterEmployeeService(currentUser.id, id);
             showNotification('Karyawan dihapus dari Cloud');
@@ -431,6 +442,8 @@ const App: React.FC = () => {
 
     const handleImportMasterEmployees = async (employeesToImport: Omit<MasterEmployee, 'id'>[]) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+
         try {
             await importMasterEmployeesService(currentUser.id, employeesToImport);
             showNotification(`${employeesToImport.length} karyawan master berhasil diimpor.`);
@@ -441,6 +454,8 @@ const App: React.FC = () => {
 
     const handleSaveOvertime = async (records: OvertimeRecord[], deletedIds?: string[]) => {
         if (!currentUser) return;
+        if (!isLicenseActivated) { handleOpenActivation(); return; }
+
         try {
             await saveOvertimeRecordsService(currentUser.id, records, deletedIds);
             showNotification('Data lembur tersimpan di Cloud');
@@ -465,7 +480,6 @@ const App: React.FC = () => {
         );
     }
 
-    // 1. Authentication Barrier
     if (!currentUser) {
         return (
             <>
@@ -477,20 +491,10 @@ const App: React.FC = () => {
         );
     }
 
-    // 2. License Check Barrier (Post-Auth)
-    if (!isLicenseActivated) {
-        return <LicenseActivation 
-            user={currentUser}
-            onActivationSuccess={() => {
-                setIsLicenseActivated(true);
-            }} 
-        />;
-    }
-
     const renderContent = () => {
-        // Fallback profile if loading or error
         const activeProfile = profile || defaultProfile;
 
+        // Shared props for forms
         const employeeFormProps = {
             onSave: handleSaveEmployee,
             existingEmployee: editingEmployee,
@@ -519,7 +523,7 @@ const App: React.FC = () => {
             onOpenDetailModal: handleOpenDetailModal,
             onImport: handleImportEmployees,
             showNotification: showNotification,
-            profile: activeProfile, // Send synced profile data
+            profile: activeProfile,
         };
 
         switch (currentPage) {
@@ -529,7 +533,10 @@ const App: React.FC = () => {
                 return <EmployeeMasterList 
                             masterEmployees={masterEmployees} 
                             onEdit={handleOpenMasterEmployeeModal}
-                            onAddNew={() => handleOpenMasterEmployeeModal(null)}
+                            onAddNew={() => {
+                                if(!isLicenseActivated) handleOpenActivation();
+                                else handleOpenMasterEmployeeModal(null);
+                            }}
                             onDelete={handleDeleteMasterEmployee} 
                             onImport={handleImportMasterEmployees}
                             showNotification={showNotification}
@@ -567,17 +574,36 @@ const App: React.FC = () => {
             case 'taxRules':
                 return <TaxRules />;
             case 'reports':
-                return <Reports employees={employees} masterEmployees={masterEmployees} profile={activeProfile} showNotification={showNotification} />;
+                return <Reports 
+                    employees={employees} 
+                    masterEmployees={masterEmployees} 
+                    profile={activeProfile} 
+                    showNotification={showNotification} 
+                    isLicenseActivated={isLicenseActivated}
+                    onOpenActivation={handleOpenActivation}
+                />;
             case 'overtime':
-                return <Overtime masterEmployees={masterEmployees} existingRecords={overtimeRecords} onSave={handleSaveOvertime} />;
+                return <Overtime 
+                    masterEmployees={masterEmployees} 
+                    existingRecords={overtimeRecords} 
+                    onSave={handleSaveOvertime} 
+                    isLicenseActivated={isLicenseActivated}
+                    onOpenActivation={handleOpenActivation}
+                />;
             case 'settings':
-                return <Settings showNotification={showNotification} currentUser={currentUser} currentTheme={currentTheme} onSetTheme={handleSetTheme} />;
+                return <Settings 
+                    showNotification={showNotification} 
+                    currentUser={currentUser} 
+                    currentTheme={currentTheme} 
+                    onSetTheme={handleSetTheme} 
+                    isLicenseActivated={isLicenseActivated}
+                    onOpenActivation={handleOpenActivation}
+                />;
             default:
                 return <Dashboard employees={employees} masterEmployees={masterEmployees} navigateTo={navigateTo} onEditEmployee={handleEditEmployee} />;
         }
     };
 
-    // Ensure profile is loaded (or default) before rendering main app to prevent flickers
     const activeProfile = profile || defaultProfile;
 
     return (
@@ -585,61 +611,28 @@ const App: React.FC = () => {
             className="flex flex-col h-screen bg-gray-900 font-sans text-gray-200 transition-colors duration-300"
             style={themes[currentTheme]}
         >
-            <header className="flex-shrink-0 bg-gray-800 border-b border-gray-700 flex items-center h-16 z-10 transition-colors duration-300">
-                <div className={`flex-shrink-0 h-full flex items-center border-r border-gray-700 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-64 px-6' : 'w-20 px-4 justify-center'}`}>
-                    <div className="flex items-center space-x-3">
-                        <img src={activeProfile.logoUrl} alt="Logo" className="h-8 w-8 rounded-md object-cover bg-gray-700 flex-shrink-0"/>
-                        <span className={`text-xl font-bold text-gray-100 whitespace-nowrap transition-opacity ${isSidebarOpen ? 'opacity-100' : 'opacity-0 hidden'}`}>{activeProfile.appName}</span>
-                    </div>
-                </div>
-                <div className="flex-1 flex justify-between items-center px-4 sm:px-6">
-                     <div>
-                        <button onClick={toggleSidebar} className="p-2 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
-                            <span className="sr-only">Toggle sidebar</span>
-                            <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            </svg>
-                        </button>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                        <button className="p-2 rounded-full hover:bg-gray-700" title="Notifikasi">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-                        </button>
-                        <div className="relative" ref={profileDropdownRef}>
-                            <button onClick={() => setProfileDropdownOpen(prev => !prev)} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700">
-                                <img className="h-9 w-9 rounded-full object-cover bg-gray-700" src={activeProfile.logoUrl} alt="Company Logo" />
-                                <div>
-                                    <div className="text-sm font-semibold text-gray-200 text-left">{currentUser.name}</div>
-                                    <div className="text-xs text-gray-400 text-left truncate max-w-[150px]">{currentUser.email}</div>
-                                </div>
-                            </button>
-                            {isProfileDropdownOpen && (
-                                <div className="absolute right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg py-1 z-50 border border-gray-600">
-                                <button
-                                    onClick={() => { setProfileModalOpen(true); setProfileDropdownOpen(false); }}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600"
-                                >
-                                    Profil Perusahaan
-                                </button>
-                                <button
-                                    onClick={() => { handleLogout(); setProfileDropdownOpen(false); }}
-                                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600"
-                                >
-                                    Logout
-                                </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Navbar 
+                profile={activeProfile}
+                user={currentUser}
+                onOpenProfileModal={() => {
+                    if(!isLicenseActivated) handleOpenActivation();
+                    else setProfileModalOpen(true);
+                }}
+                onToggleSidebar={toggleSidebar}
+                onLogout={handleLogout}
+                isLicenseActivated={isLicenseActivated}
+                onOpenActivation={handleOpenActivation}
+            />
+            
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar currentPage={currentPage} navigateTo={navigateTo} isOpen={isSidebarOpen} />
-                <main ref={mainContentRef} className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8">
+                <main ref={mainContentRef} className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8 relative">
                     {renderContent()}
                     <Footer />
                 </main>
             </div>
+
+            {/* Modals */}
             {detailEmployee && <EmployeeDetailModal 
                 employee={detailEmployee} 
                 onClose={() => setDetailEmployee(null)} 
@@ -650,6 +643,17 @@ const App: React.FC = () => {
             {isProfileModalOpen && <ProfileModal isOpen={isProfileModalOpen} onClose={() => setProfileModalOpen(false)} onSave={handleSaveProfile} profile={activeProfile} />}
             {isMasterEmployeeModalOpen && <MasterEmployeeFormModal isOpen={isMasterEmployeeModalOpen} onClose={handleCloseMasterEmployeeModal} onSave={handleSaveMasterEmployee} existingEmployee={editingMasterEmployee} />}
             {notification && <Notification message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+            
+            {/* Activation Modal */}
+            <LicenseActivation 
+                isOpen={isActivationModalOpen}
+                onClose={() => setActivationModalOpen(false)}
+                user={currentUser}
+                onActivationSuccess={() => {
+                    setIsLicenseActivated(true);
+                    setActivationModalOpen(false);
+                }} 
+            />
         </div>
     );
 };

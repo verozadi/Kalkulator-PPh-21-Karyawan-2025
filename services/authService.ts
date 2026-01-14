@@ -1,6 +1,6 @@
 
 import firebase from 'firebase/compat/app';
-import { auth, googleProvider } from './firebase';
+import { auth, googleProvider, db } from './firebase';
 import { User } from '../types';
 
 const LICENSE_API_URL = "https://script.google.com/macros/s/AKfycbwC5xHIrnG39FMYU853IOAwrLGE4U25ZTZc_MbWXkhQHNgY27WIRXy48NmzXTkXhZeStQ/exec";
@@ -19,6 +19,19 @@ export const loginWithGoogle = async (): Promise<{ success: boolean; message: st
     try {
         const result = await auth.signInWithPopup(googleProvider);
         const user = mapFirebaseUser(result.user!);
+
+        // Ensure user document exists in Firestore with default safe state
+        const userRef = db.collection('users').doc(user.id);
+        const doc = await userRef.get();
+        if (!doc.exists) {
+             await userRef.set({
+                displayName: user.name,
+                email: user.email,
+                isActivated: false, // Default state aman
+                createdAt: new Date().toISOString()
+            }, { merge: true });
+        }
+
         return { success: true, message: 'Login berhasil!', user };
     } catch (error: any) {
         console.error("Firebase Login Error", error);
@@ -57,6 +70,15 @@ export const register = async (name: string, email: string, password: string): P
         const result = await auth.createUserWithEmailAndPassword(email, password);
         if (result.user) {
             await result.user.updateProfile({ displayName: name });
+            
+            // Initialize Firestore User Document with Default Activation State
+            await db.collection('users').doc(result.user.uid).set({
+                displayName: name,
+                email: email,
+                isActivated: false, // PASTI FALSE saat daftar
+                createdAt: new Date().toISOString()
+            }, { merge: true });
+
             // Send Verification Email
             await result.user.sendEmailVerification();
         }

@@ -9,10 +9,12 @@ interface SettingsProps {
   currentUser: User;
   currentTheme: AppTheme;
   onSetTheme: (theme: AppTheme) => void;
+  isLicenseActivated: boolean; // Prop added
+  onOpenActivation: () => void; // Prop added
 }
 
-// Icons
-const CogIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+// Icons (Same as before)
+const CogIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const UserCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const LockClosedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>;
 const DatabaseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>;
@@ -23,7 +25,7 @@ const CloudIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w
 const SpinnerIcon = () => <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 const PaletteIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>;
 
-const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, currentTheme, onSetTheme }) => {
+const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, currentTheme, onSetTheme, isLicenseActivated, onOpenActivation }) => {
     // Backup & Restore State
     const [restoreFile, setRestoreFile] = React.useState<File | null>(null);
     const [isProcessing, setIsProcessing] = React.useState(false);
@@ -40,8 +42,16 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, curr
     const [emailPassword, setEmailPassword] = React.useState('');
     const [isUpdatingEmail, setIsUpdatingEmail] = React.useState(false);
 
+    // --- Helper for License Check ---
+    const checkLicense = (action: () => void) => {
+        if (!isLicenseActivated) {
+            onOpenActivation();
+            return;
+        }
+        action();
+    };
+
     // --- Helper for Batching ---
-    // Firestore allows max 500 writes per batch. We chunk the data.
     const chunkArray = (array: any[], size: number) => {
         const chunked = [];
         for (let i = 0; i < array.length; i += size) {
@@ -52,67 +62,59 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, curr
 
     // --- Backup Logic (From Firebase to .db) ---
     const handleBackup = async () => {
-        setIsProcessing(true);
-        setStatusMessage('Sedang mengambil data dari Cloud...');
-        
-        try {
-            const userId = currentUser.id;
-            const backupData: any = {
-                metadata: {
-                    version: "1.0",
-                    timestamp: new Date().toISOString(),
-                    userId: userId,
-                    type: "veroztax_full_backup"
-                },
-                data: {
-                    employees: [],
-                    master_employees: [],
-                    overtime_records: [],
-                    profile: null
-                }
-            };
+        checkLicense(async () => {
+            setIsProcessing(true);
+            setStatusMessage('Sedang mengambil data dari Cloud...');
+            
+            try {
+                const userId = currentUser.id;
+                const backupData: any = {
+                    metadata: {
+                        version: "1.0",
+                        timestamp: new Date().toISOString(),
+                        userId: userId,
+                        type: "veroztax_full_backup"
+                    },
+                    data: {
+                        employees: [],
+                        master_employees: [],
+                        overtime_records: [],
+                        profile: null
+                    }
+                };
 
-            // 1. Fetch Employees
-            const empSnap = await db.collection('users').doc(userId).collection('employees').get();
-            backupData.data.employees = empSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Fetch data logic remains same...
+                const empSnap = await db.collection('users').doc(userId).collection('employees').get();
+                backupData.data.employees = empSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const masterSnap = await db.collection('users').doc(userId).collection('master_employees').get();
+                backupData.data.master_employees = masterSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const overtimeSnap = await db.collection('users').doc(userId).collection('overtime_records').get();
+                backupData.data.overtime_records = overtimeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const profileSnap = await db.collection('users').doc(userId).collection('settings').doc('profile').get();
+                if (profileSnap.exists) { backupData.data.profile = profileSnap.data(); }
 
-            // 2. Fetch Master Employees
-            const masterSnap = await db.collection('users').doc(userId).collection('master_employees').get();
-            backupData.data.master_employees = masterSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setStatusMessage('Membuat file database...');
+                const jsonString = JSON.stringify(backupData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/octet-stream' }); 
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const date = new Date().toISOString().slice(0, 10);
+                a.href = url;
+                a.download = `VerozTax_Backup_${date}.db`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
 
-            // 3. Fetch Overtime
-            const overtimeSnap = await db.collection('users').doc(userId).collection('overtime_records').get();
-            backupData.data.overtime_records = overtimeSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            // 4. Fetch Profile
-            const profileSnap = await db.collection('users').doc(userId).collection('settings').doc('profile').get();
-            if (profileSnap.exists) {
-                backupData.data.profile = profileSnap.data();
+                showNotification('Database Cloud berhasil dicadangkan ke file .db');
+            } catch (error) {
+                console.error('Cloud Backup failed:', error);
+                showNotification('Gagal mencadangkan database cloud', 'error');
+            } finally {
+                setIsProcessing(false);
+                setStatusMessage('');
             }
-
-            // Generate File
-            setStatusMessage('Membuat file database...');
-            const jsonString = JSON.stringify(backupData, null, 2);
-            // Change Blob type to generic binary/octet-stream or keep as JSON but name it .db
-            const blob = new Blob([jsonString], { type: 'application/octet-stream' }); 
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const date = new Date().toISOString().slice(0, 10);
-            a.href = url;
-            a.download = `VerozTax_Backup_${date}.db`; // Extension .db
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            showNotification('Database Cloud berhasil dicadangkan ke file .db');
-        } catch (error) {
-            console.error('Cloud Backup failed:', error);
-            showNotification('Gagal mencadangkan database cloud', 'error');
-        } finally {
-            setIsProcessing(false);
-            setStatusMessage('');
-        }
+        });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,158 +123,144 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, curr
         }
     };
 
-    // --- Restore Logic (From .db to Firebase) ---
     const handleRestore = async () => {
-        if (!restoreFile) {
-            showNotification('Silakan pilih file .db terlebih dahulu.', 'error');
-            return;
-        }
-
-        if (!window.confirm('PERINGATAN: Memulihkan database akan MENIMPA/MENGGABUNGKAN data cloud Anda dengan data dari file ini. Lanjutkan?')) {
-            return;
-        }
-
-        setIsProcessing(true);
-        setStatusMessage('Membaca file database...');
-        
-        const reader = new FileReader();
-
-        reader.onload = async (event) => {
-            try {
-                const json = event.target?.result as string;
-                const parsed = JSON.parse(json);
-
-                if (!parsed.data || !parsed.metadata) {
-                    throw new Error("Format file .db tidak valid.");
-                }
-
-                const userId = currentUser.id;
-                setStatusMessage('Mengunggah ke Cloud (Proses ini mungkin memakan waktu)...');
-
-                // Helper to perform batch writes
-                const performBatchWrite = async (collectionName: string, items: any[]) => {
-                    const chunks = chunkArray(items, 400); // chunk size < 500 for safety
-                    let processedCount = 0;
-
-                    for (const chunk of chunks) {
-                        const batch = db.batch();
-                        chunk.forEach((item: any) => {
-                            if (item.id) {
-                                const ref = db.collection('users').doc(userId).collection(collectionName).doc(item.id);
-                                batch.set(ref, item); // Overwrite/Merge
-                            }
-                        });
-                        await batch.commit();
-                        processedCount += chunk.length;
-                        setStatusMessage(`Memulihkan ${collectionName}: ${processedCount}/${items.length}...`);
-                    }
-                };
-
-                // 1. Restore Employees
-                if (parsed.data.employees && Array.isArray(parsed.data.employees)) {
-                    await performBatchWrite('employees', parsed.data.employees);
-                }
-
-                // 2. Restore Master Employees
-                if (parsed.data.master_employees && Array.isArray(parsed.data.master_employees)) {
-                    await performBatchWrite('master_employees', parsed.data.master_employees);
-                }
-
-                // 3. Restore Overtime
-                if (parsed.data.overtime_records && Array.isArray(parsed.data.overtime_records)) {
-                    await performBatchWrite('overtime_records', parsed.data.overtime_records);
-                }
-
-                // 4. Restore Profile
-                if (parsed.data.profile) {
-                    await db.collection('users').doc(userId).collection('settings').doc('profile').set(parsed.data.profile);
-                }
-
-                showNotification('Database berhasil dipulihkan ke Cloud!');
-                setRestoreFile(null);
-                
-                // Optional: Reload to refresh all listeners cleanly
-                setTimeout(() => window.location.reload(), 1500);
-
-            } catch (error: any) {
-                console.error('Cloud Restore failed:', error);
-                showNotification(`Gagal memulihkan: ${error.message}`, 'error');
-            } finally {
-                setIsProcessing(false);
-                setStatusMessage('');
+        checkLicense(async () => {
+            if (!restoreFile) {
+                showNotification('Silakan pilih file .db terlebih dahulu.', 'error');
+                return;
             }
-        };
-        
-        reader.onerror = () => {
-             showNotification('Gagal membaca file.', 'error');
-             setIsProcessing(false);
-        };
+            if (!window.confirm('PERINGATAN: Memulihkan database akan MENIMPA/MENGGABUNGKAN data cloud Anda dengan data dari file ini. Lanjutkan?')) {
+                return;
+            }
 
-        reader.readAsText(restoreFile);
+            setIsProcessing(true);
+            setStatusMessage('Membaca file database...');
+            
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const json = event.target?.result as string;
+                    const parsed = JSON.parse(json);
+                    if (!parsed.data || !parsed.metadata) throw new Error("Format file .db tidak valid.");
+
+                    const userId = currentUser.id;
+                    setStatusMessage('Mengunggah ke Cloud (Proses ini mungkin memakan waktu)...');
+
+                    const performBatchWrite = async (collectionName: string, items: any[]) => {
+                        const chunks = chunkArray(items, 400); 
+                        let processedCount = 0;
+                        for (const chunk of chunks) {
+                            const batch = db.batch();
+                            chunk.forEach((item: any) => {
+                                if (item.id) {
+                                    const ref = db.collection('users').doc(userId).collection(collectionName).doc(item.id);
+                                    batch.set(ref, item);
+                                }
+                            });
+                            await batch.commit();
+                            processedCount += chunk.length;
+                            setStatusMessage(`Memulihkan ${collectionName}: ${processedCount}/${items.length}...`);
+                        }
+                    };
+
+                    if (parsed.data.employees && Array.isArray(parsed.data.employees)) {
+                        await performBatchWrite('employees', parsed.data.employees);
+                    }
+                    if (parsed.data.master_employees && Array.isArray(parsed.data.master_employees)) {
+                        await performBatchWrite('master_employees', parsed.data.master_employees);
+                    }
+                    if (parsed.data.overtime_records && Array.isArray(parsed.data.overtime_records)) {
+                        await performBatchWrite('overtime_records', parsed.data.overtime_records);
+                    }
+                    if (parsed.data.profile) {
+                        await db.collection('users').doc(userId).collection('settings').doc('profile').set(parsed.data.profile);
+                    }
+
+                    showNotification('Database berhasil dipulihkan ke Cloud!');
+                    setRestoreFile(null);
+                    setTimeout(() => window.location.reload(), 1500);
+
+                } catch (error: any) {
+                    console.error('Cloud Restore failed:', error);
+                    showNotification(`Gagal memulihkan: ${error.message}`, 'error');
+                } finally {
+                    setIsProcessing(false);
+                    setStatusMessage('');
+                }
+            };
+            
+            reader.onerror = () => {
+                showNotification('Gagal membaca file.', 'error');
+                setIsProcessing(false);
+            };
+            reader.readAsText(restoreFile);
+        });
     };
 
-    // --- Password Logic ---
     const handleSavePassword = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (!oldPassword) {
-            showNotification('Mohon isi kata sandi lama untuk verifikasi.', 'error');
-            return;
-        }
-        if (newPassword.length < 6) {
-            showNotification('Kata sandi baru harus terdiri dari minimal 6 karakter.', 'error');
-            return;
-        }
-        if (newPassword !== confirmPassword) {
-            showNotification('Konfirmasi kata sandi tidak cocok.', 'error');
-            return;
-        }
-
-        setIsSavingPassword(true);
-        try {
-            const result = await updateUserPassword(newPassword, oldPassword);
-            if (result.success) {
-                showNotification(result.message, 'success');
-                setOldPassword('');
-                setNewPassword('');
-                setConfirmPassword('');
-            } else {
-                showNotification(result.message, 'error');
+        checkLicense(async () => {
+            if (!oldPassword) {
+                showNotification('Mohon isi kata sandi lama untuk verifikasi.', 'error');
+                return;
             }
-        } catch (error) {
-            showNotification('Terjadi kesalahan yang tidak terduga.', 'error');
-        } finally {
-            setIsSavingPassword(false);
-        }
+            if (newPassword.length < 6) {
+                showNotification('Kata sandi baru harus terdiri dari minimal 6 karakter.', 'error');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                showNotification('Konfirmasi kata sandi tidak cocok.', 'error');
+                return;
+            }
+
+            setIsSavingPassword(true);
+            try {
+                const result = await updateUserPassword(newPassword, oldPassword);
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setOldPassword('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Terjadi kesalahan yang tidak terduga.', 'error');
+            } finally {
+                setIsSavingPassword(false);
+            }
+        });
     };
 
-    // --- Update Email Logic (Unchanged) ---
     const handleUpdateEmail = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newEmail || !emailPassword) {
-            showNotification('Mohon isi email baru dan kata sandi saat ini.', 'error');
-            return;
-        }
-        
-        setIsUpdatingEmail(true);
-        try {
-            const result = await changeUserEmail(newEmail, emailPassword);
-            if (result.success) {
-                showNotification(result.message, 'success');
-                setNewEmail('');
-                setEmailPassword('');
-            } else {
-                showNotification(result.message, 'error');
+        checkLicense(async () => {
+            if (!newEmail || !emailPassword) {
+                showNotification('Mohon isi email baru dan kata sandi saat ini.', 'error');
+                return;
             }
-        } catch (error) {
-            showNotification('Terjadi kesalahan yang tidak terduga.', 'error');
-        } finally {
-            setIsUpdatingEmail(false);
-        }
+            
+            setIsUpdatingEmail(true);
+            try {
+                const result = await changeUserEmail(newEmail, emailPassword);
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setNewEmail('');
+                    setEmailPassword('');
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (error) {
+                showNotification('Terjadi kesalahan yang tidak terduga.', 'error');
+            } finally {
+                setIsUpdatingEmail(false);
+            }
+        });
     };
 
     return (
         <div className="space-y-8 animate-fade-in-up max-w-4xl mx-auto pb-12">
+            {/* ... [Header and Profile section same as original] ... */}
             <div>
                 <div className="flex items-center space-x-3">
                     <CogIcon />
@@ -304,7 +292,7 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, curr
                     </div>
                 </div>
 
-                {/* 2. Tema & UI */}
+                {/* 2. Tema & UI (No change needed, license check is at App.tsx level handler) */}
                 <div className="bg-gray-800 p-6 rounded-lg shadow-xl shadow-black/20 border border-gray-700">
                     <div className="flex items-center space-x-2 mb-6 border-b border-gray-700 pb-3">
                         <PaletteIcon />
@@ -341,7 +329,6 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, curr
                         <h2 className="text-xl font-semibold text-gray-200">Keamanan</h2>
                     </div>
                     
-                    {/* Change Password Section */}
                     <form onSubmit={handleSavePassword} className="space-y-6">
                         <h3 className="text-lg font-medium text-white mb-2">Ubah Kata Sandi</h3>
                         <div className="grid grid-cols-1 gap-6">
@@ -384,20 +371,13 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, curr
                                 disabled={isSavingPassword || !newPassword || !oldPassword}
                                 className="bg-primary-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg"
                             >
-                                {isSavingPassword ? (
-                                    <>
-                                        <SpinnerIcon /> <span>Menyimpan...</span>
-                                    </>
-                                ) : (
-                                    <span>Simpan Kata Sandi</span>
-                                )}
+                                {isSavingPassword ? <><SpinnerIcon /> <span>Menyimpan...</span></> : <span>Simpan Kata Sandi</span>}
                             </button>
                         </div>
                     </form>
 
                     <hr className="my-8 border-gray-700" />
 
-                    {/* Change Email Section */}
                     <form onSubmit={handleUpdateEmail} className="space-y-6">
                         <div className="flex items-center space-x-2">
                             <MailIcon />
@@ -435,13 +415,7 @@ const Settings: React.FC<SettingsProps> = ({ showNotification, currentUser, curr
                                 disabled={isUpdatingEmail || !newEmail || !emailPassword}
                                 className="bg-accent-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-accent-700 transition-colors flex items-center justify-center space-x-2 disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg"
                             >
-                                {isUpdatingEmail ? (
-                                    <>
-                                        <SpinnerIcon /> <span>Memproses...</span>
-                                    </>
-                                ) : (
-                                    <span>Update Email</span>
-                                )}
+                                {isUpdatingEmail ? <><SpinnerIcon /> <span>Memproses...</span></> : <span>Update Email</span>}
                             </button>
                         </div>
                     </form>
