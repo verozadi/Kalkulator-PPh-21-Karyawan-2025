@@ -13,6 +13,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onNavigate }) => {
     const [password, setPassword] = React.useState('');
     const [error, setError] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
+    const [showVerificationPopup, setShowVerificationPopup] = React.useState(false);
 
     // Ensure session flag is cleared when user lands on Login page
     React.useEffect(() => {
@@ -33,7 +34,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onNavigate }) => {
             if (result.success && result.user) {
                 onLoginSuccess(result.user);
             } else {
-                setError(result.message);
+                if (result.message === 'Silahkan verifikasi email anda') {
+                    setShowVerificationPopup(true);
+                } else {
+                    setError(result.message);
+                }
                 setIsLoading(false);
             }
         } catch (err: any) {
@@ -58,6 +63,32 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onNavigate }) => {
             setIsLoading(false);
         }
     };
+
+    if (showVerificationPopup) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-sm animate-fade-in">
+                <div className="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-2xl shadow-yellow-900/20 border border-gray-700 relative animate-fade-in-up text-center">
+                    <div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-yellow-900/30 mb-6 border border-yellow-500/30">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-4">Verifikasi Email Diperlukan</h2>
+                    <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700 text-left mb-6">
+                        <p className="text-gray-300 text-sm leading-relaxed text-center">
+                            Silahkan verifikasi email anda untuk dapat masuk ke aplikasi. Cek inbox atau spam email Anda.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setShowVerificationPopup(false)}
+                        className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-lg transition-colors shadow-lg"
+                    >
+                        OK
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm animate-fade-in">
